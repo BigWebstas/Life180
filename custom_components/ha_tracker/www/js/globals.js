@@ -8,6 +8,7 @@ import { currentLang, t } from './utils/i18n.js';
 
 export const haUrl = location.origin;
 
+export const USE_MAP = '3D';
 export const SHOW_VISITS = false;
 export const DEFAULT_COLOR = '#008000';
 export const DEFAULT_ALPHA = 0.3

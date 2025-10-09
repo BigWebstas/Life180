@@ -145,11 +145,11 @@ async function updateZoneMarkers() {
 
         if (existingCircle) {
             const popupContent = buildZonePopup(zone);
-            const currentPopup = existingCircle.getPopup?.();
-            if (!currentPopup) {
-                existingCircle.bindPopup(popupContent, { autoPan: false });
-            } else if (currentPopup.getContent() !== popupContent) {
+            // Refresca SIEMPRE el contenido; si el popup está abierto se actualiza en vivo
+            if (typeof existingCircle.setPopupContent === 'function') {
                 existingCircle.setPopupContent(popupContent);
+            } else {
+                existingCircle.bindPopup(popupContent, { autoPan: false });
             }
             if (existingCircle.options.color !== strokeColor || existingCircle.options.fillColor !== fillColor) {
                 existingCircle.setStyle({
@@ -222,46 +222,53 @@ async function updateZoneMarkers() {
             map.closePopup(); // Cierra cualquier popup abierto en el mapa
         });
 
-        circle.on('editable:vertex:dragend', async() => { // Asegúrate de que esta función sea async
+        circle.on('editable:vertex:dragend', async () => { // Asegúrate de que esta función sea async
             editingZones[key] = false; // Marcar como no en edición
 
             const updatedLatLng = circle.getLatLng(); // Nueva posición del centro
             const updatedRadius = circle.getRadius(); // Nuevo radio
 
-            // 1) Actualiza el modelo local para que la tabla y el popup reflejen el cambio al instante
-            zone.latitude = updatedLatLng.lat;
-            zone.longitude = updatedLatLng.lng;
-            zone.radius = updatedRadius;
+            // Recupera SIEMPRE el objeto zona "fresco" por id para evitar clausuras obsoletas
+            const z = (zones.find(zz => String(zz.id) === String(zone.id)) || zone);
 
-            // 2) Refresca el popup con el radio actualizado (usando unidades correctas)
-            circle.bindPopup(buildZonePopup(zone), {
-                autoPan: false
-            });
+            // 1) Actualiza el modelo local para que la tabla y el popup reflejen el cambio al instante
+            z.latitude = updatedLatLng.lat;
+            z.longitude = updatedLatLng.lng;
+            z.radius   = updatedRadius;
+
+            // 2) Refresca el popup con el contenido actualizado (nombre/radio/unidades)
+            const newHtml = buildZonePopup(z);
+            if (typeof circle.setPopupContent === 'function') {
+                circle.setPopupContent(newHtml);
+            } else {
+                circle.bindPopup(newHtml, { autoPan: false });
+            }
             circle.openPopup();
 
             // 3) Refresca la tabla inmediatamente (se mantiene la selección)
             await updateZonesTable();
 
             // 4) Si procede, persiste el cambio en el servidor y vuelve a sincronizar
-            if (isAdmin && custom) {
+            if (isAdmin && z.custom) {
                 try {
                     const response = await updateZone(
-                            zone.id,
-                            zone.name, // nombre sin cambios
-                            updatedRadius,
-                            updatedLatLng.lat,
-                            updatedLatLng.lng,
-                            zone.color,
-                            zone.visible !== false);
+                        z.id,
+                        z.name, // nombre fresco (evita “revivir” el nombre antiguo)
+                        updatedRadius,
+                        updatedLatLng.lat,
+                        updatedLatLng.lng,
+                        z.color,
+                        z.visible !== false
+                    );
 
                     if (response && response.success) {
-                        await fetchZones(); // sincroniza 'zones' con el servidor
-                        await updateZonesTable(); // asegura que la tabla queda 100% alineada
-                        await updateZoneMarkers(); // (opcional) revalida estilos/markers
-                        await handleZoneRowSelection(zone.id);
-                        console.log(`Zone with ID ${zone.id} updated on server.`);
+                        await fetchZones();             // sincroniza 'zones' con el servidor
+                        await updateZonesTable();       // asegura que la tabla queda alineada
+                        await updateZoneMarkers();      // revalida estilos/markers
+                        await handleZoneRowSelection(z.id);
+                        console.log(`Zone with ID ${z.id} updated on server.`);
                     } else {
-                        console.error(`Error updating zone with ID ${zone.id} on server.`);
+                        console.error(`Error updating zone with ID ${z.id} on server.`);
                     }
                 } catch (error) {
                     console.error("Error in zone update request:", error);
@@ -579,6 +586,23 @@ async function handleCreateZone() {
             await updateZonesTable();
             await updateZoneMarkers();
             await handleZoneRowSelection(newZoneId);
+			
+            // ► Simular el clic en la fila de la tabla (misma UX que pulsar en la tabla):
+            const tbody = document.getElementById('zones-table-body');
+            const row = tbody?.querySelector(`tr[data-zone-id="${String(newZoneId)}"]`);
+            if (row) {
+              // Esto activa _lastPressFromZones(), encuadra el círculo y abre el popup al norte,
+              // y, si procede, muestra los handles de edición (isAdmin && custom).
+              row.click(); // equivalente a que el usuario pulse en la fila
+            } else {
+              // Fallback por si algo falla al construir la tabla
+              const marker = zoneMarkers[String(newZoneId)];
+              if (marker) {
+                map.fitBounds(marker.getBounds(), { padding: [24, 24] });
+                marker.openPopup();
+              }
+            }			
+			
             console.log(`Zone created successfully. ID: ${newZoneId}`);
             return newZoneId;
         } else {

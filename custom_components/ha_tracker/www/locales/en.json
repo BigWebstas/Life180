@@ -100,5 +100,10 @@
   "show_on_map": "Show on the map",
   "zone_name_ha": "Home Assistant zone name",
   "column_map": "Map",
-  "column_type": "Type"  
+  "column_type": "Type",
+  "zoom_in": "Zoom in",
+  "zoom_out": "Zoom out",
+  "reset_to_north": "Reset bearing to north",
+  "search": "Search",
+  "layers": "Layers"
 }

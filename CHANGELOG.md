@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 
+## [0.0.34] - 2025-10-09
+
+### Changes
+- 3D Map
+  - When using a mouse, you need to right-click to rotate and tilt. On a smartphone, you can use two fingers.
+  - It has the following buttons:
+    - Zoom
+    - Reset bearing to north
+    - Search for locations
+    - Switch between layers (OpenStreetMap, Esri, and OpenFreeMap)
+- Traccar Server Integration #31
+
+### Fixed
+- Map closing after a few seconds on the filter screen
+- Filter window closing after a few seconds
+
+
 ## [0.0.33] - 2025-10-02
 
 ### Changes

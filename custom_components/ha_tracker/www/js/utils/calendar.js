@@ -144,6 +144,8 @@ export async function initRangePicker(opts = {}) {
                 writeLocalizedRange(inst);
             },
             onOpen(_sel, _str, inst) {
+                // Congelar el update loop mientras esté abierto
+                window.__freezeUpdates = (window.__freezeUpdates || 0) + 1;
                 inst._prevTextboxValue = inst.input.value;
                 inst._prevSelectedDates = Array.isArray(inst.selectedDates) ? [...inst.selectedDates] : [];
                 inst.calendarContainer.classList.add('fp-at-top');
@@ -154,6 +156,8 @@ export async function initRangePicker(opts = {}) {
                     writeLocalizedRange(inst);
             },
             onClose(_sel, _str, inst) {
+                // Reanudar el update loop al cerrar
+                window.__freezeUpdates = Math.max(0, (window.__freezeUpdates || 0) - 1);
                 inst.calendarContainer.classList.remove('fp-at-top');
             },
             onValueUpdate() {
@@ -389,8 +393,18 @@ function mountPanel(instance) {
 
             const startTimeAnchor = document.createElement("input");
             startTimeAnchor.type = "hidden";
+            // 👇 Oculta SIEMPRE el input, aunque Flatpickr lo convierta en text
+            startTimeAnchor.classList.add("id-visually-hidden", "fp-time-anchor");
+            startTimeAnchor.setAttribute("aria-hidden", "true");
+            startTimeAnchor.tabIndex = -1;
+
             const endTimeAnchor = document.createElement("input");
             endTimeAnchor.type = "hidden";
+            // 👇 Igual aquí
+            endTimeAnchor.classList.add("id-visually-hidden", "fp-time-anchor");
+            endTimeAnchor.setAttribute("aria-hidden", "true");
+            endTimeAnchor.tabIndex = -1;
+
             document.body.appendChild(startTimeAnchor);
             document.body.appendChild(endTimeAnchor);
 

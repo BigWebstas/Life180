@@ -146,7 +146,8 @@ export async function handlePersonsSelection(personId) {
         return;
     }
 
-    selectedPerson.openPopup();
+	try { map.closePopup?.(); } catch {}
+	selectedPerson.openPopup?.();
     map.invalidateSize();
     map.setView([lat, lng], map.getZoom());
 }
@@ -213,37 +214,41 @@ export async function fitMapToAllPersons() {
 }
 
 async function updatePersonsDevicesMap() {
-    personsDevicesMap = {};
+  personsDevicesMap = {};
 
-    persons.forEach(person => {
-        const source = person.attributes?.source;
-        if (!source || typeof source !== "string" || source.trim() === "") {
-            console.log(`The person ${person.attributes.friendly_name || person.entity_id} does not have a valid 'source'.`);
-            return;
-        }
+  for (const person of persons) {
+    const trackers = person.attributes?.device_trackers;
+    let trackerEntityId = null;
 
-        const device = devices.find(device => device.entity_id === source);
-        if (!device) {
-            console.error(`The 'source' (${source}) of ${person.attributes.friendly_name || person.entity_id} is not in device_trackers.`);
-            return;
-        }
+    // El primer device_tracker del array
+    if (Array.isArray(trackers) && typeof trackers[0] === 'string' && trackers[0].trim() !== '') {
+      trackerEntityId = trackers[0].trim();
+    }
 
-        if (!device.attributes.latitude || !device.attributes.longitude) {
-            console.log(`The device_tracker ${source} of ${person.attributes.friendly_name || person.entity_id} does not have lat/lng.`);
-            return;
-        }
+    const device = devices.find(d => d.entity_id === trackerEntityId);
+    if (!device) {
+      continue;
+    }
 
-        personsDevicesMap[person.entity_id] = device;
-    });
+    // Asegura lat/lon numéricos y válidos (no rechaza 0,0)
+    const lat = Number(device.attributes?.latitude);
+    const lon = Number(device.attributes?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      console.log(`The device_tracker '${trackerEntityId}' of ${person.attributes.friendly_name || person.entity_id} does not have valid lat/lng.`);
+      continue;
+    }
 
-    console.log("Devices to persons:", personsDevicesMap);
+    personsDevicesMap[person.entity_id] = device;
+  }
+
+  console.log("Devices to persons:", personsDevicesMap);
 }
 
 async function updatePersonsMarkers() {
     if (!map.getPane('personsMarkers')) {
         const pane = map.createPane('personsMarkers');
         pane.style.zIndex = 600; // por encima de circlePane (400)
-        pane.style.pointerEvents = 'auto'; // habilita clics
+        pane.style.pointerEvents = 'none';
     }
 
     const currentPersonIds = Object.keys(personsDevicesMap);
@@ -291,8 +296,12 @@ async function updatePersonsMarkers() {
             existing.setLatLng([latitude, longitude]);
             existing.setIcon(markerIcon);
             const p = existing.getPopup?.();
-            if (p) p.setContent(popupContent);
-            else existing.bindPopup(popupContent, { autoPan: false });
+            if (p)
+                p.setContent(popupContent);
+            else
+                existing.bindPopup(popupContent, {
+                    autoPan: false
+                });
         } else {
             personsMarkers[personId] = L.marker([latitude, longitude], {
                 icon: markerIcon,
@@ -307,7 +316,8 @@ async function updatePersonsMarkers() {
                     map.invalidateSize();
                     const ll = personsMarkers[personId].getLatLng();
                     map.setView(ll, map.getZoom());
-                    personsMarkers[personId].openPopup();
+					try { map.closePopup?.(); } catch {}
+					personsMarkers[personId].openPopup?.();
                 });
         }
     });
@@ -488,7 +498,6 @@ export async function updatePersonsTable() {
         sortedPersons.forEach((person, index) => {
             const personId = person.entity_id;
             const friendlyName = person.attributes.friendly_name || personId;
-            const source = person.attributes.source || null;
 
             let deviceName = "",
             time = "",
@@ -503,7 +512,7 @@ export async function updatePersonsTable() {
 
             let shouldRequestGeocode = false;
 
-            if (source && personsDevicesMap[personId]) {
+            if (personsDevicesMap[personId]) {
                 const device = personsDevicesMap[personId];
                 deviceName = device.attributes.friendly_name ? `(${device.attributes.friendly_name})` : "";
                 battery = readBattery(device);
@@ -643,11 +652,12 @@ export async function updatePersonsTable() {
 //
 
 export function zoneTintRgba(zone, alpha = DEFAULT_ALPHA) {
-  if (!zone || !zone.color) return null; // sin color => sin tinte
-  const a = Math.min(1, Math.max(0, Number(alpha) || 0));
-  return toRgba(zone.color, a) || zone.color;
+    if (!zone || !zone.color)
+        return null; // sin color => sin tinte
+    const a = Math.min(1, Math.max(0, Number(alpha) || 0));
+    return toRgba(zone.color, a) || zone.color;
 }
 
 function readBattery(dev) {
-  return dev?.battery_level ?? dev?.attributes?.battery_level ?? null;
+    return dev?.battery_level ?? dev?.attributes?.battery_level ?? null;
 }

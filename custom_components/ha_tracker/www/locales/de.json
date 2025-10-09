@@ -100,5 +100,10 @@
   "show_on_map": "Auf der Karte anzeigen",
   "zone_name_ha": "Zonenname in Home Assistant",
   "column_map": "Karte",
-  "column_type": "Typ"  
+  "column_type": "Typ",
+  "zoom_in": "Vergrößern",
+  "zoom_out": "Verkleinern",
+  "reset_to_north": "Ausrichtung nach Norden zurücksetzen",
+  "search": "Suchen",
+  "layers": "Ebenen"  
 }

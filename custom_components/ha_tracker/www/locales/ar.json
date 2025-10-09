@@ -100,5 +100,10 @@
   "show_on_map": "إظهار على الخريطة",
   "zone_name_ha": "اسم المنطقة في Home Assistant",
   "column_map": "الخريطة",
-  "column_type": "النوع"  
+  "column_type": "النوع",
+  "zoom_in": "تكبير",
+  "zoom_out": "تصغير",
+  "reset_to_north": "إعادة الاتجاه إلى الشمال",
+  "search": "بحث",
+  "layers": "الطبقات"  
 }

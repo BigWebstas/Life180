@@ -100,5 +100,10 @@
   "show_on_map": "Показать на карте",
   "zone_name_ha": "Название зоны в Home Assistant",
   "column_map": "Карта",
-  "column_type": "Тип"  
+  "column_type": "Тип",
+  "zoom_in": "Увеличить",
+  "zoom_out": "Уменьшить",
+  "reset_to_north": "Сбросить ориентацию на север",
+  "search": "Поиск",
+  "layers": "Слои"  
 }

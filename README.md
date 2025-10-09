@@ -20,8 +20,10 @@
     - [Home Assistant](#home-assistant)
 	- [OwnTracks](#owntracks)
     - [GPSLogger](#gpslogger)
-	- [Traccar](#traccar)
+	- [Traccar Client](#traccar-client)
+	- [Traccar Server](#traccar-server)	
 - [Quick Start](#quick-start)
+  - [3D Map](#3d-map)
   - [Screens](#screens)
     - [Users](#users)
     - [Zonas](#zones)
@@ -236,9 +238,9 @@ In **Android** make sure in the **"Settings &rarr; Companion app"** that:
 </div>
 
 The first thing you need to do is install the **OwnTracks integration**:
- - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
- - Search for **OwnTracks**, select it. The **configuration screen** will open
- - Press **Send** button and integration will be created
+  - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
+  - Search for **OwnTracks**, select it. The **configuration screen** will open
+  - Press **Send** button and integration will be created
 
 Then you can then install OwnTracks on your devices from **[iOS](https://apps.apple.com/us/app/owntracks/id692424691)** and **[Android](https://play.google.com/store/apps/details?id=org.owntracks.android)**. Then:
   - Allow the permissions that the application requests for its correct operation.
@@ -266,9 +268,9 @@ To configure the application: [here's a link](https://www.home-assistant.io/inte
 </div>
 
 The first thing you need to do is install the **GPSLogger integration**:
- - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
- - Search for **GPSLogger**, select it. The **configuration screen** will open.
- - Press **Send** button and integration will be created
+  - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
+  - Search for **GPSLogger**, select it. The **configuration screen** will open.
+  - Press **Send** button and integration will be created
  
 Then you can then install GPSLogger on your devices through the **F-Droid** Android app store.
 
@@ -294,14 +296,14 @@ To configure the application: [here's a link](https://www.home-assistant.io/inte
   - There you can change its name in Home Assistant
 - Finally, assign the device to a person in Home Assistant: **"Settings &rarr; People"**
 
-### Traccar
+### Traccar Client
 
-[Traccar](https://www.traccar.org/) is an **[iOS](https://apps.apple.com/us/app/traccar-client/id843156974)** and **[Android](https://play.google.com/store/apps/details?id=org.traccar.client)** app designed to send your phone's positions to a URL.
+[Traccar Client](https://www.traccar.org/) is an **[iOS](https://apps.apple.com/us/app/traccar-client/id843156974)** and **[Android](https://play.google.com/store/apps/details?id=org.traccar.client)** app designed to send your phone's positions to a URL.
 
 The first thing you need to do is install the **Traccar Client integration**:
- - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
- - Search for **Traccar Client**, select it. The **configuration screen** will open.
- - Press **Send** button and integration will be created
+  - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
+  - Search for **Traccar Client**, select it. The **configuration screen** will open.
+  - Press **Send** button and integration will be created
  
 Then you can then install OwnTracks on your devices from **[iOS](https://apps.apple.com/us/app/traccar-client/id843156974))** and **[Android](https://play.google.com/store/apps/details?id=org.traccar.client)**. Then:
   - Allow the permissions that the application requests for its correct operation.
@@ -317,8 +319,45 @@ To configure the application: [here's a link](https://www.traccar.org/client-con
 - Finally, assign the device to a person in Home Assistant: **"Settings &rarr; People"**
 
 ---  
+
+### Traccar Server
+[Traccar Server](https://www.traccar.org/) allows you to view the real-time location of your GPS devices.
+
+In Traccar server you need to create two **Computed Attributes**:
+  - For **Battery** with: 
+    - Description: "batteryLevel"
+	- Attribute: "Battery level"
+	- Expression: "batteryLevel"
+  - For **Speed** with:
+    - Description: "speedMps"
+	- Attribute: "Speed"
+	- Expression: "speed * 0.514444"
+	
+These Computed Attributes need to be assigned to groups and/or devices in Traccar Server.
+	
+The first thing you need to do in Home Assistant is install the **Traccar Server integration**:
+  - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
+  - Search for **Traccar Server**, select it. The **configuration screen** will open.
+  - Complete the fields with those of the Traccar server
+  - Press **Send** button and integration will be created
+
+In the **Traccar Server Options** it is necessary to add two **Custom Attributes**: **batteryLevel** and **speedMps**
+  
+- In Home Assistant, you'll find connected devices under **"Settings &rarr; Devices & services &rarr; Traccar Server"**
+  - There you can change its name in Home Assistant
+- Finally, assign the device to a person in Home Assistant: **"Settings &rarr; People"**
+
+---  
 	
 # QUICK START
+
+## 3D Map
+- When using a mouse, you need to right-click to rotate and tilt. On a smartphone, you can use two fingers.
+- It has the following buttons:
+  - Zoom
+  - Reset bearing to north
+  - Search for locations
+  - Switch between layers (OpenStreetMap, Esri, and OpenFreeMap)
 
 ## Screens
 

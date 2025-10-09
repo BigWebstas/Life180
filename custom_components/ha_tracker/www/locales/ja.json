@@ -100,5 +100,10 @@
   "show_on_map": "地図に表示",
   "zone_name_ha": "Home Assistantのゾーン名",
   "column_map": "地図",
-  "column_type": "種類"  
+  "column_type": "種類",
+  "zoom_in": "拡大",
+  "zoom_out": "縮小",
+  "reset_to_north": "北を上に戻す",
+  "search": "検索",
+  "layers": "レイヤー"  
 }

@@ -31,12 +31,12 @@ const STOP_ICON_24_24 = '/ha-tracker/images/stop24x24.png';
 const pad = n => String(n).padStart(2, '0');
 
 const combo = document.getElementById('combo-select');
-if (combo) 
+if (combo)
     combo.addEventListener('change', () => {
-		resetFilter();
-		showPositionsTab();
-	});
-	
+        resetFilter();
+        showPositionsTab();
+    });
+
 function showPositionsTab() {
     const positionsTabButton = document.querySelector('.tab-button[data-tab="positions"]');
     if (positionsTabButton) {
@@ -94,19 +94,19 @@ export async function initFilter() {
     await initRangePicker({
         onApplyFilter: () => applyFilter().catch(console.error)
     });
-	
-	document.addEventListener('positions:select-by-id', (ev) => {
-	  const id = ev?.detail?.uniqueId;
-	  if (id) {
-		try {
-		  handleFilterRowSelection(id);
-		} catch (e) {
-		  console.error('No se pudo seleccionar la fila desde el gráfico:', e);
-		}
-	  }
-	});
-	
-	initPositionsChart();
+
+    document.addEventListener('positions:select-by-id', (ev) => {
+        const id = ev?.detail?.uniqueId;
+        if (id) {
+            try {
+                handleFilterRowSelection(id);
+            } catch (e) {
+                console.error('No se pudo seleccionar la fila desde el gráfico:', e);
+            }
+        }
+    });
+
+    initPositionsChart();
 }
 
 function retintFilterList() {
@@ -125,22 +125,61 @@ function retintFilterList() {
     });
 }
 
+// === Ajuste de vista DESPUÉS de dibujar marcadores ===
+async function fitMapToFilter(positions, padding = 24) {
+  try {
+    if (!Array.isArray(positions) || positions.length === 0) return;
+    const coords = positions
+      .map(p => {
+        const lat = Number(p?.attributes?.latitude);
+        const lon = Number(p?.attributes?.longitude);
+        return (Number.isFinite(lat) && Number.isFinite(lon)) ? [lat, lon] : null;
+      })
+      .filter(Boolean);
+    if (coords.length === 0) return;
+
+    const Lg = window.L; // disponible en Leaflet y en el shim MapLibre
+    if (!Lg) return;
+
+    // Espera 1 frame para asegurar que los marcadores DOM están en el árbol
+    await new Promise(r => requestAnimationFrame(r));
+
+    if (coords.length === 1) {
+      // Un solo punto: céntralo y aplica un zoom razonable para ver los markers no-stop
+      const z = Math.max((map.getZoom?.() || 0), MIN_ZOOM_TO_SHOW);
+      map.setView(coords[0], z);
+      return;
+    }
+
+    const bounds = Lg.latLngBounds(coords);
+    // El shim de MapLibre y Leaflet aceptan el objeto bounds;
+    // padding por defecto 24 (coincide con el usado en el shim)
+    map.fitBounds(bounds, { padding });
+  } catch (e) {
+    console.warn('fitMapToFilter:', e);
+  }
+}
+
 export async function setFilter(payload) {
     try {
         showPositionsTab();
-		
-		// Back-compat: si payload es array, actúa como antes
+
+        // Back-compat: si payload es array, actúa como antes
         const positions = Array.isArray(payload) ? payload : (payload?.positions || []);
         const summary = Array.isArray(payload) ? null : (payload?.summary || null);
         const zones = Array.isArray(payload) ? null : (payload?.zones || null);
-		
+
         if (positions.length > 0) {
             console.log("Positions:", positions);
 
             await resetFilter(false, false);
-			
-			renderPositionsChart(positions);
-			
+
+            try {
+                map.closePopup?.();
+            } catch {}
+
+            renderPositionsChart(positions);
+
             // Primero cacheamos zonas para tener los colores listos al pintar
             if (zones) {
                 setCachedZoneStatsFromServer(zones);
@@ -158,14 +197,16 @@ export async function setFilter(payload) {
             // Por si acaso algún color cambia dinámicamente, retintamos todo
             retintFilterList();
 
-            await addFilterMarkers(positions);
+            // Ajusta la vista al conjunto de posiciones/marcadores
+            await fitMapToFilter(positions);
+
             await addRouteLine(positions, undefined, undefined, undefined, undefined, undefined, {
                 curved: true,
                 curveAlg: 'catmull',
                 subdivisions: 6,
                 alpha: 0.5
             });
-						
+            await addFilterMarkers(positions);
 
             updateExportFilterVisibility(true);
         } else {
@@ -602,12 +643,13 @@ async function applyFilter() {
     }
 
     try {
-		showWindowOverlay(t('running_filter'));
-		
+        window.__freezeUpdates = (window.__freezeUpdates || 0) + 1;
+        showWindowOverlay(t('running_filter'));
+
         // PRUEBAS
         //await fetchResetReverseGeocodeCache();
         //console.log("***************** fetchResetReverseGeocodeCache ****************");
-		
+
         await fetchFilteredPositions(selectedPersonId, startUTC, endUTCPlus1s);
     } catch (error) {
         console.error("Error during filter:", error);
@@ -615,6 +657,7 @@ async function applyFilter() {
             title: t('filter')
         });
     } finally {
+        window.__freezeUpdates = Math.max(0, (window.__freezeUpdates || 0) - 1);
         hideWindowOverlay();
     }
 }
@@ -622,7 +665,7 @@ async function applyFilter() {
 export async function resetFilter(resetCalendar = true, resetUsers = true) {
     if (resetCalendar)
         clearRangeTextbox();
-	
+
     if (resetUsers) {
         const sel = document.getElementById('person-select');
         if (sel) {
@@ -633,7 +676,7 @@ export async function resetFilter(resetCalendar = true, resetUsers = true) {
         }
     }
 
-    closeInfoPopup();    
+    closeInfoPopup();
 
     // Reiniciar posiciones
     document.getElementById('filter-table-body').innerHTML = '';
@@ -693,8 +736,8 @@ export async function resetFilter(resetCalendar = true, resetUsers = true) {
     // recalcula visibilidad del rango de fechas y oculta export SIEMPRE tras un reset
     updateDaterangeVisibility();
     updateExportFilterVisibility(false);
-	
-	clearPositionsChart();
+
+    clearPositionsChart();
 }
 
 async function toggleGroup(groupClass, btn) {
@@ -729,7 +772,7 @@ async function toggleGroup(groupClass, btn) {
     }
 }
 
-async function selectRow(row) {	
+async function selectRow(row) {
     const rows = document.querySelectorAll('#filter-table-body tr');
     rows.forEach(r => r.classList.remove('selected'));
     row.classList.add('selected');
@@ -745,8 +788,8 @@ async function selectRow(row) {
     const isStop = row.dataset.isStop === '1';
 
     openInfoPopup(latitude, longitude, lastUpdated, speed, isStop);
-	
-	setPositionsMarker(lastUpdated);
+
+    setPositionsMarker(lastUpdated);
 }
 
 function openInfoPopup(lat, lon, lastUpdated, speed, isStop = false) {
@@ -826,6 +869,29 @@ async function handleFilterRowSelection(uniqueId) {
     });
 }
 
+// === Espera a que las capas MapLibre existan y se pinten al menos 1 frame ===
+async function waitForMapLibrePaint(layerIds = []) {
+  const ml = map && map._ml;
+  if (!ml) return; // Leaflet: no hace falta esperar
+
+  // 1) Espera a que existan las capas/layers
+  for (let i = 0; i < 60; i++) { // ~3s máx
+    const ok = layerIds.every(id => id && ml.getLayer(id));
+    if (ok) break;
+    await new Promise(r => setTimeout(r, 50));
+  }
+
+  // 2) Espera a un render con esas capas ya presentes
+  await new Promise(resolve => {
+    try {
+      ml.once('render', resolve);
+      ml.triggerRepaint && ml.triggerRepaint();
+    } catch { resolve(); }
+  });
+  // 3) Frame extra por si hay gradiente/simplificación diferida
+  await new Promise(r => requestAnimationFrame(r));
+}
+
 async function addRouteLine(
     positions,
     colorStart = [0, 200, 0, 0.8],
@@ -834,46 +900,55 @@ async function addRouteLine(
     outlineWeight = 9,
     lineWeight = 6,
     opts = {}) {
-    const { curved = false, // activar curvas
-    curveAlg = 'catmull', // 'catmull' | 'chaikin'
-    subdivisions = 8, // densidad por tramo (más => más suave)
-    alpha = 0.5 // 0.5 centrípeta (mejor contra bucles)
+    const { curved = false,
+    curveAlg = 'catmull',
+    subdivisions = 8,
+    alpha = 0.5
      } = opts;
 
     if (!positions || positions.length < 2)
         return;
 
+    // coords [lat,lng]
     let coords = positions
-        .map(p => (p.attributes.latitude && p.attributes.longitude)
+        .map(p => (p?.attributes?.latitude && p?.attributes?.longitude)
              ? [p.attributes.latitude, p.attributes.longitude]
              : null)
         .filter(Boolean);
     if (coords.length < 2)
         return;
 
-    // === curva que pasa por los puntos ===
-    if (curved) {
-        if (curveAlg === 'catmull') {
-            // límite de rendimiento: evita explotar en miles de segmentos
-            const maxSegs = 4000;
-            const desiredSegs = (coords.length - 1) * subdivisions;
-            const safeSubs = desiredSegs > maxSegs
-                 ? Math.max(1, Math.floor(maxSegs / Math.max(coords.length - 1, 1)))
-                 : subdivisions;
-
-            coords = catmullRomSpline(coords, safeSubs, alpha);
-        }
+    // Curva (cap de salida para evitar rutas infinitas)
+    if (curved && curveAlg === 'catmull') {
+        const subs = Math.max(3, subdivisions);
+        const MAX_SPLINE_POINTS = 6000;
+        coords = catmullRomSplineCapped(coords, subs, alpha, MAX_SPLINE_POINTS);
     }
 
-    // …(lo demás igual que ya tienes) limpiar, crear panes, etc.
-    if (window.routeLineSegments) {
-        window.routeLineSegments.forEach(seg => {
+    // === Heurística de “ruta pesada” ===
+    const HEAVY_THRESHOLD = 5000;
+    const isHeavy = coords.length >= HEAVY_THRESHOLD;
+
+    // Simplificación: rápido para primer frame, luego refinamos
+    const SIMPLIFY_FAST = 3.0;
+    const SIMPLIFY_FINAL = 0.5;
+    const OUTLINE_SIMPL = isHeavy ? 1.5 : 0.8;
+
+    // Limpiar anteriores
+    if (Array.isArray(window.routeLineSegments)) {
+        for (const seg of window.routeLineSegments) {
             try {
                 map.removeLayer(seg);
             } catch {}
-        });
+        }
     }
     window.routeLineSegments = [];
+    if (window._routeColorLine) {
+        try {
+            map.removeLayer(window._routeColorLine);
+        } catch {}
+        window._routeColorLine = null;
+    }
     if (window.routeOutline) {
         try {
             map.removeLayer(window.routeOutline);
@@ -881,6 +956,7 @@ async function addRouteLine(
         window.routeOutline = null;
     }
 
+    // Panes
     if (!map.getPane('routeOutline'))
         map.createPane('routeOutline');
     if (!map.getPane('routeColor'))
@@ -888,72 +964,248 @@ async function addRouteLine(
     map.getPane('routeOutline').style.zIndex = 390;
     map.getPane('routeColor').style.zIndex = 391;
 
-    const n = coords.length - 1;
-    for (let i = 0; i < n; i++) {
-        const t = i / n;
-        const r = Math.round(colorStart[0] + t * (colorEnd[0] - colorStart[0]));
-        const g = Math.round(colorStart[1] + t * (colorEnd[1] - colorStart[1]));
-        const b = Math.round(colorStart[2] + t * (colorEnd[2] - colorStart[2]));
-        const a = colorStart[3] + t * (colorEnd[3] - colorStart[3]);
-        const color = `rgba(${r},${g},${b},${a})`;
+    // Renderer Canvas (si Leaflet real)
+    if (!window._routeRenderer && typeof L?.canvas === 'function') {
+        window._routeRenderer = L.canvas({
+            padding: 0.5
+        });
+    }
 
-        const p0 = coords[i],
-        p1 = coords[i + 1];
+    const supportsGradient = !!map?._ml;
+    const ml = map._ml;
 
-        const segmentOutline = L.polyline([p0, p1], {
-            color: outlineColor,
-            weight: outlineWeight,
-            opacity: 1,
-            lineCap: 'round',
-            lineJoin: 'round',
-            pane: 'routeOutline',
-        }).addTo(map);
-        window.routeLineSegments.push(segmentOutline);
+    // Mantener orden (color por encima)
+    function ensureOrder() {
+        try {
+            if (!ml)
+                return;
+            if (window.routeOutline?.__ml_id)
+                ml.moveLayer(window.routeOutline.__ml_id);
+            if (window._routeColorLine?.__ml_id)
+                ml.moveLayer(window._routeColorLine.__ml_id);
+            if (Array.isArray(window.routeLineSegments)) {
+                for (const seg of window.routeLineSegments) {
+                    if (seg?.__ml_id)
+                        ml.moveLayer(seg.__ml_id);
+                }
+            }
+        } catch {}
+    }
+    if (ml && !window._routeOrderHooked) {
+        try {
+            ml.on('idle', ensureOrder);
+            window._routeOrderHooked = true;
+        } catch {}
+    }
 
-        const segmentColor = L.polyline([p0, p1], {
-            color,
+    // Colores
+    const c0 = `rgba(${colorStart[0]},${colorStart[1]},${colorStart[2]},${colorStart[3]})`;
+    const c1 = `rgba(${colorEnd[0]},${colorEnd[1]},${colorEnd[2]},${colorEnd[3]})`;
+    const mid = `rgba(${
+        Math.round((colorStart[0] + colorEnd[0]) / 2)
+},${
+        Math.round((colorStart[1] + colorEnd[1]) / 2)
+},${
+        Math.round((colorStart[2] + colorEnd[2]) / 2)
+},${
+        Math.round((colorStart[3] + colorEnd[3]) / 2)
+})`;
+
+    // === 1) OUTLINE: lo creamos ya, pero OCULTO (opacity: 0) ===
+    window.routeOutline = L.polyline(coords, {
+        color: outlineColor,
+        weight: outlineWeight,
+        opacity: 0, // <-- clave: no mostrarlo aún
+        lineCap: 'round',
+        lineJoin: 'round',
+        pane: 'routeOutline',
+        renderer: window._routeRenderer || undefined,
+        simplifyPx: OUTLINE_SIMPL,
+        simplifyHardCap: 10000
+    }).addTo(map);
+
+    // === 2) COLOR: pinta INMEDIATO en sólido (mid). Gradiente y refinado después. ===
+    if (supportsGradient) {
+        // Capa única de color
+        window._routeColorLine = L.polyline(coords, {
+            color: mid, // sólido instantáneo
             weight: lineWeight,
             opacity: 1,
             lineCap: 'round',
             lineJoin: 'round',
-            pane: 'routeColor'
+            pane: 'routeColor',
+            renderer: window._routeRenderer || undefined,
+            simplifyPx: isHeavy ? SIMPLIFY_FAST : SIMPLIFY_FINAL,
+            simplifyHardCap: isHeavy ? 8000 : 12000
         }).addTo(map);
-        window.routeLineSegments.push(segmentColor);
-    }
 
-    map.fitBounds(L.latLngBounds(coords));
+        // Ya hay color en pantalla: muestra el outline y asegura orden
+        window.routeOutline.setStyle({
+            opacity: 1
+        });
+        ensureOrder();
+
+    // ✅ Espera a que las capas (línea + outline) existan y se pinten al menos un frame
+    await waitForMapLibrePaint([
+      window._routeColorLine?.__ml_id,
+      window.routeOutline?.__ml_id
+    ]);
+
+        // Aplica gradiente en el SIGUIENTE frame (evita bloquear el primer pintado)
+        requestAnimationFrame(() => {
+            try {
+                const gradient = ['interpolate', ['linear'], ['line-progress'], 0, c0, 1, c1];
+                window._routeColorLine.setStyle({
+                    lineGradient: gradient
+                });
+                ensureOrder();
+            } catch (e) {
+                console.warn('lineGradient no disponible, se mantiene color sólido:', e);
+            }
+
+            // Refinado (solo si es pesada)
+            if (isHeavy) {
+                requestAnimationFrame(() => {
+                    try {
+                        window._routeColorLine.options.simplifyPx = SIMPLIFY_FINAL;
+                        window._routeColorLine.setLatLngs(coords); // fuerza recomputar
+                        ensureOrder();
+                    } catch {}
+                });
+            }
+        });
+
+        // Referencia común
+        window.routeLineSegments = [window._routeColorLine];
+
+    } else {
+        // === Fallback (Leaflet puro): segmentos por “buckets” ===
+        const nPts = coords.length;
+        if (nPts >= 2) {
+            const BUCKETS = Math.min(200, Math.max(8, Math.floor(nPts / 50)));
+            for (let b = 0; b < BUCKETS; b++) {
+                const t = b / (BUCKETS - 1);
+                const r = Math.round(colorStart[0] + t * (colorEnd[0] - colorStart[0]));
+                const g = Math.round(colorStart[1] + t * (colorEnd[1] - colorStart[1]));
+                const bcol = Math.round(colorStart[2] + t * (colorEnd[2] - colorStart[2]));
+                const acol = (colorStart[3] + t * (colorEnd[3] - colorStart[3]));
+                const bucketColor = `rgba(${r},${g},${bcol},${acol})`;
+
+                const i0 = Math.floor(b * (nPts - 1) / BUCKETS);
+                const i1 = Math.floor((b + 1) * (nPts - 1) / BUCKETS);
+                const slice = coords.slice(i0, i1 + 1);
+                if (slice.length >= 2) {
+                    const seg = L.polyline(slice, {
+                        color: bucketColor,
+                        weight: lineWeight,
+                        opacity: 1,
+                        lineCap: 'round',
+                        lineJoin: 'round',
+                        pane: 'routeColor',
+                        renderer: window._routeRenderer || undefined,
+                        simplifyPx: isHeavy ? SIMPLIFY_FAST : SIMPLIFY_FINAL,
+                        simplifyHardCap: isHeavy ? 8000 : 12000
+                    }).addTo(map);
+                    window.routeLineSegments.push(seg);
+                }
+            }
+        }
+
+        // Ya hay color: muestra outline y asegura orden
+        window.routeOutline.setStyle({
+            opacity: 1
+        });
+        ensureOrder();
+
+        // Refinado en siguiente frame para rutas pesadas
+        if (isHeavy) {
+            requestAnimationFrame(() => {
+                try {
+                    // Rehacer segmentos con más detalle
+                    for (const seg of window.routeLineSegments) {
+                        try {
+                            map.removeLayer(seg);
+                        } catch {}
+                    }
+                    window.routeLineSegments = [];
+
+                    const nPts2 = coords.length;
+                    const BUCKETS2 = Math.min(200, Math.max(8, Math.floor(nPts2 / 50)));
+                    for (let b = 0; b < BUCKETS2; b++) {
+                        const t = b / (BUCKETS2 - 1);
+                        const r = Math.round(colorStart[0] + t * (colorEnd[0] - colorStart[0]));
+                        const g = Math.round(colorStart[1] + t * (colorEnd[1] - colorStart[1]));
+                        const bcol = Math.round(colorStart[2] + t * (colorEnd[2] - colorStart[2]));
+                        const acol = (colorStart[3] + t * (colorEnd[3] - colorStart[3]));
+                        const bucketColor = `rgba(${r},${g},${bcol},${acol})`;
+
+                        const i0 = Math.floor(b * (nPts2 - 1) / BUCKETS2);
+                        const i1 = Math.floor((b + 1) * (nPts2 - 1) / BUCKETS2);
+                        const slice = coords.slice(i0, i1 + 1);
+                        if (slice.length >= 2) {
+                            const seg = L.polyline(slice, {
+                                color: bucketColor,
+                                weight: lineWeight,
+                                opacity: 1,
+                                lineCap: 'round',
+                                lineJoin: 'round',
+                                pane: 'routeColor',
+                                renderer: window._routeRenderer || undefined,
+                                simplifyPx: SIMPLIFY_FINAL,
+                                simplifyHardCap: 12000
+                            }).addTo(map);
+                            window.routeLineSegments.push(seg);
+                        }
+                    }
+                    ensureOrder();
+                } catch {}
+            });
+        }
+    }
 }
 
-// Curva Catmull-Rom centrípeta que INTERPOLA los puntos (pasa por ellos)
-function catmullRomSpline(latlngs, subdivisions = 8, alpha = 0.5) {
+// Catmull-Rom centrípeta con reparto por SEGMENTO del presupuesto de salida.
+// Siempre asegura al menos 1 punto interior por segmento (curva visible).
+function catmullRomSplineCapped(latlngs, subdivisions = 6, alpha = 0.5, maxOut = 6000) {
     const eps = 1e-6;
     const pts = latlngs
         .map(p => [Number(p[0]), Number(p[1])])
         .filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
-    if (pts.length < 2)
+    const n = pts.length;
+    if (n < 2)
         return pts;
 
+    // Reparto del presupuesto:
+    // Total de puntos si añadiésemos q interiores por segmento = n + q*(n-1).
+    // Queremos n + q*(n-1) <= maxOut  =>  q <= (maxOut - n)/(n-1).
+    const segs = n - 1;
+    const maxInteriorGlobal = Math.max(0, maxOut - n);
+    let q = Math.floor(maxInteriorGlobal / segs); // interiores por segmento
+    q = Math.min(subdivisions, q);
+    if (q < 2)
+        q = 2; // ¡Clave!: al menos 2 interior por segmento para que haya curva
+
     const out = [];
+    out.push(pts[0]);
+
     const lerp = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
     const td = (A, B) => Math.pow(Math.hypot(B[0] - A[0], B[1] - A[1]) || eps, alpha);
 
-    out.push(pts[0]); // incluye el primer punto exactamente
-
-    for (let i = 0; i < pts.length - 1; i++) {
+    for (let i = 0; i < segs; i++) {
         const p0 = i > 0 ? pts[i - 1] : pts[i];
         const p1 = pts[i];
         const p2 = pts[i + 1];
-        const p3 = i + 2 < pts.length ? pts[i + 2] : pts[i + 1];
+        const p3 = i + 2 < n ? pts[i + 2] : pts[i + 1];
 
         const t0 = 0;
         const t1 = t0 + td(p0, p1);
         const t2 = t1 + td(p1, p2);
         const t3 = t2 + td(p2, p3);
 
-        // generamos puntos entre p1..p2; j=1..subdivisions para no duplicar p1
-        for (let j = 1; j <= subdivisions; j++) {
-            const t = t1 + (j * (t2 - t1)) / subdivisions;
-
+        // Emitimos q puntos interiores uniformemente entre p1..p2
+        // (usamos q+1 divisiones => saltamos j=1..q).
+        for (let j = 1; j <= q; j++) {
+            const t = t1 + (j * (t2 - t1)) / (q + 1);
             const A1 = lerp(p0, p1, (t - t0) / (t1 - t0 + eps));
             const A2 = lerp(p1, p2, (t - t1) / (t2 - t1 + eps));
             const A3 = lerp(p2, p3, (t - t2) / (t3 - t2 + eps));
@@ -966,11 +1218,12 @@ function catmullRomSpline(latlngs, subdivisions = 8, alpha = 0.5) {
                 out.push(C);
         }
 
-        // Asegura que p2 exacto queda incluido (interpolación estricta)
+        // Asegura pasar por p2 (nudo)
         const last = out[out.length - 1];
         if (!last || Math.hypot(p2[0] - last[0], p2[1] - last[1]) > eps)
             out.push(p2);
     }
+
     return out;
 }
 

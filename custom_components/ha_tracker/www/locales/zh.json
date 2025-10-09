@@ -100,5 +100,10 @@
   "show_on_map": "在地图上显示",
   "zone_name_ha": "Home Assistant 中的区域名称",
   "column_map": "地图",
-  "column_type": "类型"  
+  "column_type": "类型",
+  "zoom_in": "放大",
+  "zoom_out": "缩小",
+  "reset_to_north": "将朝向重置为正北",
+  "search": "搜索",
+  "layers": "图层"  
 }

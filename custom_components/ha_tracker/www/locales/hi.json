@@ -100,5 +100,10 @@
   "show_on_map": "मानचित्र पर दिखाएँ",
   "zone_name_ha": "Home Assistant में ज़ोन का नाम",
   "column_map": "मानचित्र",
-  "column_type": "प्रकार"  
+  "column_type": "प्रकार",
+  "zoom_in": "ज़ूम इन",
+  "zoom_out": "ज़ूम आउट",
+  "reset_to_north": "अभिविन्यास को उत्तर पर रीसेट करें",
+  "search": "खोजें",
+  "layers": "परतें"  
 }

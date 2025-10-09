@@ -35,21 +35,92 @@ async function ensureHtml2Canvas() {
   await loadScriptOnce(HTML2CANVAS_CDN);
 }
 
-// saca PNG del div #map
+// Captura compuesta para PDF: MapLibre (GL) o Leaflet (canvas+tiles)
 async function captureMapPngDataURL() {
-  await ensureHtml2Canvas();
-  const el = document.getElementById('map');
-  if (!el) return null;
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return null;
 
-  // escala 2x para que se vea nítido en el PDF
-  const canvas = await window.html2canvas(el, {
-    useCORS: true,
+  // ¿MapLibre (GL) o Leaflet?
+  const isMapLibre = !!mapEl.querySelector('.maplibregl-canvas');
+  const lfCanvas   = mapEl.querySelector('.leaflet-pane canvas');
+
+  // Asegura que el frame está pintado
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  // ================= MAPLIBRE (GL): base = canvas GL, overlay = marcadores DOM =================
+  if (isMapLibre) {
+    const glCanvas = mapEl.querySelector('.maplibregl-canvas') || mapEl.querySelector('canvas');
+
+    let baseUrl = null;
+    if (glCanvas) {
+      try { baseUrl = glCanvas.toDataURL('image/png'); } catch (e) {}
+    }
+
+    // Overlay DOM (sin canvas GL para no duplicar)
+    await ensureHtml2Canvas();
+    const scale = glCanvas && mapEl.clientWidth
+      ? Math.max(1, Math.round(glCanvas.width / mapEl.clientWidth))
+      : 2;
+
+    const overlayCanvas = await window.html2canvas(mapEl, {
+      backgroundColor: null,
+      scale,
+      logging: false,
+      useCORS: true,
+      ignoreElements: (el) => el.tagName === 'CANVAS' && mapEl.contains(el),
+    });
+
+    if (!baseUrl) return overlayCanvas.toDataURL('image/png');
+
+    // Composición
+    const w = glCanvas ? glCanvas.width  : overlayCanvas.width;
+    const h = glCanvas ? glCanvas.height : overlayCanvas.height;
+    const out = document.createElement('canvas');
+    out.width = w; out.height = h;
+    const ctx = out.getContext('2d');
+
+    await new Promise(res => { const img = new Image(); img.onload = () => { ctx.drawImage(img, 0, 0, w, h); res(); }; img.onerror = res; img.src = baseUrl; });
+    ctx.drawImage(overlayCanvas, 0, 0, w, h);
+    return out.toDataURL('image/png');
+  }
+
+  // ================= LEAFLET: incluir CANVAS + TILES (si CORS lo permite) =================
+  await ensureHtml2Canvas();
+
+  // Espera a que los tiles estén cargados (mejor nitidez y menos parches)
+  const tiles = Array.from(mapEl.querySelectorAll('img.leaflet-tile'));
+  await Promise.all(tiles.map(img => img?.complete ? Promise.resolve()
+    : new Promise(res => { img.onload = img.onerror = res; })));
+
+  const scale = lfCanvas && mapEl.clientWidth
+    ? Math.max(1, Math.round(lfCanvas.width / mapEl.clientWidth))
+    : 2;
+
+  // 1) Intento con tiles incluidos (fondo visible)
+  try {
+    const full = await window.html2canvas(mapEl, {
+      backgroundColor: '#ffffff',
+      scale,
+      logging: false,
+      useCORS: true, // importante: junto con crossOrigin:true en los tileLayers
+      // no ignoramos nada: queremos tiles + canvas + marcadores
+    });
+    return full.toDataURL('image/png');
+  } catch (e) {
+    console.warn('html2canvas con tiles falló (posible CORS). Reintento sin tiles:', e);
+  }
+
+  // 2) Fallback: SIN tiles (se verá ruta + marcadores, como antes)
+  const overlayOnly = await window.html2canvas(mapEl, {
     backgroundColor: '#ffffff',
+    scale,
     logging: false,
-    scale: 2
+    useCORS: true,
+    ignoreElements: (el) => el.tagName === 'IMG' && el.classList.contains('leaflet-tile'),
   });
-  return canvas.toDataURL('image/jpeg', 0.92);
+  return overlayOnly.toDataURL('image/png');
 }
+
 
 function blendWithWhite(hex, alpha = DEFAULT_ALPHA) {
     const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
@@ -275,7 +346,7 @@ export async function exportPositionsToPdf({
       const imgProps = doc.getImageProperties(dataUrl);
       const targetW = L.tableWidth;
       const targetH = (imgProps.height * targetW) / imgProps.width;
-      doc.addImage(dataUrl, 'JPEG', L.left, y, targetW, targetH);
+      doc.addImage(dataUrl, 'PNG', L.left, y, targetW, targetH);
       y += targetH + 8; // separación inferior
     }
   } catch (e) {
