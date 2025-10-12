@@ -246,12 +246,18 @@ function injectUIOverridesCSS() {
 // --- Traducir títulos/aria-label de los botones nativos de navegación ---
 function _localizeNavTitles() {
     const root = _ml?.getContainer?.();
-    if (!root) return;
+    if (!root)
+        return;
     const q = (sel) => root.querySelector(sel);
-    const apply = (el, s) => { if (!el) return; el.title = s; el.setAttribute('aria-label', s); };
-    apply(q('.maplibregl-ctrl-zoom-in'),  t('zoom_in'));
+    const apply = (el, s) => {
+        if (!el)
+            return;
+        el.title = s;
+        el.setAttribute('aria-label', s);
+    };
+    apply(q('.maplibregl-ctrl-zoom-in'), t('zoom_in'));
     apply(q('.maplibregl-ctrl-zoom-out'), t('zoom_out'));
-    apply(q('.maplibregl-ctrl-compass'),  t('reset_to_north'));
+    apply(q('.maplibregl-ctrl-compass'), t('reset_to_north'));
 }
 
 async function ensureMapLibreLoaded() {
@@ -716,8 +722,8 @@ export async function initMap() {
     _ml.addControl(new maplibregl.NavigationControl({
             visualizePitch: true
         }), 'top-left');
-	_localizeNavTitles();
-	
+    _localizeNavTitles();
+
     // Botón BUSCAR (slot inline a la derecha). El control como tal se crea ya.
     _searchCtlRef = new SearchToggleControl();
     _ml.addControl(_searchCtlRef, 'top-left');
@@ -1106,7 +1112,7 @@ export async function initMap() {
     // Objeto map “tipo Leaflet”
     map = {
         getZoom: () => _ml.getZoom(),
-        setView: (pos, zoom = null) => {
+        setView: (pos, zoom = null, opts = {}) => {
             let lat,
             lng;
             if (Array.isArray(pos))
@@ -1123,7 +1129,11 @@ export async function initMap() {
             };
             if (zoom != null)
                 o.zoom = clampZoom(zoom);
-            _ml.easeTo(o);
+            if (opts?.animate === false) {
+                _ml.jumpTo(o); // sin animación
+            } else {
+                _ml.easeTo(o); // animado como antes
+            }
         },
         fitBounds: (bbox, opts = {}) => {
             let sw,
@@ -1138,9 +1148,12 @@ export async function initMap() {
                 ne = [n.lng, n.lat];
             } else
                 return;
-            _ml.fitBounds([sw, ne], {
+            const mlOpts = {
                 padding: opts?.padding || 24
-            });
+            };
+            if (opts?.animate === false)
+                mlOpts.duration = 0;
+            _ml.fitBounds([sw, ne], mlOpts);
         },
         fitWorld: () => _ml.fitBounds([[-180, -85], [180, 85]], {
             padding: 24

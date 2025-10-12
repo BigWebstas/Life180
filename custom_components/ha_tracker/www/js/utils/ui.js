@@ -31,9 +31,6 @@ export async function loadUI() {
             filterContainer.classList.remove('hidden');
         }
 
-        // Configura observadores al cargar la página
-        observeTableContainers();
-
         // Garantizar que todo el contenido esté oculto hasta que las hojas de estilo y el DOM estén listos
         if (!document.body.classList.contains('loaded')) {
             document.body.classList.add('loaded');
@@ -42,11 +39,6 @@ export async function loadUI() {
         console.error("Error during load:", error);
     }
 }
-
-// recalcular en redimensionado
-window.addEventListener('resize', () => {
-    document.querySelectorAll('.table-container').forEach(adjustTableContainerHeight);
-});
 
 export async function updateUI() {
     //ocultar VISITAS en FILTRO-> ZONAS
@@ -195,80 +187,6 @@ async function toggleContainer() {
         }
     } catch (error) {
         console.error("Error during toggleContainer:", error);
-    }
-}
-
-async function adjustTableContainerHeight(container) {
-  try {
-    // Evita tocar alturas si el contenedor está oculto
-    const style = getComputedStyle(container);
-    const isHidden = style.display === 'none' || container.offsetParent === null;
-    if (isHidden) return;
-
-    const viewportHeight = window.innerHeight;
-    const containerTop = container.getBoundingClientRect().top;
-
-    // Reserva espacio para el gráfico solo en Positions
-    let reserved = 0;
-    if (container.closest('#positions')) {
-      const chart = document.getElementById('positions-chart');
-      if (chart) reserved = (chart.offsetHeight || 50) + 10;
-    }
-
-    const newHeight = Math.max(viewportHeight - containerTop - 20 - reserved, 150);
-    if (Math.abs(container.clientHeight - newHeight) > 2) {
-      requestAnimationFrame(() => { container.style.height = `${newHeight}px`; });
-    }
-  } catch (error) {
-    console.error("Error adjusting table height:", error);
-  }
-}
-
-async function observeTableContainers() {
-    try {
-        const containers = document.querySelectorAll('.table-container');
-        const parentContainer = document.getElementById('forms-container'); // Contenedor general
-
-        // Crear ResizeObserver evitando loops
-        const resizeObserver = new ResizeObserver(entries => {
-            requestAnimationFrame(() => { // Evita ciclos infinitos
-                entries.forEach(entry => adjustTableContainerHeight(entry.target));
-            });
-        });
-
-        // Crear IntersectionObserver para detectar cuando una tabla aparece
-        const intersectionObserver = new IntersectionObserver(entries => {
-            requestAnimationFrame(() => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting)
-                        adjustTableContainerHeight(entry.target);
-                });
-            });
-        });
-
-        // Crear MutationObserver para detectar cambios en el DOM (cuando desaparecen elementos)
-        const mutationObserver = new MutationObserver(() => {
-            requestAnimationFrame(() => {
-                document.querySelectorAll('.table-container').forEach(adjustTableContainerHeight);
-            });
-        });
-
-        // Aplicar observadores a cada tabla
-        containers.forEach(container => {
-            intersectionObserver.observe(container);
-            resizeObserver.observe(container);
-        });
-
-        // Aplicar MutationObserver al contenedor padre
-        if (parentContainer) {
-            mutationObserver.observe(parentContainer, {
-                childList: true,
-                subtree: true
-            });
-        }
-
-    } catch (error) {
-        console.error("Error in observeTableContainers:", error);
     }
 }
 

@@ -91,6 +91,7 @@
           <div class="tabs">
             <button class="tab-button active" data-tab="positions" data-i18n="positions">Positions</button>
             <button class="tab-button" data-tab="summary" data-i18n="summary">Summary</button>
+			<button class="tab-button" data-tab="chart" data-i18n="chart">Chart</button>
           </div>
           <div id="tab-content">
             <div id="positions" class="tab active">
@@ -111,9 +112,6 @@
                   </tbody>
                 </table>
               </div>
-			  
-			  <div id="positions-chart" class="chart-slot" aria-label="Chart area"></div>
-			  
             </div>
             <div id="summary" class="tab">
               <div class="table-container">
@@ -153,7 +151,7 @@
                     </tr>					
                   </tbody>
                 </table>
-                <table id="summary-zones-table">
+                <table id="summary-zones-table" class="fixed-table">
                   <thead>
                     <tr>
                       <th data-i18n="zone">Zone</th>
@@ -169,6 +167,11 @@
                 </table>         
               </div>
             </div>
+		    <div id="chart" class="tab">
+			  <div class="table-container">
+			    <div id="positions-chart" class="chart-slot" aria-label="Chart area"></div>
+			  </div>
+		    </div>			
           </div>
         </div>
       </div>

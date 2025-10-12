@@ -5,7 +5,7 @@
   "end_date": "Enddatum",
   "apply_filter": "Filter anwenden",
   "positions": "Positionen",
-  "summary": "Zusammenfassung",
+  "summary": "Summary",
   "time": "Zeit",
   "speed": "Geschwindigkeit",
   "zone": "Zone",
@@ -105,5 +105,6 @@
   "zoom_out": "Verkleinern",
   "reset_to_north": "Ausrichtung nach Norden zurücksetzen",
   "search": "Suchen",
-  "layers": "Ebenen"  
+  "layers": "Ebenen",
+  "chart": "Diagramm"
 }

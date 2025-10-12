@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 
+## [0.0.35] - 2025-10-12
+
+### Changes
+- In the filter screen we take the chart out of the positions tab and move it to its own tab
+
+### Fixed
+- Centering map elements for large screens
+- If one of the last positions in the filter screen was selected, the scroll would move when changing tabs.
+
+
 ## [0.0.34] - 2025-10-09
 
 ### Changes

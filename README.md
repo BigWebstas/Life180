@@ -326,14 +326,26 @@ To configure the application: [here's a link](https://www.traccar.org/client-con
 In Traccar server you need to create two **Computed Attributes**:
   - For **Battery** with: 
     - Description: "batteryLevel"
-	- Attribute: "Battery level"
-	- Expression: "batteryLevel"
+    - Attribute: "Battery level"
+    - Expression: "batteryLevel"
   - For **Speed** with:
     - Description: "speedMps"
-	- Attribute: "Speed"
-	- Expression: "speed * 0.514444"
+    - Attribute: "Speed"
+    - Expression: "speed * 0.514444"
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-computed-attributes.png" alt="Traccar Server Computed Attributes" style="width: 300px; max-width: 100%; height: auto;" />
+  <br>
+  <em>Traccar Server Computed Attributes</em>
+</div>
 	
-These Computed Attributes need to be assigned to groups and/or devices in Traccar Server.
+These Computed Attributes need to be assigned to **groups** and/or **devices** in Traccar Server.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-groups.png" alt="Traccar Server Groups" style="width: 300px; max-width: 100%; height: auto;" />
+  <br>
+  <em>Traccar Server Groups</em>
+</div>
 	
 The first thing you need to do in Home Assistant is install the **Traccar Server integration**:
   - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
@@ -341,7 +353,13 @@ The first thing you need to do in Home Assistant is install the **Traccar Server
   - Complete the fields with those of the Traccar server
   - Press **Send** button and integration will be created
 
-In the **Traccar Server Options** it is necessary to add two **Custom Attributes**: **batteryLevel** and **speedMps**
+In **"Settings &rarr; Devices and Services &rarr; Traccar Server &rarr; Options"** it is necessary to add two **Custom Attributes**: **batteryLevel** and **speedMps**
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-options.png" alt="Traccar Server Options" style="width: 300px; max-width: 100%; height: auto;" />
+  <br>
+  <em>Traccar Server Options</em>
+</div>
   
 - In Home Assistant, you'll find connected devices under **"Settings &rarr; Devices & services &rarr; Traccar Server"**
   - There you can change its name in Home Assistant
@@ -405,13 +423,16 @@ In the **Traccar Server Options** it is necessary to add two **Custom Attributes
 
 A filter applied to a user within a specific date range displays positions grouped by zone and a summary of the most relevant data.
 
-There are **two tabs** on this screen:
-- The **first tab** shows the list of **filtered positions** grouped by the zone in which they were found.
-  - In the table with the positions they are grouped by the name of the zone in which they are located and can be expanded by clicking on the triangle icon on the left. 
-  - You can filter the positions of a group by clicking on the filter icon to the right of the table. 
-  - In this table, you'll also see the **stops** made. To correctly identify them, it's **very important** to adjust the **Speed ​​for stop** value in the server options.
-  - Below the table with the positions is a **graph** that runs through the filter from start to finish, showing the zones visited by color, movement (green)/stationary (red), and speed. It also shows the selected row with a vertical blue line. If you click on the graph, the table of positions shows the selected row.
-- The **second tab** contains a **summary** of the most relevant **statistics** for the filter and for each zone visited.
+There are **three tabs** on this screen:
+  - The **first tab** shows the list of **filtered positions** grouped by the zone in which they were found.
+    - In the table with the positions they are grouped by the name of the zone in which they are located and can be expanded by clicking on the triangle icon on the left. 
+    - You can filter the positions of a group by clicking on the filter icon to the right of the table. 
+    - In this table, you'll also see the **stops** made. To correctly identify them, it's **very important** to adjust the **Speed ​​for stop** value in the server options.
+  - The **second tab** contains a **summary** of the most relevant **statistics** for the filter and for each zone visited.
+  - The **third tab** displays a chart by day, divided into 6-hour segments.
+    - At the top of each chart, the color of the area visited is shown, and at the bottom, it's red if the time has been stopped or green if the time has been moving. Additionally, the speed graph is displayed in dark green. 
+    - The position selected in the first tab is shown with a blue vertical line in the chart.
+    - Clicking on the chart takes you to that position within the Positions tab.
 
 On the **map**, the filter is represented by:
 - The route with the filter positions on the map appears in green at the start and blue at the end.  
@@ -438,6 +459,13 @@ In addition, there is the possibility of **exporting** the filters made to vario
   <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/filter-summary.png" alt="HA Tracker summary screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the summary screen</em>
+</div>
+<br>
+<br>
+<div align="center">
+  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/filter-chart.png" alt="HA Tracker chart screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <br>
+  <em>This is the chart screen</em>
 </div>
 
 ---

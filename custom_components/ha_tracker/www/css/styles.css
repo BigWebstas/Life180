@@ -41,7 +41,7 @@
 
   --combo-min-h: 40px; /* altura mínima común para combos */
   --combo-w: min(260px, 90vw);
-  
+
   --fp-width-lg: 340px;
 }
 
@@ -64,17 +64,31 @@ body.loaded {
 #filter-container,
 #zones-container,
 #persons-container {
-  flex-grow: 1;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;      /* ← rellena alto disponible */
+  min-height: 0;       /* ← clave para permitir scroll del hijo */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   border-radius: 8px;
   background-color: #fff;
   padding: 10px;
   box-sizing: border-box;
   width: 100%;
-  height: calc(100% - 60px);
-  margin: 0 0 auto 0;
+  margin: 0;
+  /* sin height calc() */
+  /* sin margin-bottom:auto */
+  padding-bottom: 10px;    
+}
+
+/* Cuando el HTML pone style="display:block" en la pantalla visible,
+   forzamos que esa pantalla sea flex (sin desocultar las ocultas con display:none) */
+#forms-container > #persons-container[style*="display: block"],
+#forms-container > #zones-container[style*="display: block"],
+#forms-container > #filter-container[style*="display: block"]{
+  display: flex !important;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 #zones-container .table-container,
@@ -83,9 +97,6 @@ body.loaded {
   overflow-x: hidden;
   overflow-y: auto;
 }
-
-#zones-container,
-#persons-container { display: none; } /* Oculto por defecto */
 
 /* ===== Tablas personas / zonas ===== */
 #persons-table-body td {
@@ -125,15 +136,10 @@ body.loaded {
   background-color: color-mix(in srgb, #4a90e2 70%, white 30%) !important;
 }
 
-/* Altura fija para encabezados de tabla de resumen */
-#summary-zones-table thead th { height: 30px !important; }
-
 /* ===== Mapa ===== */
 #map {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
   z-index: 0;
 }
 
@@ -151,12 +157,13 @@ body.loaded {
   z-index: 1000;
   transition: transform 0.3s ease-in-out;
   transform: translateX(0);
+  display: flex;           /* ← columna flex */
+  flex-direction: column;
+  min-height: 0;           /* ← para que las pantallas hijas puedan scrollear */
 }
 #forms-container.hidden { transform: translateX(100%); }
 
 /* ===== Responsive panel: en pantallas pequeñas, oculto por defecto ===== */
-/* Panel lateral: en móvil (≤600px) está oculto por defecto.
-   Se muestra únicamente cuando añadimos .visible desde JS. */
 @media (max-width: 600px) {
   #forms-container {
     transform: translateX(100%);   /* fuera de pantalla (oculto) */
@@ -205,19 +212,6 @@ body.loaded {
 }
 
 /* ===== Selects nativos con icono (fallback si no se usa UI personalizada) ===== */
-#person-select:hover,
-#export-filter:hover { cursor: pointer; }
-
-#person-select,
-#export-filter {
-  font-size: 14px;
-  height: 40px;
-  width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
-  text-align: center;
-}
 
 #person-select{
   background-image: url("data:image/svg+xml;utf8,\
@@ -269,22 +263,23 @@ body.loaded {
 
 .table-container {
   height: auto;
-  overflow-y: auto;
-  border: 1px solid var(--brand-1);
+  border: 1px solid var(--brand-1);   /* “línea azul” */
   box-sizing: border-box;
-  flex: 1;
   display: flex;
   flex-direction: column;
   border-top: none;
   overflow-x: hidden;
   border-radius: 0 0 8px 8px;
+  /* Ajuste auto por flex (sin JS) */
+  flex: 1 1 auto;
+  overflow-y: auto;
 }
 
 /* ===== Tablas (base) ===== */
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.fixed-table { table-layout: fixed; width: 100%; }
+.fixed-table { width: 100%; }
 
-th {
+.fixed-table thead th{
   background: var(--brand-grad) !important;
   color: #fff !important;
   padding: 10px;
@@ -293,11 +288,11 @@ th {
   z-index: 1;
   height: 20px;
   font-size: 12px;
-  font-weight: 400 !important; /* sin negrita */
+  font-weight: 400 !important;
   border-bottom: 1px solid var(--brand-border);
-  border-top: 0;                  /* evita línea fina superior */
-  background-clip: padding-box;   /* evita sangrado del gradiente */
-  box-shadow: none !important;    /* por si algún user-agent añade sombra */
+  border-top: 0;
+  background-clip: padding-box;
+  box-shadow: none !important;
 }
 
 td {
@@ -370,18 +365,19 @@ td {
 
 .tab-button {
   flex: 1;
-  padding: 10px 20px;
+  padding: 10px 5px;
   background: linear-gradient(to bottom, #4a90e2, #336699);
   color: white;
   border: 0;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
   text-align: center;
   outline: none;
   border-radius: 10px 10px 0 0;
   transition: background 0.3s ease;
 }
+
 .tab-button:hover { background: linear-gradient(to bottom, #5aa4f2, #3b78a6); }
 .tab-button.active {
   background: linear-gradient(to bottom,#001f4d, #003366);
@@ -390,8 +386,62 @@ td {
 }
 .tab-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-.tab { display: none; }
-.tab.active { display: block; }
+/* Tabs: estructura flex para que la tabla herede el alto y scrollee */
+#tab-content{
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tab { display: none; min-height: 0; }
+.tab.active {
+  display: flex !important;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Espacio entre pestañas del Filtro */
+#filter-container .tabs{
+  display: flex;
+  gap: 2px;           /* ← separa los botones */
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
+/* (Opcional) asegúrate de que todas repartan el ancho por igual */
+#filter-container .tab-button{
+  flex: 1 1 0;
+}
+
+/* Fallback si algún navegador no soporta gap en flex */
+@supports not (gap: 1rem){
+  #filter-container .tab-button + .tab-button{
+    margin-left: 6px;
+  }
+}
+
+/* El wrapper que contiene .tabs y #tab-content debe ser flex columna */
+#filter-container > div:has(> .tabs){
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;        /* permite que el hijo scrollee */
+}
+
+/* Asegura scroll en la tabla dentro de Filtro */
+#filter-container .table-container{
+  /* rellena el alto libre dentro de la pestaña */
+  flex: 1 1 auto;          /* si ya lo pone la regla genérica, puedes omitirlo */
+  /* permitir que la tabla scrollee */
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;        /* idem: puedes omitirlo si está en la genérica */
+  /* neutraliza alturas que haya puesto el JS inline */
+  height: auto !important;
+  max-height: none !important;
+}
 
 /* ===== Leaflet capas ===== */
 .leaflet-control-layers-expanded {
@@ -474,7 +524,7 @@ body.no-scroll { overflow: hidden; }
 .toast {
   pointer-events: auto; background: var(--brand-1); color: #fff;
   padding: 10px 14px; border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   transform: translateY(8px); opacity: 0; animation: toast-in 150ms ease-out forwards;
 }
 .toast-warning { background: #b45309; }
@@ -784,7 +834,7 @@ body.no-scroll { overflow: hidden; }
 .id-toggle:focus { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .id-icon { width: 20px; height: 20px; flex: 0 0 20px; fill: currentColor; opacity: .9; }
 .id-text { flex: 1 1 auto; text-align: left; }
-.id-caret { margin-left: .5rem; color: currentColor !important; }
+.id-caret { margin-left: .5rem; }
 
 .id-menu {
   position: absolute; 
@@ -892,7 +942,6 @@ body.no-scroll { overflow: hidden; }
 #combo-container .id-toggle .id-icon { width: 22px; height: 22px; }
 #combo-container .id-toggle .id-text { font-weight: 700; }
 
-
 /* === Calendar como combo mejorado (con caret a la derecha) === */
 #daterange{
   appearance: none;
@@ -942,7 +991,6 @@ body.no-scroll { overflow: hidden; }
 #daterange::placeholder{ color: rgba(255,255,255,.85); }
 #daterange:focus{ outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 #daterange:disabled{ opacity:.85; filter: grayscale(.15); cursor: not-allowed; }
-
 
 /* ===== Botones de acción unificados (azul claro) ===== */
 .action-button{
@@ -1019,55 +1067,29 @@ body.no-scroll { overflow: hidden; }
   border: 0 !important;
 }
 
-
-
-/* La tabla ocupa el espacio restante */
-#positions > .table-container{
-  flex: 1 1 auto;
-  height: auto;           /* dejamos que el JS ajuste si hace falta */
-  min-height: 150px;
-}
-
-/* Hueco para gráfico con mismo look de las tablas */
-.chart-slot{
-  height: 50px;                      /* alto fijo para el gráfico */
-  margin-top: 10px;                  /* separación respecto a la tabla */
-  border: 1px solid var(--brand-1);  /* línea azul */
-  border-radius: 8px;                /* esquinas redondeadas */
+/* ====== Gráfico en cabecera de posiciones ====== */
+.positions-chart-stack{
+  position: sticky;
+  top: 0;
+  z-index: 2;
   background: #fff;
-  box-sizing: border-box;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* opcional */
-}
-
-/* Reglas de tabs: ocultar siempre lo que no esté activo */
-.tab:not(.active){
-  display: none !important;
-}
-
-/* Cuando la pestaña Positions está activa, entonces sí es flex-columna */
-#positions.tab.active{
-  display: flex !important;
+  display: flex;
   flex-direction: column;
+  gap: 6px;              /* ← espacio entre paneles */
+  padding-bottom: 4px;   /* micro margen opcional */
 }
 
-/* La tabla dentro de Positions ocupa el espacio restante */
-#positions.tab.active > .table-container{
-  flex: 1 1 auto;
-  height: auto;
-  min-height: 150px;
-}
-
-/* El contenedor recorta el contenido y muestra sus esquinas redondeadas */
-.chart-slot{
-  overflow: hidden;        /* imprescindible para ver las esquinas */
-  position: relative;      /* por si quieres superponer algo después */
-}
-
-/* El canvas hereda el radio y no deja “picos” cuadrados */
-#positions-chart canvas{
+/* Cada panel (canvas) */
+.positions-chart-canvas{
   display: block;
   width: 100%;
-  height: 100%;
-  border-radius: inherit;   /* respeta el redondeado del contenedor */
+  height: 50px;          /* ← alto de cada panel (usa el mismo valor en JS si lo cambias) */
+  position: static;      /* ya NO sticky por panel */
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,.1);
+}
+
+/* Reserva del thead según altura total de cabecera */
+#positions .table-container.chart-has-header .fixed-table thead th{
+  top: var(--chart-header-h, 50px);  /* antes estaba fijo a 50px */
 }

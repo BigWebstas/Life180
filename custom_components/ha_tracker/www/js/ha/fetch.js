@@ -13,7 +13,7 @@ async function fetchData(
     method = 'GET',
     headers = {},
     body,
-    timeoutMs = 15000
+    timeoutMs = 30000
 } = {},
     authRequired = true) {
     const controller = new AbortController();

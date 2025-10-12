@@ -105,5 +105,6 @@
   "zoom_out": "Zoom out",
   "reset_to_north": "Reset bearing to north",
   "search": "Search",
-  "layers": "Layers"
+  "layers": "Layers",
+  "chart": "Chart"
 }

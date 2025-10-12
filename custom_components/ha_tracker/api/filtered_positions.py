@@ -8,7 +8,7 @@ from functools import partial
 
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.components.recorder import get_instance as get_recorder_instance
-from homeassistant.components.recorder.history import get_significant_states
+from homeassistant.components.recorder.history import state_changes_during_period
 from homeassistant.util import dt as dt_util
 
 DOMAIN = __package__.split(".")[-2]
@@ -197,22 +197,33 @@ def filter_positions(
         except (TypeError, ValueError):
             continue
 
-        attrs = dict(state.attributes)
+        # Construye solo los atributos necesarios (evita copiar todo el dict)
+        attrs = {
+            "latitude": latitude,
+            "longitude": longitude,
+        }
+        # speed / speedMps / velocity -> speed (m/s)
+        try:
+            if "speed" in state.attributes:
+                attrs["speed"] = round(float(state.attributes["speed"]), 2)
+            elif "speedMps" in state.attributes:
+                attrs["speed"] = round(float(state.attributes["speedMps"]), 2)
+            elif "velocity" in state.attributes:
+                attrs["speed"] = round(float(state.attributes["velocity"]) / 3.6, 2)
+        except Exception:
+            pass
 
-        # speedMps / velocity -> speed (m/s)
-        if "speed" not in attrs:
-            # Prioridad: speedMps (ya viene en m/s)
-            if "speedMps" in attrs:
-                try:
-                    attrs["speed"] = round(float(attrs["speedMps"]), 2)
-                except (TypeError, ValueError):
-                    pass
-            # Alternativa: OwnTracks "velocity" (km/h -> m/s)
-            elif "velocity" in attrs:
-                try:
-                    attrs["speed"] = round(float(attrs.pop("velocity")) / 3.6, 2)
-                except (TypeError, ValueError):
-                    pass
+        # Precisión si existe (normalizamos a gps_accuracy)
+        acc_val = state.attributes.get("gps_accuracy", state.attributes.get("accuracy"))
+        if acc_val is not None:
+            attrs["gps_accuracy"] = acc_val
+
+        # Batería si existe (primera coincidencia)
+        for _bk in ("battery","battery_level","battery_percent","battery_percentage",
+                    "battery_level_pct","batteryLevel"):
+            if _bk in state.attributes:
+                attrs[_bk] = state.attributes[_bk]
+                break
 
        # Normaliza speed: si es numérica y < 0 -> 0.0
         try:
@@ -238,6 +249,7 @@ def filter_positions(
             "attributes": attrs,
             "last_updated": state.last_updated.isoformat(),
             "last_changed": state.last_changed.isoformat(),
+            "_last_updated_dt": current_datetime,
         }
         last_position = candidate
 
@@ -310,7 +322,9 @@ def filter_positions(
 
         if last_seen_dt_real is not None:
             try:
-                t2 = dt_util.as_utc(isoparse(last_position["last_updated"]))
+                # Usa el datetime guardado; si no estuviera, cae al parseo
+                t2 = last_position.get("_last_updated_dt") or dt_util.as_utc(isoparse(last_position["last_updated"]))
+
                 dt_s = (t2 - last_seen_dt_real).total_seconds()
 
                 # tiempo mínimo entre aceptados
@@ -1085,11 +1099,59 @@ def _calc_zone_stats(positions, zones, expected_total_s=None):
 def _empty_payload():
     return { "positions": [], "summary": _calc_summary([]), "zones": [] }
 
+# --- pipeline pesado fuera del event loop (executor) ---
+def _build_payload_offthread(states, *, cfg, zones):
+    """
+    Ejecuta todo el pipeline (filtro -> antispike -> paradas -> summary/zonas)
+    en un hilo del executor para no bloquear el event loop.
+    """
+    positions = filter_positions(
+        states,
+        max_gps_accuracy_m=cfg["max_gps_accuracy_m"],
+        max_speed_kmh=cfg["max_speed_kmh"],
+        min_distance=MIN_DISTANCE,
+    )
+
+    # Anti-spike relativo 5 puntos (si está activado)
+    if cfg["anti_spike_radius"] > 0 and cfg["anti_spike_time"] > 0:
+        positions = drop_c_spikes_relative_5pt(
+            positions,
+            factor_k=float(cfg["anti_spike_factor_k"]),
+            min_detour_ratio=float(cfg["anti_spike_detour_ratio"]),
+            max_bd_dt_s=int(cfg["anti_spike_time"]),
+            min_leg_m=max(10.0, cfg["anti_spike_radius"]),
+            max_gps_accuracy_m=cfg["max_gps_accuracy_m"],
+        )
+
+    # Paradas (si procede)
+    if cfg["stop_radius_m"] > 0 and cfg["stop_time_s"] > 0:
+        positions = annotate_stops_and_collapse(
+            positions,
+            stop_radius_m=float(cfg["stop_radius_m"]),
+            stop_time_s=int(cfg["stop_time_s"]),
+            reentry_gap_s=int(cfg["reentry_gap_s"]),
+            outside_gap_s=int(cfg["outside_gap_s"]),
+            max_gps_accuracy_m=float(cfg["max_gps_accuracy_m"]),
+            require_good_acc=REQUIRE_GOOD_ACC,
+        )
+
+    summary = _calc_summary(positions)
+    zones_rows = _calc_zone_stats(positions, zones, expected_total_s=summary["total_time_s"])
+
+    # Limpia el campo interno no serializable/innecesario
+    try:
+        for p in positions:
+            p.pop("_last_updated_dt", None)
+    except Exception:
+        pass
+
+    return {"positions": positions, "summary": summary, "zones": zones_rows}
+
 # ----------------------------
 # Endpoint
 # ----------------------------
 class FilteredPositionsEndpoint(HomeAssistantView):
-    """Obtener posiciones filtradas de un usuario entre fechas"""
+    """Obtener posiciones filtradas de un usuario entre fechas (optimizado)"""
 
     url = "/api/ha_tracker/filtered_positions"
     name = "api:ha_tracker/filtered_positions"
@@ -1100,7 +1162,7 @@ class FilteredPositionsEndpoint(HomeAssistantView):
 
         hass = request.app["hass"]
 
-        # Devuelve solo si es administrador o only_admin es false
+        # Por si tu integración lo usa
         only_admin = False
 
         # valores por defecto (radios float, tiempos int)
@@ -1113,91 +1175,56 @@ class FilteredPositionsEndpoint(HomeAssistantView):
         reentry_gap_s: int = int(REENTRY_GAP_S_FALLBACK)
         outside_gap_s: int = int(OUTSIDE_GAP_S_FALLBACK)
         max_gps_accuracy_m: float = float(MAX_GPS_ACCURACY_M_FALLBACK)
-        max_speed_kmh: float = float(MAX_SPEED_KMH_FALLBACK)        
+        max_speed_kmh: float = float(MAX_SPEED_KMH_FALLBACK)
 
         entries = hass.config_entries.async_entries(DOMAIN)
         if entries:
             entry = entries[0]
             only_admin = entry.options.get("only_admin", entry.data.get("only_admin", False))
 
-            # stop_radius (float >= 0)
+            def _opt(key, default):
+                return entry.options.get(key, entry.data.get(key, default))
+
+            # Lee opciones, saneando
             try:
-                stop_radius_m = float(entry.options.get("stop_radius", entry.data.get("stop_radius", stop_radius_m)))
-                if stop_radius_m < 0:
-                    stop_radius_m = 0.0
-            except (TypeError, ValueError):
+                stop_radius_m = max(0.0, float(_opt("stop_radius", stop_radius_m)))
+            except Exception:
                 pass
-
-            # stop_time (int >= 0)
             try:
-                stop_time_s = int(entry.options.get("stop_time", entry.data.get("stop_time", stop_time_s)))
-                if stop_time_s < 0:
-                    stop_time_s = 0
-            except (TypeError, ValueError):
+                stop_time_s = max(0, int(_opt("stop_time", stop_time_s)))
+            except Exception:
                 pass
-
-            # reentry_gap (int >= 0)
             try:
-                reentry_gap_s = int(entry.options.get("reentry_gap", entry.data.get("reentry_gap", reentry_gap_s)))
-                if reentry_gap_s < 0:
-                    reentry_gap_s = 0
-            except (TypeError, ValueError):
+                reentry_gap_s = max(0, int(_opt("reentry_gap", reentry_gap_s)))
+            except Exception:
                 pass
-                
-            # outside_gap (int >= 0)
             try:
-                outside_gap_s = int(entry.options.get("outside_gap", entry.data.get("outside_gap", outside_gap_s)))
-                if outside_gap_s < 0:
-                    outside_gap_s = 0
-            except (TypeError, ValueError):
-                pass        
-
-            # gps_accuracy (float >= 0)
-            try:
-                max_gps_accuracy_m = float(entry.options.get("gps_accuracy", entry.data.get("gps_accuracy", max_gps_accuracy_m)))
-                if max_gps_accuracy_m < 0:
-                    max_gps_accuracy_m = 0
-            except (TypeError, ValueError):
+                outside_gap_s = max(0, int(_opt("outside_gap", outside_gap_s)))
+            except Exception:
                 pass
-                
-            # max_speed (float >= 0)
             try:
-                max_speed_kmh = float(entry.options.get("max_speed", entry.data.get("max_speed", max_speed_kmh)))
-                if max_speed_kmh < 0:
-                    max_speed_kmh = 0
-            except (TypeError, ValueError):
-                pass                     
-
-            # anti_spike_factor_k (float >= 0)
-            try:
-                anti_spike_factor_k = float(entry.options.get("anti_spike_factor_k", entry.data.get("anti_spike_factor_k", anti_spike_factor_k)))
-                if anti_spike_factor_k < 0:
-                    anti_spike_factor_k = 0.0
-            except (TypeError, ValueError):
+                max_gps_accuracy_m = max(0.0, float(_opt("gps_accuracy", max_gps_accuracy_m)))
+            except Exception:
                 pass
-
-            # anti_spike_detour_ratio (float >= 0)
             try:
-                anti_spike_detour_ratio = float(entry.options.get("anti_spike_detour_ratio", entry.data.get("anti_spike_detour_ratio", anti_spike_detour_ratio)))
-                if anti_spike_detour_ratio < 0:
-                    anti_spike_detour_ratio = 0.0
-            except (TypeError, ValueError):
-                pass                
-
-            # anti_spike_radius (float >= 0)
-            try:
-                anti_spike_radius = float(entry.options.get("anti_spike_radius", entry.data.get("anti_spike_radius", anti_spike_radius)))
-                if anti_spike_radius < 0:
-                    anti_spike_radius = 0.0
-            except (TypeError, ValueError):
+                max_speed_kmh = max(0.0, float(_opt("max_speed", max_speed_kmh)))
+            except Exception:
                 pass
-
-            # anti_spike_time (int >= 0)
             try:
-                anti_spike_time = int(entry.options.get("anti_spike_time", entry.data.get("anti_spike_time", anti_spike_time)))
-                if anti_spike_time < 0:
-                    anti_spike_time = 0
-            except (TypeError, ValueError):
+                anti_spike_factor_k = max(0.0, float(_opt("anti_spike_factor_k", anti_spike_factor_k)))
+            except Exception:
+                pass
+            try:
+                anti_spike_detour_ratio = max(0.0, float(_opt("anti_spike_detour_ratio", anti_spike_detour_ratio)))
+            except Exception:
+                pass
+            try:
+                anti_spike_radius = max(0.0, float(_opt("anti_spike_radius", anti_spike_radius)))
+            except Exception:
+                pass
+            try:
+                anti_spike_time = max(0, int(_opt("anti_spike_time", anti_spike_time)))
+            except Exception:
                 pass
 
         user = request["hass_user"]
@@ -1206,32 +1233,32 @@ class FilteredPositionsEndpoint(HomeAssistantView):
 
         query = request.query
 
+        # Params obligatorios
         person_id, start_date, end_date, error = validate_query_params(query)
         if error:
             return self.json(error, status_code=error["status_code"])
-                     
+
         source_device_id, error = validate_person(hass, person_id)
         if error:
             return self.json(error, status_code=error["status_code"])
 
         start_datetime_utc, end_datetime_utc, error = validate_dates(start_date, end_date)
         if error:
-            return self.json(error, status_code=error["status_code"])       
-        
+            return self.json(error, status_code=error["status_code"])
+
+        # --- Lee historial (más directo) ---
         try:
             rec = get_recorder_instance(hass)
             history = await rec.async_add_executor_job(
                 partial(
-                    get_significant_states,
+                    state_changes_during_period,
                     hass,
                     start_datetime_utc,
                     end_datetime_utc,
-                    [source_device_id],
+                    entity_id=source_device_id,
                     include_start_time_state=False,
-                    significant_changes_only=False,
-                    minimal_response=False,
                     no_attributes=False,
-                )
+                ),
             )
         except (OSError, ValueError, KeyError) as e:
             return self.json({"error": f"Error with history: {str(e)}"}, status_code=500)
@@ -1239,52 +1266,38 @@ class FilteredPositionsEndpoint(HomeAssistantView):
         if not history or source_device_id not in history:
             return self.json(_empty_payload())
 
-        states = history[source_device_id]
-        states = [s for s in states
-                  if dt_util.as_utc(s.last_updated) >= start_datetime_utc
-                  and dt_util.as_utc(s.last_updated) <= end_datetime_utc]
-        states.sort(key=lambda s: dt_util.as_utc(s.last_updated))
+        states = history[source_device_id] or []
 
-        # Filtra posiciones
-        positions = filter_positions(
-            states, 
-            max_gps_accuracy_m=max_gps_accuracy_m,
-            max_speed_kmh=max_speed_kmh, 
-            min_distance=MIN_DISTANCE
-        )            
+        # Reforzar corte exacto de ventana y orden temporal
+        try:
+            as_utc = dt_util.as_utc
+            s0 = start_datetime_utc
+            s1 = end_datetime_utc
+            states = [s for s in states if as_utc(s.last_updated) >= s0 and as_utc(s.last_updated) <= s1]
+            states.sort(key=lambda s: as_utc(s.last_updated))
+        except Exception:
+            pass
 
-        # Anti-spike 5 puntos por velocidad relativa (A→B, B→C→D, D→E)
-        if anti_spike_radius > 0 and anti_spike_time > 0:
-            positions = drop_c_spikes_relative_5pt(
-                positions,
-                factor_k=float(anti_spike_factor_k),
-                min_detour_ratio=float(anti_spike_detour_ratio),
-                max_bd_dt_s=int(anti_spike_time),          # puedes reutilizar tu opción existente
-                min_leg_m=max(10.0, anti_spike_radius),    # coherente con tu escala espacial
-                max_gps_accuracy_m=max_gps_accuracy_m
-            )   
-
-        # Paradas
-        if stop_radius_m > 0 and stop_time_s > 0:
-            positions = annotate_stops_and_collapse(
-                positions,
-                stop_radius_m=float(stop_radius_m),
-                stop_time_s=int(stop_time_s),
-                reentry_gap_s=int(reentry_gap_s),
-                outside_gap_s=int(outside_gap_s),
-                max_gps_accuracy_m=float(max_gps_accuracy_m),
-                require_good_acc=REQUIRE_GOOD_ACC,               
-            )
-
-        # --- calcular resumen y zonas en servidor ---
+        # Zonas (leer en el hilo principal)
         zones = _all_zones(hass)
-        
-        summary = _calc_summary(positions)
-        zones_rows = _calc_zone_stats(positions, zones, expected_total_s=summary["total_time_s"])
 
-        payload = {
-            "positions": positions,
-            "summary": summary,
-            "zones": zones_rows
+        # Config para el pipeline off-thread
+        cfg = {
+            "stop_radius_m": float(stop_radius_m),
+            "stop_time_s": int(stop_time_s),
+            "anti_spike_factor_k": float(anti_spike_factor_k),
+            "anti_spike_detour_ratio": float(anti_spike_detour_ratio),
+            "anti_spike_radius": float(anti_spike_radius),
+            "anti_spike_time": int(anti_spike_time),
+            "reentry_gap_s": int(reentry_gap_s),
+            "outside_gap_s": int(outside_gap_s),
+            "max_gps_accuracy_m": float(max_gps_accuracy_m),
+            "max_speed_kmh": float(max_speed_kmh),
         }
+
+        # Ejecuta todo el pipeline en executor
+        payload = await hass.async_add_executor_job(
+            partial(_build_payload_offthread, states, cfg=cfg, zones=zones)
+        )
+
         return self.json(payload)

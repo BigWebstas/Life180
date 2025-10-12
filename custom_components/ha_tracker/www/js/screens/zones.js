@@ -3,7 +3,7 @@
 //
 
 import { isAdmin, fmt0, use_imperial, DEFAULT_COLOR, DEFAULT_ALPHA } from '../globals.js';
-import { map, getDistanceFromLatLonInMeters } from '../utils/map.js';
+import { map, getDistanceFromLatLonInMeters, fitBoundsSafe, focusPoint } from '../utils/map.js';
 import { deleteZone, updateZone, createZone, fetchZones } from '../ha/fetch.js';
 import { updatePersonsTable } from '../screens/persons.js';
 import { t, tWithVars } from '../utils/i18n.js';
@@ -95,8 +95,8 @@ async function updateZoneMarkers() {
     const currentZoneIds = zones.map(z => String(z.id));
 
     // Eliminar círculos de zonas que ya no existen
-	Object.keys(zoneMarkers).forEach(zoneId => {
-		if (!currentZoneIds.includes(String(zoneId))) {
+    Object.keys(zoneMarkers).forEach(zoneId => {
+        if (!currentZoneIds.includes(String(zoneId))) {
             map.removeLayer(zoneMarkers[zoneId]); // Eliminar el círculo del mapa
             delete zoneMarkers[zoneId]; // Eliminar de la memoria
             delete editingZones[zoneId]; // Eliminar de los estados de edición
@@ -105,10 +105,8 @@ async function updateZoneMarkers() {
 
     // Añadir o actualizar las zonas actuales
     zones.forEach(zone => {
-		const key = String(zone.id);
+        const key = String(zone.id);
         const { latitude, longitude, radius, name, custom, visible } = zone;
-		
-		
 
         // Validaciones numéricas robustas
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !Number.isFinite(radius)) {
@@ -117,11 +115,11 @@ async function updateZoneMarkers() {
         }
 
         // Ocultación en mapa por flag "visible"
-		if (visible === false) {
-			if (zoneMarkers[key]) {
-				map.removeLayer(zoneMarkers[key]);
-				delete zoneMarkers[key];
-				delete editingZones[key];
+        if (visible === false) {
+            if (zoneMarkers[key]) {
+                map.removeLayer(zoneMarkers[key]);
+                delete zoneMarkers[key];
+                delete editingZones[key];
             }
             return;
         }
@@ -149,7 +147,9 @@ async function updateZoneMarkers() {
             if (typeof existingCircle.setPopupContent === 'function') {
                 existingCircle.setPopupContent(popupContent);
             } else {
-                existingCircle.bindPopup(popupContent, { autoPan: false });
+                existingCircle.bindPopup(popupContent, {
+                    autoPan: false
+                });
             }
             if (existingCircle.options.color !== strokeColor || existingCircle.options.fillColor !== fillColor) {
                 existingCircle.setStyle({
@@ -167,8 +167,8 @@ async function updateZoneMarkers() {
 
         // Si ya existe un círculo para la zona, guardamos el estado del popup
         let isPopupOpen = false;
-		if (zoneMarkers[key]) {
-			const prevCircle = zoneMarkers[key];
+        if (zoneMarkers[key]) {
+            const prevCircle = zoneMarkers[key];
             const wasOpen = prevCircle.isPopupOpen();
             isPopupOpen = wasOpen;
             map.removeLayer(prevCircle);
@@ -202,8 +202,10 @@ async function updateZoneMarkers() {
         circle.on('click', async() => {
             try {
                 // Ajustar el zoom para encuadrar el círculo (con padding)
-                map.fitBounds(circle.getBounds(), {
-                    padding: [24, 24]
+                fitBoundsSafe(circle.getBounds(), {
+                    animate: false,
+                    base: 24,
+                    extraRight: 16
                 });
 
                 // Abre el popup del círculo
@@ -222,7 +224,7 @@ async function updateZoneMarkers() {
             map.closePopup(); // Cierra cualquier popup abierto en el mapa
         });
 
-        circle.on('editable:vertex:dragend', async () => { // Asegúrate de que esta función sea async
+        circle.on('editable:vertex:dragend', async() => { // Asegúrate de que esta función sea async
             editingZones[key] = false; // Marcar como no en edición
 
             const updatedLatLng = circle.getLatLng(); // Nueva posición del centro
@@ -234,14 +236,16 @@ async function updateZoneMarkers() {
             // 1) Actualiza el modelo local para que la tabla y el popup reflejen el cambio al instante
             z.latitude = updatedLatLng.lat;
             z.longitude = updatedLatLng.lng;
-            z.radius   = updatedRadius;
+            z.radius = updatedRadius;
 
             // 2) Refresca el popup con el contenido actualizado (nombre/radio/unidades)
             const newHtml = buildZonePopup(z);
             if (typeof circle.setPopupContent === 'function') {
                 circle.setPopupContent(newHtml);
             } else {
-                circle.bindPopup(newHtml, { autoPan: false });
+                circle.bindPopup(newHtml, {
+                    autoPan: false
+                });
             }
             circle.openPopup();
 
@@ -252,19 +256,18 @@ async function updateZoneMarkers() {
             if (isAdmin && z.custom) {
                 try {
                     const response = await updateZone(
-                        z.id,
-                        z.name, // nombre fresco (evita “revivir” el nombre antiguo)
-                        updatedRadius,
-                        updatedLatLng.lat,
-                        updatedLatLng.lng,
-                        z.color,
-                        z.visible !== false
-                    );
+                            z.id,
+                            z.name, // nombre fresco (evita “revivir” el nombre antiguo)
+                            updatedRadius,
+                            updatedLatLng.lat,
+                            updatedLatLng.lng,
+                            z.color,
+                            z.visible !== false);
 
                     if (response && response.success) {
-                        await fetchZones();             // sincroniza 'zones' con el servidor
-                        await updateZonesTable();       // asegura que la tabla queda alineada
-                        await updateZoneMarkers();      // revalida estilos/markers
+                        await fetchZones(); // sincroniza 'zones' con el servidor
+                        await updateZonesTable(); // asegura que la tabla queda alineada
+                        await updateZoneMarkers(); // revalida estilos/markers
                         await handleZoneRowSelection(z.id);
                         console.log(`Zone with ID ${z.id} updated on server.`);
                     } else {
@@ -335,14 +338,16 @@ export async function updateZoneActionButtons() {
     const deleteButton = document.getElementById('delete-zone-button');
     const editButton = document.getElementById('edit-zone-button');
     const zoneActions = document.getElementById('zone-actions');
-	if (!zoneActions) return;
+    if (!zoneActions)
+        return;
 
     // Ocultar todos los botones al inicio para evitar conflictos (solo los que existan)
     [addButton, deleteButton, editButton].filter(Boolean).forEach(btn => btn.classList.add('hidden'));
 
     // Manejo de visibilidad del contenedor de botones según permisos de admin
     zoneActions.style.display = isAdmin ? 'flex' : 'none';
-    if (!isAdmin) return;
+    if (!isAdmin)
+        return;
 
     // Si no hay filas, solo mostrar el botón "Añadir"
     if (rows.length === 0) {
@@ -440,8 +445,8 @@ async function handleEditZone() {
         return;
     }
 
-	const zoneId = selectedRow.dataset.zoneId;
-	const zone = zones.find(z => String(z.id) === String(zoneId));
+    const zoneId = selectedRow.dataset.zoneId;
+    const zone = zones.find(z => String(z.id) === String(zoneId));
 
     if (!zone) {
         uiAlert(t('error_finding_zone'), {
@@ -586,23 +591,27 @@ async function handleCreateZone() {
             await updateZonesTable();
             await updateZoneMarkers();
             await handleZoneRowSelection(newZoneId);
-			
+
             // ► Simular el clic en la fila de la tabla (misma UX que pulsar en la tabla):
             const tbody = document.getElementById('zones-table-body');
             const row = tbody?.querySelector(`tr[data-zone-id="${String(newZoneId)}"]`);
             if (row) {
-              // Esto activa _lastPressFromZones(), encuadra el círculo y abre el popup al norte,
-              // y, si procede, muestra los handles de edición (isAdmin && custom).
-              row.click(); // equivalente a que el usuario pulse en la fila
+                // Esto activa _lastPressFromZones(), encuadra el círculo y abre el popup al norte,
+                // y, si procede, muestra los handles de edición (isAdmin && custom).
+                row.click(); // equivalente a que el usuario pulse en la fila
             } else {
-              // Fallback por si algo falla al construir la tabla
-              const marker = zoneMarkers[String(newZoneId)];
-              if (marker) {
-                map.fitBounds(marker.getBounds(), { padding: [24, 24] });
-                marker.openPopup();
-              }
-            }			
-			
+                // Fallback por si algo falla al construir la tabla
+                const marker = zoneMarkers[String(newZoneId)];
+                if (marker) {
+                    fitBoundsSafe(marker.getBounds(), {
+                        animate: false,
+                        base: 24,
+                        extraRight: 16
+                    });
+                    marker.openPopup();
+                }
+            }
+
             console.log(`Zone created successfully. ID: ${newZoneId}`);
             return newZoneId;
         } else {
@@ -700,15 +709,19 @@ export function handleZonePosition(latitude, longitude, opts = {}) {
 }
 
 export async function showZone(idZone) {
-  if (!idZone) return;
-  const key = String(idZone);
-  const circle = zoneMarkers[key];
-  if (circle) {
-    map.setView(circle.getLatLng(), map.getZoom());
-    circle.openPopup();
-  } else {
-    console.error("Marker for zone not found:", key);
-  }
+    if (!idZone)
+        return;
+    const key = String(idZone);
+    const circle = zoneMarkers[key];
+    if (circle) {
+        focusPoint(circle.getLatLng(), {
+            zoom: map.getZoom(),
+            animate: false
+        });
+        circle.openPopup();
+    } else {
+        console.error("Marker for zone not found:", key);
+    }
 }
 
 async function updateZonesTable() {
@@ -732,26 +745,26 @@ async function updateZonesTable() {
 
         switch (zonesSortColumn) {
         case "vmap": { // columna del mapa (visibilidad), si decides habilitar sort sobre 'column_map'
-            const visA = (a.visible === false) ? 1 : 0; // 0 visible, 1 no visible
-            const visB = (b.visible === false) ? 1 : 0;
-            if (visA !== visB) {
-                return zonesSortAscending ? visA - visB : visB - visA;
+                const visA = (a.visible === false) ? 1 : 0; // 0 visible, 1 no visible
+                const visB = (b.visible === false) ? 1 : 0;
+                if (visA !== visB) {
+                    return zonesSortAscending ? visA - visB : visB - visA;
+                }
+                const nameA = canonZoneName(a.name);
+                const nameB = canonZoneName(b.name);
+                return zonesSortAscending ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
             }
-            const nameA = canonZoneName(a.name);
-            const nameB = canonZoneName(b.name);
-            return zonesSortAscending ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-        }
         case "ctype": { // columna de tipo (custom vs HA) → icono
-            // En ascendente: custom primero (0) y luego HA (1). Invierte con descendente.
-            const typeA = a.custom ? 0 : 1;
-            const typeB = b.custom ? 0 : 1;
-            if (typeA !== typeB) {
-                return zonesSortAscending ? typeA - typeB : typeB - typeA;
+                // En ascendente: custom primero (0) y luego HA (1). Invierte con descendente.
+                const typeA = a.custom ? 0 : 1;
+                const typeB = b.custom ? 0 : 1;
+                if (typeA !== typeB) {
+                    return zonesSortAscending ? typeA - typeB : typeB - typeA;
+                }
+                const nameA = canonZoneName(a.name);
+                const nameB = canonZoneName(b.name);
+                return zonesSortAscending ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
             }
-            const nameA = canonZoneName(a.name);
-            const nameB = canonZoneName(b.name);
-            return zonesSortAscending ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-        }
         case "radius":
             valueA = Number(a.radius) || 0;
             valueB = Number(b.radius) || 0;
@@ -794,16 +807,16 @@ async function updateZonesTable() {
         row.dataset.visible = String(isVisible);
         row.style.setProperty('--color-bg', toRgba(color, DEFAULT_ALPHA));
         const adminColumnContent = isVisible
-          ? `<div style="
+             ? `<div style="
               width:12px; height:12px; border:2px solid ${color};
               border-radius:50%;
               background-color:${toRgba(color, 0.3)};
               margin:auto;"></div>`
-          : ``; // sin círculo si no es visible
+             : ``; // sin círculo si no es visible
 
         // Segunda columna: icono de tipo (custom vs HA)
         const typeIcon = zone.custom ? HA_TRACKER_ICON_16_16 : HA_ICON_16_16;
-        const typeAlt  = zone.custom ? 'custom' : 'ha';
+        const typeAlt = zone.custom ? 'custom' : 'ha';
         const typeColumnContent = `<img src="${typeIcon}" alt="${typeAlt}" width="16" height="16" style="display:block;margin:auto;">`;
 
         const radiusText = `${use_imperial ? fmt0(zone.radius * 3.28084) : fmt0(zone.radius)}`;
@@ -826,8 +839,10 @@ async function updateZonesTable() {
             const marker = zoneMarkers[String(id)];
             if (marker) {
                 const circleBounds = marker.getBounds();
-                map.fitBounds(circleBounds, {
-                    padding: [24, 24]
+                fitBoundsSafe(circleBounds, {
+                    animate: false,
+                    base: 24,
+                    extraRight: 16
                 });
                 marker.openPopup(); // Mostrar el popup
             } else {
@@ -892,16 +907,16 @@ function updateZonesTableHeaders() {
         // name        → name
         // radius      → radius
         switch (columnKey) {
-          case "column_map":
+        case "column_map":
             columnName = "vmap";
             break;
-          case "column_type":
+        case "column_type":
             columnName = "ctype";
             break;
-          case "name":
+        case "name":
             columnName = "name";
             break;
-          case "radius":
+        case "radius":
             columnName = "radius";
             break;
         }
@@ -927,8 +942,8 @@ function updateZonesTableHeaders() {
         }
 
         const label = (columnKey === 'radius')
-          ? `${use_imperial ? t('feet') : t('meters')}`
-          : t(columnKey);
+         ? `${use_imperial ? t('feet') : t('meters')}`
+         : t(columnKey);
 
         header.innerHTML = `
 		  <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:30px;">
@@ -998,7 +1013,8 @@ export function getZoneById(id) {
 
 export function getZoneStyleById(id) {
     const z = getZoneById(id);
-    if (!z) return null;
+    if (!z)
+        return null;
     const baseHex = z.color || DEFAULT_COLOR;
     return {
         id: z.id,

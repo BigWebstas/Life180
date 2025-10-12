@@ -105,5 +105,6 @@
   "zoom_out": "Zoom arrière",
   "reset_to_north": "Réinitialiser l'orientation au nord",
   "search": "Rechercher",
-  "layers": "Couches"  
+  "layers": "Couches",
+  "chart": "Graphique"
 }

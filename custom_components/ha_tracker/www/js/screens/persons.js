@@ -5,7 +5,7 @@
 import { formatDate, geocodeTime, geocodeDistance, use_imperial, DEFAULT_ALPHA } from '../globals.js';
 import { fetchPersons, fetchDevices } from '../ha/fetch.js';
 import { handleZonePosition } from '../screens/zones.js';
-import { map, isValidCoordinates, getDistanceFromLatLonInMeters } from '../utils/map.js';
+import { map, isValidCoordinates, getDistanceFromLatLonInMeters, fitBoundsSafe, focusPoint } from '../utils/map.js';
 import { t } from '../utils/i18n.js';
 import { requestAddress, cancelAddress } from '../utils/geocode.js';
 import { toRgba } from '../utils/dialogs.js';
@@ -146,10 +146,15 @@ export async function handlePersonsSelection(personId) {
         return;
     }
 
-	try { map.closePopup?.(); } catch {}
-	selectedPerson.openPopup?.();
+    try {
+        map.closePopup?.();
+    } catch {}
+    selectedPerson.openPopup?.();
     map.invalidateSize();
-    map.setView([lat, lng], map.getZoom());
+    focusPoint([lat, lng], {
+        zoom: map.getZoom(),
+        animate: false
+    });
 }
 
 export function updatePersonsFilter() {
@@ -207,41 +212,45 @@ export async function fitMapToAllPersons() {
         }
 
         const bounds = L.latLngBounds(coords);
-        map.fitBounds(bounds);
+        fitBoundsSafe(bounds, {
+            animate: false,
+            base: 24,
+            extraRight: 16
+        });
     } catch (error) {
         console.error("Error doing fitMapToAllDevices:", error);
     }
 }
 
 async function updatePersonsDevicesMap() {
-  personsDevicesMap = {};
+    personsDevicesMap = {};
 
-  for (const person of persons) {
-    const trackers = person.attributes?.device_trackers;
-    let trackerEntityId = null;
+    for (const person of persons) {
+        const trackers = person.attributes?.device_trackers;
+        let trackerEntityId = null;
 
-    // El primer device_tracker del array
-    if (Array.isArray(trackers) && typeof trackers[0] === 'string' && trackers[0].trim() !== '') {
-      trackerEntityId = trackers[0].trim();
+        // El primer device_tracker del array
+        if (Array.isArray(trackers) && typeof trackers[0] === 'string' && trackers[0].trim() !== '') {
+            trackerEntityId = trackers[0].trim();
+        }
+
+        const device = devices.find(d => d.entity_id === trackerEntityId);
+        if (!device) {
+            continue;
+        }
+
+        // Asegura lat/lon numéricos y válidos (no rechaza 0,0)
+        const lat = Number(device.attributes?.latitude);
+        const lon = Number(device.attributes?.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+            console.log(`The device_tracker '${trackerEntityId}' of ${person.attributes.friendly_name || person.entity_id} does not have valid lat/lng.`);
+            continue;
+        }
+
+        personsDevicesMap[person.entity_id] = device;
     }
 
-    const device = devices.find(d => d.entity_id === trackerEntityId);
-    if (!device) {
-      continue;
-    }
-
-    // Asegura lat/lon numéricos y válidos (no rechaza 0,0)
-    const lat = Number(device.attributes?.latitude);
-    const lon = Number(device.attributes?.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      console.log(`The device_tracker '${trackerEntityId}' of ${person.attributes.friendly_name || person.entity_id} does not have valid lat/lng.`);
-      continue;
-    }
-
-    personsDevicesMap[person.entity_id] = device;
-  }
-
-  console.log("Devices to persons:", personsDevicesMap);
+    console.log("Devices to persons:", personsDevicesMap);
 }
 
 async function updatePersonsMarkers() {
@@ -315,9 +324,14 @@ async function updatePersonsMarkers() {
                     await handlePersonRowSelection(personId);
                     map.invalidateSize();
                     const ll = personsMarkers[personId].getLatLng();
-                    map.setView(ll, map.getZoom());
-					try { map.closePopup?.(); } catch {}
-					personsMarkers[personId].openPopup?.();
+                    focusPoint(ll, {
+                        zoom: map.getZoom(),
+                        animate: false
+                    });
+                    try {
+                        map.closePopup?.();
+                    } catch {}
+                    personsMarkers[personId].openPopup?.();
                 });
         }
     });

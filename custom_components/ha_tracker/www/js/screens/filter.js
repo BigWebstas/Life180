@@ -2,7 +2,7 @@
 // FILTER
 //
 
-import { map } from '../utils/map.js';
+import { map, fitBoundsSafe, focusPoint } from '../utils/map.js';
 import { formatDate, fmt0, fmt2, use_imperial, DEFAULT_ALPHA } from '../globals.js';
 import { fetchFilteredPositions, fetchResetReverseGeocodeCache } from '../ha/fetch.js';
 import { handleZonePosition, showZone, getZoneStyleById } from '../screens/zones.js';
@@ -127,37 +127,47 @@ function retintFilterList() {
 
 // === Ajuste de vista DESPUÉS de dibujar marcadores ===
 async function fitMapToFilter(positions, padding = 24) {
-  try {
-    if (!Array.isArray(positions) || positions.length === 0) return;
-    const coords = positions
-      .map(p => {
-        const lat = Number(p?.attributes?.latitude);
-        const lon = Number(p?.attributes?.longitude);
-        return (Number.isFinite(lat) && Number.isFinite(lon)) ? [lat, lon] : null;
-      })
-      .filter(Boolean);
-    if (coords.length === 0) return;
+    try {
+        if (!Array.isArray(positions) || positions.length === 0)
+            return;
+        const coords = positions
+            .map(p => {
+                const lat = Number(p?.attributes?.latitude);
+                const lon = Number(p?.attributes?.longitude);
+                return (Number.isFinite(lat) && Number.isFinite(lon)) ? [lat, lon] : null;
+            })
+            .filter(Boolean);
+        if (coords.length === 0)
+            return;
 
-    const Lg = window.L; // disponible en Leaflet y en el shim MapLibre
-    if (!Lg) return;
+        const Lg = window.L; // disponible en Leaflet y en el shim MapLibre
+        if (!Lg)
+            return;
 
-    // Espera 1 frame para asegurar que los marcadores DOM están en el árbol
-    await new Promise(r => requestAnimationFrame(r));
+        // Espera 1 frame para asegurar que los marcadores DOM están en el árbol
+        await new Promise(r => requestAnimationFrame(r));
 
-    if (coords.length === 1) {
-      // Un solo punto: céntralo y aplica un zoom razonable para ver los markers no-stop
-      const z = Math.max((map.getZoom?.() || 0), MIN_ZOOM_TO_SHOW);
-      map.setView(coords[0], z);
-      return;
+        if (coords.length === 1) {
+            // Un solo punto: céntralo y aplica un zoom razonable para ver los markers no-stop
+            const z = Math.max((map.getZoom?.() || 0), MIN_ZOOM_TO_SHOW);
+            focusPoint(coords[0], {
+                zoom: z,
+                animate: false
+            });
+            return;
+        }
+
+        const bounds = Lg.latLngBounds(coords);
+        // El shim de MapLibre y Leaflet aceptan el objeto bounds;
+        // padding por defecto 24 (coincide con el usado en el shim)
+        fitBoundsSafe(bounds, {
+            animate: false,
+            base: 24,
+            extraRight: 16
+        });
+    } catch (e) {
+        console.warn('fitMapToFilter:', e);
     }
-
-    const bounds = Lg.latLngBounds(coords);
-    // El shim de MapLibre y Leaflet aceptan el objeto bounds;
-    // padding por defecto 24 (coincide con el usado en el shim)
-    map.fitBounds(bounds, { padding });
-  } catch (e) {
-    console.warn('fitMapToFilter:', e);
-  }
 }
 
 export async function setFilter(payload) {
@@ -173,6 +183,8 @@ export async function setFilter(payload) {
             console.log("Positions:", positions);
 
             await resetFilter(false, false);
+
+            updateExportFilterVisibility(true);
 
             try {
                 map.closePopup?.();
@@ -207,8 +219,6 @@ export async function setFilter(payload) {
                 alpha: 0.5
             });
             await addFilterMarkers(positions);
-
-            updateExportFilterVisibility(true);
         } else {
             resetFilter(true, false);
             //updateExportFilterVisibility(false);
@@ -805,14 +815,17 @@ function openInfoPopup(lat, lon, lastUpdated, speed, isStop = false) {
         currentPopup.remove();
 
     currentPopup = L.popup({
-        autoPan: true
+        autoPan: false
     })
         .setLatLng([lat, lon])
         .setContent(html)
         .openOn(map);
 
     map.invalidateSize();
-    map.setView([lat, lon], map.getZoom());
+    focusPoint([lat, lon], {
+        zoom: map.getZoom(),
+        animate: true
+    });
 }
 
 function closeInfoPopup() {
@@ -871,25 +884,29 @@ async function handleFilterRowSelection(uniqueId) {
 
 // === Espera a que las capas MapLibre existan y se pinten al menos 1 frame ===
 async function waitForMapLibrePaint(layerIds = []) {
-  const ml = map && map._ml;
-  if (!ml) return; // Leaflet: no hace falta esperar
+    const ml = map && map._ml;
+    if (!ml)
+        return; // Leaflet: no hace falta esperar
 
-  // 1) Espera a que existan las capas/layers
-  for (let i = 0; i < 60; i++) { // ~3s máx
-    const ok = layerIds.every(id => id && ml.getLayer(id));
-    if (ok) break;
-    await new Promise(r => setTimeout(r, 50));
-  }
+    // 1) Espera a que existan las capas/layers
+    for (let i = 0; i < 60; i++) { // ~3s máx
+        const ok = layerIds.every(id => id && ml.getLayer(id));
+        if (ok)
+            break;
+        await new Promise(r => setTimeout(r, 50));
+    }
 
-  // 2) Espera a un render con esas capas ya presentes
-  await new Promise(resolve => {
-    try {
-      ml.once('render', resolve);
-      ml.triggerRepaint && ml.triggerRepaint();
-    } catch { resolve(); }
-  });
-  // 3) Frame extra por si hay gradiente/simplificación diferida
-  await new Promise(r => requestAnimationFrame(r));
+    // 2) Espera a un render con esas capas ya presentes
+    await new Promise(resolve => {
+        try {
+            ml.once('render', resolve);
+            ml.triggerRepaint && ml.triggerRepaint();
+        } catch {
+            resolve();
+        }
+    });
+    // 3) Frame extra por si hay gradiente/simplificación diferida
+    await new Promise(r => requestAnimationFrame(r));
 }
 
 async function addRouteLine(
@@ -1045,11 +1062,11 @@ async function addRouteLine(
         });
         ensureOrder();
 
-    // ✅ Espera a que las capas (línea + outline) existan y se pinten al menos un frame
-    await waitForMapLibrePaint([
-      window._routeColorLine?.__ml_id,
-      window.routeOutline?.__ml_id
-    ]);
+        // ✅ Espera a que las capas (línea + outline) existan y se pinten al menos un frame
+        await waitForMapLibrePaint([
+                window._routeColorLine?.__ml_id,
+                window.routeOutline?.__ml_id
+            ]);
 
         // Aplica gradiente en el SIGUIENTE frame (evita bloquear el primer pintado)
         requestAnimationFrame(() => {

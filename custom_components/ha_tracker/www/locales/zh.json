@@ -105,5 +105,6 @@
   "zoom_out": "缩小",
   "reset_to_north": "将朝向重置为正北",
   "search": "搜索",
-  "layers": "图层"  
+  "layers": "图层",
+  "chart": "图表"
 }

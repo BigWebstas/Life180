@@ -128,19 +128,30 @@ export async function configureConsole() {
     }
 }
 
-export function formatDate(date) {
+export function formatDate(date, hour = true) {
     const parsedDate = new Date(date);
-    const options = {
-        weekday: 'short',
-        day: '2-digit',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-    };
-    // Usa `currentLang` o un idioma por defecto (por ejemplo, 'en')
-    return parsedDate.toLocaleString(currentLang || 'en', options);
+	if (hour) {
+		const options = {
+			weekday: 'short',
+			day: '2-digit',
+			month: 'short',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hour12: false,
+		};
+		// Usa `currentLang` o un idioma por defecto (por ejemplo, 'en')
+		return parsedDate.toLocaleString(currentLang || 'en', options);
+	} else {
+		const options = {
+			weekday: 'long',
+			day: '2-digit',
+			month: 'short',
+			hour12: false,
+		};
+		// Usa `currentLang` o un idioma por defecto (por ejemplo, 'en')
+		return parsedDate.toLocaleString(currentLang || 'en', options);
+	}
 }
 
 function formatNumber({
