@@ -19,7 +19,6 @@ Mejoras conservadoras y robustez:
 - Parser de float tolerante a coma decimal
 - _build_accept_lang(): construcción segura de Accept-Language
 - Guardas ante Content-Type no JSON, JSON inválido y payloads enormes
-- Parámetro ?debug=1 con diagnósticos ligeros
 - Métrica rl_age y backoff_remaining
 - Rechazo explícito de NaN/Inf en lat/lon
 - Header Accept: application/json
@@ -34,10 +33,10 @@ Mejoras conservadoras y robustez:
 Simplificaciones/ajustes aplicados:
 - Rejilla fija por DECIMALS para el índice + caja de prefiltrado basada en radio (evita falsos negativos).
 - Fallback opcional de idioma (desactivable con ?lang_strict=1) y override por ?lang=.
-- (Nuevo) Capacidad de sobreescribir parámetros vía opciones del config entry (RL, per-cell, backlog, email).
-- (Nuevo) Mapeo de 5xx de upstream a 503 (temporarily_unavailable) más semántico + propagación de Retry-After.
-- (Nuevo) Fallback inteligente: prioriza el idioma primario (p. ej. `es`) antes de aceptar cualquier idioma.
-- (Nuevo) Header X-Cache con `hit`, `hit-fallback` o `miss`.
+- Capacidad de sobreescribir parámetros vía opciones del config entry (RL, per-cell, backlog, email).
+- Mapeo de 5xx de upstream a 503 (temporarily_unavailable) más semántico + propagación de Retry-After.
+- Fallback inteligente: prioriza el idioma primario (p. ej. `es`) antes de aceptar cualquier idioma.
+
 
 Añadidos en esta versión:
 - (Nuevo) Reset de estado/cachés: `?reset=cache|hot|neg|backoff|metrics|all` (sólo admin).
@@ -80,9 +79,6 @@ _LOGGER = logging.getLogger(__name__)
 NOMINATIM_TIMEOUT = 15  # seg
 NOMINATIM_MAX_BYTES = 2_000_000  # ~2MB
 LOG_SAMPLE_RATE = 0.1  # 10% logs no críticos
-
-# --- Headers expuestos (DRY) ---
-EXPOSE_HDRS = "Retry-After, Content-Language, X-Queue-ETA, X-Pending-Misses, X-Cache, X-Cache-Dist-M"
 
 # --- Config (defaults) ---
 CACHE_KEY = "reverse_geocode_cache"
@@ -429,50 +425,13 @@ def _json_error(
         payload["retry_after"] = int(retry_after)
     if extra:
         payload.update(extra)
-    resp = view.json(payload, status_code=status)
-    resp.headers["Access-Control-Expose-Headers"] = EXPOSE_HDRS
-    resp.headers["Cache-Control"] = "no-store"
-    resp.headers["Vary"] = "Accept-Language"
-    lang = extra.get("lang")
-    if isinstance(lang, str):
-        resp.headers["Content-Language"] = lang.split(",", 1)[0]
-    if retry_after is not None:
-        resp.headers["Retry-After"] = str(int(retry_after))
-    if "eta" in extra:
-        try:
-            resp.headers["X-Queue-ETA"] = str(int(extra["eta"]))
-        except Exception:
-            pass
-    if "pending" in extra:
-        try:
-            resp.headers["X-Pending-Misses"] = str(int(extra["pending"]))
-        except Exception:
-            pass
-    resp.headers["X-Cache"] = "miss"
-    return resp
+    # Respuesta simple, sin cabeceras añadidas 
+    return view.json(payload, status_code=status)
 
 
 def _json_ok(view: HomeAssistantView, payload: Dict[str, Any], status_code: int = 200):
-    resp = view.json(payload, status_code=status_code)
-    resp.headers["Access-Control-Expose-Headers"] = EXPOSE_HDRS
-    resp.headers["Cache-Control"] = "no-store"
-    resp.headers["Vary"] = "Accept-Language"
-    lang = payload.get("lang")
-    if isinstance(lang, str):
-        resp.headers["Content-Language"] = lang.split(",", 1)[0]
-    src = payload.get("source")
-    if isinstance(src, str):
-        if src == "cache_lang_fallback":
-            resp.headers["X-Cache"] = "hit-fallback"
-        elif src.startswith("cache"):
-            resp.headers["X-Cache"] = "hit"
-        else:
-            resp.headers["X-Cache"] = "miss"
-    else:
-        resp.headers["X-Cache"] = "miss"
-    if payload.get("hit_distance_m") is not None:
-        resp.headers["X-Cache-Dist-M"] = str(payload["hit_distance_m"])
-    return resp
+    # Respuesta simple, sin cabeceras añadidas 
+    return view.json(payload, status_code=status_code)
 
 
 def _err(status: int, code: str, retry_after: Optional[int] = None) -> Dict[str, Any]:
@@ -769,7 +728,6 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
           - lat (float)
           - lon (float)
           - nowait=1 (opcional) -> no encola misses; responde 202 con retry_after (arranca tarea)
-          - debug=1 (opcional)
           - force=1 (solo admin)
           - zoom=10..18 (opcional)
           - lang_strict=1 (opcional)
@@ -784,7 +742,6 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
         _load_cfg_overrides(hass, dd)
 
         qs = request.rel_url.query or {}
-        debug = (qs.get("debug") == "1")
 
         server_lang = getattr(hass.config, "language", None) or "en"
         raw_lang = (qs.get("lang") or "").strip()

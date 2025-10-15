@@ -1,10 +1,15 @@
 import logging
 import math
+import json
+import gzip
+
 
 from typing import List, Tuple, Optional
 from dateutil.parser import isoparse
 from datetime import timedelta, datetime
 from functools import partial
+from aiohttp import web
+
 
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.components.recorder import get_instance as get_recorder_instance
@@ -1268,16 +1273,6 @@ class FilteredPositionsEndpoint(HomeAssistantView):
 
         states = history[source_device_id] or []
 
-        # Reforzar corte exacto de ventana y orden temporal
-        try:
-            as_utc = dt_util.as_utc
-            s0 = start_datetime_utc
-            s1 = end_datetime_utc
-            states = [s for s in states if as_utc(s.last_updated) >= s0 and as_utc(s.last_updated) <= s1]
-            states.sort(key=lambda s: as_utc(s.last_updated))
-        except Exception:
-            pass
-
         # Zonas (leer en el hilo principal)
         zones = _all_zones(hass)
 
@@ -1300,4 +1295,23 @@ class FilteredPositionsEndpoint(HomeAssistantView):
             partial(_build_payload_offthread, states, cfg=cfg, zones=zones)
         )
 
-        return self.json(payload)
+        #SIN COMPRESION
+        # return self.json(payload)
+
+        #CON COMPRESION
+        # --- Respuesta JSON con compresión gzip (si el cliente lo acepta) ---
+        raw = json.dumps(payload, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
+        accept = (request.headers.get('Accept-Encoding') or '').lower()
+
+        headers = {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Vary': 'Accept-Encoding',
+        }
+
+        if 'gzip' in accept:
+            body = await hass.async_add_executor_job(lambda: gzip.compress(raw, compresslevel=5))
+            headers['Content-Encoding'] = 'gzip'
+        else:
+            body = raw
+
+        return web.Response(body=body, headers=headers, status=200)

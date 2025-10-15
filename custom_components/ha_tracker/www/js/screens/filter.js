@@ -24,9 +24,9 @@ let summaryZonesSortColumn = "zone";
 let summaryZonesSortAscending = true;
 
 const MIN_ZOOM_TO_SHOW = 16;
-const FILTER_ICON = '/ha-tracker/images/filter.png';
-const STOP_ICON_16_16 = '/ha-tracker/images/stop16x16.png';
-const STOP_ICON_24_24 = '/ha-tracker/images/stop24x24.png';
+const FILTER_ICON = './images/filter.png';
+const STOP_ICON_16_16 = './images/stop16x16.png';
+const STOP_ICON_24_24 = './images/stop24x24.png';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -1319,11 +1319,11 @@ async function updateSummaryZonesTable() {
             row.style.cursor = ''; // o 'default'
         }
 
-        row.addEventListener('click', () => {
-            const zoneData = zonePositions[zoneName];
-            if (zoneData)
-                showZone(zoneData.id);
-        });
+        //row.addEventListener('click', () => {
+        //    const zoneData = zonePositions[zoneName];
+        //    if (zoneData)
+        //        showZone(zoneData.id);
+        //});
 
         const meta = zonePositions[zoneName];
         if (zoneName) {

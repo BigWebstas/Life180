@@ -2,7 +2,7 @@
 // DEVICES
 //
 
-import { formatDate, geocodeTime, geocodeDistance, use_imperial, DEFAULT_ALPHA } from '../globals.js';
+import { haUrl, formatDate, geocodeTime, geocodeDistance, use_imperial, DEFAULT_ALPHA } from '../globals.js';
 import { fetchPersons, fetchDevices } from '../ha/fetch.js';
 import { handleZonePosition } from '../screens/zones.js';
 import { map, isValidCoordinates, getDistanceFromLatLonInMeters, fitBoundsSafe, focusPoint } from '../utils/map.js';
@@ -10,7 +10,7 @@ import { t } from '../utils/i18n.js';
 import { requestAddress, cancelAddress } from '../utils/geocode.js';
 import { toRgba } from '../utils/dialogs.js';
 
-const DEFAULT_ICON_URL = '/ha-tracker/images/location-red.png';
+const DEFAULT_ICON_URL = './images/location-red.png';
 
 export let persons = [];
 
@@ -253,6 +253,12 @@ async function updatePersonsDevicesMap() {
     console.log("Devices to persons:", personsDevicesMap);
 }
 
+export function resolveWithHaUrl(pathLike) {
+  if (!pathLike) return "";
+  // Asegura una barra final en la base para que respete el pathname de haUrl
+  return new URL(pathLike, haUrl + "/").href;
+}
+
 async function updatePersonsMarkers() {
     if (!map.getPane('personsMarkers')) {
         const pane = map.createPane('personsMarkers');
@@ -281,7 +287,7 @@ async function updatePersonsMarkers() {
         const formattedDate = formatDate(device.last_updated || t("date_unavailable"));
         const personObj = persons.find(p => p.entity_id === personId);
         const ownerName = personObj?.attributes.friendly_name || '';
-        const iconUrl = personObj?.attributes.entity_picture || DEFAULT_ICON_URL;
+        const iconUrl = resolveWithHaUrl(personObj?.attributes.entity_picture) || DEFAULT_ICON_URL;
 
         const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
         const popupContent = `

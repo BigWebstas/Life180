@@ -70,7 +70,16 @@ The steps to install this integration are as follows:
 
 You can access the application by opening the panel from the menu on the left or also from a web browser at the address:
 
-   `https://<HOST>/ha-tracker/index.html`
+   `https://HOST/ha-tracker/index.html`
+   
+This URL accepts 3 parameters:
+  - **debug=1:** to avoid using minified JavaScript
+  - **haUrl=HOST_2:** In case you need to connect to a host other than "HOST_1"
+  - **token=ll_token:** Where "ll_token" is a long-lived token
+  
+**Example:** 
+    
+	`https://HOST/ha-tracker/index.html?debug=1&haUrl=HOST_2&token=ll_token`   
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/install.png" alt="Install screen" style="width: 80%; max-width: 100%; height: auto;" />
@@ -204,6 +213,8 @@ Integrations create Device Trackers in Home Assistant when connected and they ar
 
 Device Trackers must be assigned to users: **"Settings &rarr; People &rarr; Username &rarr; Devices that belong to this person"**
 
+**Important:** If there are multiple devices associated with a person, HA Tracker takes the first one.
+
 ---
 
 ### Home Assistant
@@ -334,7 +345,7 @@ In Traccar server you need to create two **Computed Attributes**:
     - Expression: "speed * 0.514444"
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-computed-attributes.png" alt="Traccar Server Computed Attributes" style="width: 300px; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-computed-attributes.png" alt="Traccar Server Computed Attributes" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>Traccar Server Computed Attributes</em>
 </div>
@@ -342,7 +353,7 @@ In Traccar server you need to create two **Computed Attributes**:
 These Computed Attributes need to be assigned to **groups** and/or **devices** in Traccar Server.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-groups.png" alt="Traccar Server Groups" style="width: 300px; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-groups.png" alt="Traccar Server Groups" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>Traccar Server Groups</em>
 </div>
@@ -356,7 +367,7 @@ The first thing you need to do in Home Assistant is install the **Traccar Server
 In **"Settings &rarr; Devices and Services &rarr; Traccar Server &rarr; Options"** it is necessary to add two **Custom Attributes**: **batteryLevel** and **speedMps**
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-options.png" alt="Traccar Server Options" style="width: 300px; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-options.png" alt="Traccar Server Options" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>Traccar Server Options</em>
 </div>

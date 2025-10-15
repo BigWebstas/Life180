@@ -484,19 +484,109 @@ export function fitBoundsSafe(
             return false;
 
         // --- MAPLIBRE (3D) ---
-        if (map._ml && typeof map._ml.fitBounds === 'function') {
+        if (map._ml && (typeof map._ml.fitBounds === 'function' || typeof map._ml.cameraForBounds === 'function')) {
             const ml = map._ml;
             const bb = [[swne.sw.lng, swne.sw.lat], [swne.ne.lng, swne.ne.lat]];
+            const padding = {
+                left: leftPad,
+                right: rightPad,
+                top: topPad,
+                bottom: bottomPad
+            };
+
             try {
-                ml.fitBounds(bb, {
-                    padding: {
-                        left: leftPad,
-                        right: rightPad,
-                        top: topPad,
-                        bottom: bottomPad
-                    },
-                    duration: animate ? 300 : 0
-                });
+                const bearing = ml.getBearing?.() ?? 0;
+                const pitch = ml.getPitch?.() ?? 0;
+
+                // 1) Calcular encuadre sin perspectiva (pitch 0) para un zoom/centro "conservador"
+                if (typeof ml.cameraForBounds === 'function') {
+                    const cam = ml.cameraForBounds(bb, {
+                        padding,
+                        bearing,
+                        pitch: 0
+                    });
+                    (animate ? ml.easeTo : ml.jumpTo).call(ml, {
+                        center: cam.center,
+                        zoom: cam.zoom,
+                        bearing,
+                        pitch, // restauramos el pitch real
+                        duration: animate ? 300 : 0
+                    });
+                } else {
+                    ml.fitBounds(bb, {
+                        padding,
+                        duration: animate ? 300 : 0
+                    });
+                }
+
+                // 2) Post-ajuste por píxeles: asegurar que extremos caben con paddings reales
+                const fixEdges = (tries = 3) => {
+                    const c = ml.getContainer?.();
+                    const w = c?.clientWidth || 0;
+                    if (!w)
+                        return true;
+
+                    const guard = 12; // pequeño margen extra para icono (~48px)
+                    const leftLimit = leftPad + guard;
+                    const rightLimit = w - (rightPad + guard);
+
+                    // usa las 4 esquinas del bounds (cubre 2 puntos a izq/der)
+                    const pts = [
+                        [swne.sw.lng, swne.sw.lat],
+                        [swne.ne.lng, swne.ne.lat],
+                        [swne.sw.lng, swne.ne.lat],
+                        [swne.ne.lng, swne.sw.lat],
+                    ];
+                    let minX = Infinity,
+                    maxX = -Infinity;
+                    for (const [lng, lat] of pts) {
+                        const p = ml.project([lng, lat]);
+                        if (!p)
+                            continue;
+                        if (p.x < minX)
+                            minX = p.x;
+                        if (p.x > maxX)
+                            maxX = p.x;
+                    }
+                    if (!isFinite(minX) || !isFinite(maxX))
+                        return true;
+
+                    // Errores (positivos = fuera)
+                    const leftErr = Math.max(0, leftLimit - minX); // demasiado a la IZQUIERDA
+                    const rightErr = Math.max(0, maxX - rightLimit); // demasiado a la DERECHA
+
+                    if (leftErr === 0 && rightErr === 0)
+                        return true;
+
+                    if (leftErr > 0 && rightErr > 0) {
+                        // ambos fuera -> un pelín de zoom out y reintento
+                        ml.easeTo({
+                            zoom: ml.getZoom() - 0.22,
+                            duration: animate ? 180 : 0
+                        });
+                    } else if (leftErr > 0) {
+                        // mover contenido a la DERECHA en pantalla => panear a la IZQUIERDA (dx negativo)
+                        ml.panBy([-leftErr, 0], {
+                            duration: animate ? 160 : 0
+                        });
+                    } else if (rightErr > 0) {
+                        // mover contenido a la IZQUIERDA en pantalla => panear a la DERECHA (dx positivo)
+                        ml.panBy([rightErr, 0], {
+                            duration: animate ? 160 : 0
+                        });
+                    }
+
+                    if (tries - 1 <= 0)
+                        return true;
+                    requestAnimationFrame(() => fixEdges(tries - 1));
+                    return false;
+                };
+
+                if (animate)
+                    setTimeout(() => requestAnimationFrame(() => fixEdges(3)), 320);
+                else
+                    requestAnimationFrame(() => fixEdges(3));
+
                 return true;
             } catch {
                 return false;

@@ -77,10 +77,10 @@ function _lastPressFromZones(ms = 1200) {
 
 const v = '1.0.8';
 const CDN = {
-    maplibreCSS: ['/ha-tracker/vendor/maplibre-gl/maplibre-gl.css?v=' + v],
-    maplibreJS: ['/ha-tracker/vendor/maplibre-gl/maplibre-gl.js?v=' + v],
-    geocCSS: ['/ha-tracker/vendor/maplibre-gl-geocoder/maplibre-gl-geocoder.css?v=' + v],
-    geocJS: ['/ha-tracker/vendor/maplibre-gl-geocoder/maplibre-gl-geocoder.min.js?v=' + v]
+    maplibreCSS: ['./vendor/maplibre-gl/maplibre-gl.css?v=' + v],
+    maplibreJS: ['./vendor/maplibre-gl/maplibre-gl.js?v=' + v],
+    geocCSS: ['./vendor/maplibre-gl-geocoder/maplibre-gl-geocoder.css?v=' + v],
+    geocJS: ['./vendor/maplibre-gl-geocoder/maplibre-gl-geocoder.min.js?v=' + v]
 };
 
 // OpenFreeMap (estilo vectorial)

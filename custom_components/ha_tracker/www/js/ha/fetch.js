@@ -22,7 +22,16 @@ async function fetchData(
     try {
         let currentToken;
         if (authRequired) {
-            currentToken = await getToken();
+
+            // 1) Intenta leer el token desde la URL (?token=... o ?access_token=...)
+            let urlToken = "";
+            try {
+                const sp = new URLSearchParams(window.location.search);
+                urlToken = (sp.get("token") || sp.get("access_token") || "").trim();
+            } catch (_) {}
+            // 2) Prioriza el token de la URL; si no hay, usa getToken()
+            currentToken = urlToken || await getToken();
+
             if (!currentToken || !currentToken.trim()) {
                 throw new Error("Invalid token.");
             }
@@ -40,7 +49,10 @@ async function fetchData(
         };
         if (method !== 'GET' && body !== undefined) {
             init.body = body;
-            if (!(body instanceof FormData) && !(body instanceof Blob) && !(body instanceof ArrayBuffer)) {
+            if (!(body instanceof FormData) &&
+                !(body instanceof Blob) &&
+                !(body instanceof ArrayBuffer) &&
+                !(body instanceof URLSearchParams)) {
                 init.headers = {
                     'Content-Type': 'application/json',
                     ...headers
@@ -50,12 +62,13 @@ async function fetchData(
 
         const response = await fetch(url, init);
         const status = response.status;
-        const retryAfterHdr = Number(response.headers.get('Retry-After'));
+        const raRaw = response.headers.get('Retry-After');
+		const retryAfterHdr = parseRetryAfter(raRaw);
         const contentType = (response.headers.get('content-type') || '').toLowerCase();
 
         // 202 Accepted → cola: puede venir con o sin JSON
         if (status === 202) {
-            if (contentType.includes('application/json')) {
+            if (contentType.includes('json')) {
                 try {
                     const data = await response.json();
                     return data ?? {
@@ -82,16 +95,21 @@ async function fetchData(
         }
 
         if (!response.ok) {
-            const errorDetails = await response.text().catch(() => '');
-            const err = new Error(`Error HTTP: ${status} - ${errorDetails}`);
+            // Intenta leer JSON de error para capturar retry_after / error
+            let errorJson = null;
+            try { errorJson = await response.clone().json(); } catch (_) {}
+            const errorText = errorJson ? JSON.stringify(errorJson) : (await response.text().catch(() => ''));
+            const err = new Error(`Error HTTP: ${status} - ${errorText}`);
             err.status = status;
-            if (Number.isFinite(retryAfterHdr))
-                err.retry_after = retryAfterHdr;
+            const raBody = Number(errorJson?.retry_after);
+            if (Number.isFinite(retryAfterHdr)) err.retry_after = retryAfterHdr;
+            else if (Number.isFinite(raBody))   err.retry_after = raBody;
+            if (errorJson?.error) err.code = errorJson.error;
             throw err;
         }
 
         // OK 2xx “normal”
-        if (contentType.includes('application/json')) {
+        if (contentType.includes('json')) {
             return await response.json();
         }
         const text = await response.text();
@@ -105,6 +123,14 @@ async function fetchData(
     }
 }
 
+function parseRetryAfter(hdr) {
+  if (hdr == null) return NaN;
+  const n = Number(hdr);
+  if (Number.isFinite(n)) return n;
+  const t = Date.parse(hdr); // HTTP-date
+  return Number.isNaN(t) ? NaN : Math.max(1, Math.round((t - Date.now()) / 1000));
+}
+
 export async function fetchReverseGeocode(lat, lon) {
     if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lon))) {
         throw new Error("latitude and longitude must be finite numbers.");
@@ -113,8 +139,12 @@ export async function fetchReverseGeocode(lat, lon) {
     u.searchParams.set('lat', String(lat));
     u.searchParams.set('lon', String(lon));
     u.searchParams.set('nowait', '1');
-    // payload mínimo desde el backend
-    u.searchParams.set('brief', '1');
+    try {
+        const lang = (navigator.language || '').trim();
+       if (lang) {
+            u.searchParams.set('lang', lang.replace('_', '-'));
+        }
+    } catch (_) {}
 
     try {
         const data = await fetchData(u.toString(), {
@@ -267,7 +297,7 @@ export async function updateZone(zoneId, name, radius, latitude, longitude, colo
         latitude: latitude,
         longitude: longitude,
         color: color,
-		visible: visible,
+        visible: visible,
     });
 
     try {

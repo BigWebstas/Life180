@@ -11,11 +11,11 @@ const RANGE_SEP = " \u21D2 ";
 const v = '4.6.13';
 
 const FP_CDN = {
-    coreJS: '/ha-tracker/vendor/flatpickr/flatpickr.min.js?v=' + v,
-    coreCSS: '/ha-tracker/vendor/flatpickr/flatpickr.min.css?v=' + v,
-    confirmJS: '/ha-tracker/vendor/flatpickr/plugins/confirmDate/confirmDate.js?v=' + v,
-    confirmCSS: '/ha-tracker/vendor/flatpickr/plugins/confirmDate/confirmDate.css?v=' + v,
-    l10nBase: '/ha-tracker/vendor/flatpickr/l10n', // p.ej. `${l10nBase}/es.js?v=${v}`
+    coreJS: './vendor/flatpickr/flatpickr.min.js?v=' + v,
+    coreCSS: './vendor/flatpickr/flatpickr.min.css?v=' + v,
+    confirmJS: './vendor/flatpickr/plugins/confirmDate/confirmDate.js?v=' + v,
+    confirmCSS: './vendor/flatpickr/plugins/confirmDate/confirmDate.css?v=' + v,
+    l10nBase: './vendor/flatpickr/l10n', // p.ej. `${l10nBase}/es.js?v=${v}`
 };
 
 // ---- Estado interno ----

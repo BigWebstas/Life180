@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 
+## [0.0.36] - 2025-10-
+
+### Changes
+- The URL to connect to the Home Assistant server from a browser window is: https://HOST_1/ha-tracker/index.html and accepts 3 parameters:
+  - debug=1: to avoid using minified JavaScript
+  - haUrl=HOST_2: In case you need to connect to a host other than "HOST_1"
+  - token=ll_token: Where "ll_token" is a long-lived token
+  Example: http://HOST_1/custom_components/ha_tracker/www/index.html?debug=1&haUrl=HOST_2&token=ll_token
+- Important: If there are multiple devices associated with a person, HA Tracker takes the first one #36
+
+### Fixed
+- Centering elements on the map on large screens
+
+
 ## [0.0.35] - 2025-10-12
 
 ### Changes
