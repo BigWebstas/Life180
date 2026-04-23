@@ -1,5 +1,5 @@
 """Módulo de inicialización para HA Tracker"""
-from __future__ import annotations
+from __future__ import annotations 
 
 import json
 import logging
