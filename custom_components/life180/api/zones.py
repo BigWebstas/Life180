@@ -446,8 +446,9 @@ def validate_zone(zone):
         return False, "Latitude must be between -90 and 90"
     if not -180 <= lon <= 180:
         return False, "Longitude must be between -180 and 180"
+    # radius llega en metros (Leaflet / zonas de Home Assistant); 20 m ~= 66 ft
     if radius < 20:
-        return False, "Radius must be at least 20 meters"
+        return False, "Radius must be at least 66 feet"
 
     # Nombre válido
     if not isinstance(zone["name"], str) or not zone["name"].strip():

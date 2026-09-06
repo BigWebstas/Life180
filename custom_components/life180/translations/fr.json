@@ -30,18 +30,17 @@
           "update_interval": "Intervalle de mise à jour (secondes)",
           "enable_debug": "Activer le débogage",
           "geocode_time": "Temps de géocodage (secondes)",
-          "geocode_distance": "Distance minimale pour géocoder (mètres)",
+          "geocode_distance": "Distance minimale pour géocoder (ft)",
           "only_admin": "Réservé aux administrateurs",
-          "use_imperial": "Utiliser les unités impériales",
-          "stop_radius": "Rayon d’arrêt (mètres)",
+          "stop_radius": "Rayon d’arrêt (ft)",
           "stop_time": "Temps d’arrêt (secondes)",
           "reentry_gap": "Intervalle de ré-entrée (secondes)",
           "outside_gap": "Intervalle hors zone (secondes)",
-          "gps_accuracy": "Précision GPS (mètres)",
-          "max_speed": "Vitesse maximale (km/h)",
+          "gps_accuracy": "Précision GPS (ft)",
+          "max_speed": "Vitesse maximale (mph)",
           "anti_spike_factor_k": "Facteur K",
           "anti_spike_detour_ratio": "Ratio de détour",
-          "anti_spike_radius": "Rayon anti-saut (mètres)",
+          "anti_spike_radius": "Rayon anti-saut (ft)",
           "anti_spike_time": "Temps anti-saut (secondes)"
         }
       }
@@ -49,13 +48,13 @@
     "error": {
       "min_update_interval": "L’intervalle de mise à jour doit être d’au moins 10 secondes.",
       "min_geocode_time": "Le temps de géocodage doit être d’au moins 10 secondes.",
-      "min_geocode_distance": "La distance minimale pour géocoder doit être d’au moins 20 mètres.",
+      "min_geocode_distance": "La distance minimale pour géocoder doit être d’au moins 66 ft.",
       "min_stop_radius": "Le rayon d’arrêt ne peut pas être négatif.",
       "min_stop_time": "Le temps d’arrêt ne peut pas être négatif.",
       "min_reentry_gap": "L’intervalle de ré-entrée ne peut pas être négatif.",
       "min_outside_gap": "L’intervalle hors zone ne peut pas être négatif.",
-      "min_gps_accuracy": "La précision GPS doit être d’au moins 10 mètres.",
-      "min_max_speed": "La vitesse maximale doit être d’au moins 100 km/h.",
+      "min_gps_accuracy": "La précision GPS doit être d’au moins 33 ft.",
+      "min_max_speed": "La vitesse maximale doit être d’au moins 63 mph.",
       "min_anti_spike_factor_k": "Le facteur K doit être au minimum 1,5.",
       "min_anti_spike_detour_ratio": "Le ratio de détour doit être au minimum 1,1.",
       "min_anti_spike_radius": "Le rayon anti-saut ne peut pas être négatif.",
@@ -79,8 +78,7 @@
             "data": {
               "update_interval": "Intervalle de mise à jour (secondes)",
               "only_admin": "Réservé aux administrateurs",
-              "enable_debug": "Activer le débogage",
-              "use_imperial": "Utiliser les unités impériales"
+              "enable_debug": "Activer le débogage"
             }
           },
           "geocoding": {
@@ -88,14 +86,14 @@
             "description": "Paramètres de géocodage inversé.",
             "data": {
               "geocode_time": "Temps de géocodage (secondes)",
-              "geocode_distance": "Distance minimale pour géocoder (mètres)"
+              "geocode_distance": "Distance minimale pour géocoder (ft)"
             }
           },
           "stops": {
             "name": "Arrêts",
             "description": "Seuils de détection d’arrêt.",
             "data": {
-              "stop_radius": "Rayon d’arrêt (mètres)",
+              "stop_radius": "Rayon d’arrêt (ft)",
               "stop_time": "Temps d’arrêt (secondes)",
               "reentry_gap": "Intervalle de ré-entrée (secondes)",
               "outside_gap": "Intervalle hors zone (secondes)"
@@ -105,8 +103,8 @@
             "name": "Précision",
             "description": "Paramètres pour considérer les positions.",
             "data": {
-              "gps_accuracy": "Précision GPS (mètres)",
-              "max_speed": "Vitesse maximale (km/h)"
+              "gps_accuracy": "Précision GPS (ft)",
+              "max_speed": "Vitesse maximale (mph)"
             }
           },
           "anti_spike": {
@@ -115,7 +113,7 @@
             "data": {
               "anti_spike_factor_k": "Facteur K",
               "anti_spike_detour_ratio": "Ratio de détour",
-              "anti_spike_radius": "Rayon anti-saut (mètres)",
+              "anti_spike_radius": "Rayon anti-saut (ft)",
               "anti_spike_time": "Temps anti-saut (secondes)"
             }
           }
@@ -125,13 +123,13 @@
     "error": {
       "min_update_interval": "L’intervalle de mise à jour doit être d’au moins 10 secondes.",
       "min_geocode_time": "Le temps de géocodage doit être d’au moins 10 secondes.",
-      "min_geocode_distance": "La distance minimale pour géocoder doit être d’au moins 20 mètres.",
+      "min_geocode_distance": "La distance minimale pour géocoder doit être d’au moins 66 ft.",
       "min_stop_radius": "Le rayon d’arrêt ne peut pas être négatif.",
       "min_stop_time": "Le temps d’arrêt ne peut pas être négatif.",
       "min_reentry_gap": "L’intervalle de ré-entrée ne peut pas être négatif.",
       "min_outside_gap": "L’intervalle hors zone ne peut pas être négatif.",
-      "min_gps_accuracy": "La précision GPS doit être d’au moins 10 mètres.",
-      "min_max_speed": "La vitesse maximale doit être d’au moins 100 km/h.",
+      "min_gps_accuracy": "La précision GPS doit être d’au moins 33 ft.",
+      "min_max_speed": "La vitesse maximale doit être d’au moins 63 mph.",
       "min_anti_spike_factor_k": "Le facteur K doit être au minimum 1,5.",
       "min_anti_spike_detour_ratio": "Le ratio de détour doit être au minimum 1,1.",
       "min_anti_spike_radius": "Le rayon anti-saut ne peut pas être négatif.",

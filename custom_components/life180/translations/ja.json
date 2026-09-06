@@ -30,18 +30,17 @@
           "update_interval": "更新間隔（秒）",
           "enable_debug": "デバッグを有効にする",
           "geocode_time": "ジオコーディング間隔（秒）",
-          "geocode_distance": "ジオコーディング最小距離（m）",
+          "geocode_distance": "ジオコーディング最小距離（ft）",
           "only_admin": "管理者のみ",
-          "use_imperial": "ヤード・ポンド法を使用",
-          "stop_radius": "停止半径（m）",
+          "stop_radius": "停止半径（ft）",
           "stop_time": "停止時間（秒）",
           "reentry_gap": "再入間隔（秒）",
           "outside_gap": "ゾーン外間隔（秒）",
-          "gps_accuracy": "GPS 精度（m）",
-          "max_speed": "最高速度（km/h）",
+          "gps_accuracy": "GPS 精度（ft）",
+          "max_speed": "最高速度（mph）",
           "anti_spike_factor_k": "係数 K",
           "anti_spike_detour_ratio": "迂回比（Detour Ratio）",
-          "anti_spike_radius": "スパイク抑制半径（m）",
+          "anti_spike_radius": "スパイク抑制半径（ft）",
           "anti_spike_time": "スパイク抑制時間（秒）"
         }
       }
@@ -49,13 +48,13 @@
     "error": {
       "min_update_interval": "更新間隔は 10 秒以上である必要があります。",
       "min_geocode_time": "ジオコーディング間隔は 10 秒以上である必要があります。",
-      "min_geocode_distance": "ジオコーディング最小距離は 20 m 以上である必要があります。",
+      "min_geocode_distance": "ジオコーディング最小距離は 66 ft 以上である必要があります。",
       "min_stop_radius": "停止半径を負の値にはできません。",
       "min_stop_time": "停止時間を負の値にはできません。",
       "min_reentry_gap": "再入間隔を負の値にはできません。",
       "min_outside_gap": "ゾーン外間隔を負の値にはできません。",
-      "min_gps_accuracy": "GPS 精度は 10 m 以上である必要があります。",
-      "min_max_speed": "最高速度は 100 km/h 以上である必要があります。",
+      "min_gps_accuracy": "GPS 精度は 33 ft 以上である必要があります。",
+      "min_max_speed": "最高速度は 63 mph 以上である必要があります。",
       "min_anti_spike_factor_k": "係数 K は 1.5 以上である必要があります。",
       "min_anti_spike_detour_ratio": "迂回比（Detour Ratio）は 1.1 以上である必要があります。",
       "min_anti_spike_radius": "スパイク抑制半径を負の値にはできません。",
@@ -79,8 +78,7 @@
             "data": {
               "update_interval": "更新間隔（秒）",
               "only_admin": "管理者のみ",
-              "enable_debug": "デバッグを有効にする",
-              "use_imperial": "ヤード・ポンド法を使用"
+              "enable_debug": "デバッグを有効にする"
             }
           },
           "geocoding": {
@@ -88,14 +86,14 @@
             "description": "逆ジオコーディングのパラメータ。",
             "data": {
               "geocode_time": "ジオコーディング間隔（秒）",
-              "geocode_distance": "ジオコーディング最小距離（m）"
+              "geocode_distance": "ジオコーディング最小距離（ft）"
             }
           },
           "stops": {
             "name": "停止検出",
             "description": "停止検出のしきい値。",
             "data": {
-              "stop_radius": "停止半径（m）",
+              "stop_radius": "停止半径（ft）",
               "stop_time": "停止時間（秒）",
               "reentry_gap": "再入間隔（秒）",
               "outside_gap": "ゾーン外間隔（秒）"
@@ -105,8 +103,8 @@
             "name": "精度",
             "description": "位置情報を有効とみなすためのパラメータ。",
             "data": {
-              "gps_accuracy": "GPS 精度（m）",
-              "max_speed": "最高速度（km/h）"
+              "gps_accuracy": "GPS 精度（ft）",
+              "max_speed": "最高速度（mph）"
             }
           },
           "anti_spike": {
@@ -115,7 +113,7 @@
             "data": {
               "anti_spike_factor_k": "係数 K",
               "anti_spike_detour_ratio": "迂回比（Detour Ratio）",
-              "anti_spike_radius": "スパイク抑制半径（m）",
+              "anti_spike_radius": "スパイク抑制半径（ft）",
               "anti_spike_time": "スパイク抑制時間（秒）"
             }
           }
@@ -125,13 +123,13 @@
     "error": {
       "min_update_interval": "更新間隔は 10 秒以上である必要があります。",
       "min_geocode_time": "ジオコーディング間隔は 10 秒以上である必要があります。",
-      "min_geocode_distance": "ジオコーディング最小距離は 20 m 以上である必要があります。",
+      "min_geocode_distance": "ジオコーディング最小距離は 66 ft 以上である必要があります。",
       "min_stop_radius": "停止半径を負の値にはできません。",
       "min_stop_time": "停止時間を負の値にはできません。",
       "min_reentry_gap": "再入間隔を負の値にはできません。",
       "min_outside_gap": "ゾーン外間隔を負の値にはできません。",
-      "min_gps_accuracy": "GPS 精度は 10 m 以上である必要があります。",
-      "min_max_speed": "最高速度は 100 km/h 以上である必要があります。",
+      "min_gps_accuracy": "GPS 精度は 33 ft 以上である必要があります。",
+      "min_max_speed": "最高速度は 63 mph 以上である必要があります。",
       "min_anti_spike_factor_k": "係数 K は 1.5 以上である必要があります。",
       "min_anti_spike_detour_ratio": "迂回比（Detour Ratio）は 1.1 以上である必要があります。",
       "min_anti_spike_radius": "スパイク抑制半径を負の値にはできません。",

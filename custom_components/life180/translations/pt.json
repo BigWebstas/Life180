@@ -30,18 +30,17 @@
           "update_interval": "Intervalo de atualização (segundos)",
           "enable_debug": "Ativar depuração",
           "geocode_time": "Tempo de geocodificação (segundos)",
-          "geocode_distance": "Distância mínima para geocodificar (metros)",
+          "geocode_distance": "Distância mínima para geocodificar (ft)",
           "only_admin": "Apenas administradores",
-          "use_imperial": "Usar unidades imperiais",
-          "stop_radius": "Raio de paragem (metros)",
+          "stop_radius": "Raio de paragem (ft)",
           "stop_time": "Tempo de paragem (segundos)",
           "reentry_gap": "Intervalo de reentrada (segundos)",
           "outside_gap": "Intervalo fora da área (segundos)",
-          "gps_accuracy": "Precisão do GPS (metros)",
-          "max_speed": "Velocidade máxima (km/h)",
+          "gps_accuracy": "Precisão do GPS (ft)",
+          "max_speed": "Velocidade máxima (mph)",
           "anti_spike_factor_k": "Fator K",
           "anti_spike_detour_ratio": "Rácio de desvio",
-          "anti_spike_radius": "Raio anti-salto (metros)",
+          "anti_spike_radius": "Raio anti-salto (ft)",
           "anti_spike_time": "Tempo anti-salto (segundos)"
         }
       }
@@ -49,13 +48,13 @@
     "error": {
       "min_update_interval": "O intervalo de atualização deve ser de pelo menos 10 segundos.",
       "min_geocode_time": "O tempo de geocodificação deve ser de pelo menos 10 segundos.",
-      "min_geocode_distance": "A distância mínima para geocodificar deve ser de pelo menos 20 metros.",
+      "min_geocode_distance": "A distância mínima para geocodificar deve ser de pelo menos 66 ft.",
       "min_stop_radius": "O raio de paragem não pode ser negativo.",
       "min_stop_time": "O tempo de paragem não pode ser negativo.",
       "min_reentry_gap": "O intervalo de reentrada não pode ser negativo.",
       "min_outside_gap": "O intervalo fora da área não pode ser negativo.",
-      "min_gps_accuracy": "A precisão do GPS deve ser de pelo menos 10 metros.",
-      "min_max_speed": "A velocidade máxima deve ser de pelo menos 100 km/h.",
+      "min_gps_accuracy": "A precisão do GPS deve ser de pelo menos 33 ft.",
+      "min_max_speed": "A velocidade máxima deve ser de pelo menos 63 mph.",
       "min_anti_spike_factor_k": "O Fator K deve ser, no mínimo, 1,5.",
       "min_anti_spike_detour_ratio": "O rácio de desvio deve ser, no mínimo, 1,1.",
       "min_anti_spike_radius": "O raio anti-salto não pode ser negativo.",
@@ -79,8 +78,7 @@
             "data": {
               "update_interval": "Intervalo de atualização (segundos)",
               "only_admin": "Apenas administradores",
-              "enable_debug": "Ativar depuração",
-              "use_imperial": "Usar unidades imperiais"
+              "enable_debug": "Ativar depuração"
             }
           },
           "geocoding": {
@@ -88,14 +86,14 @@
             "description": "Parâmetros de geocodificação reversa.",
             "data": {
               "geocode_time": "Tempo de geocodificação (segundos)",
-              "geocode_distance": "Distância mínima para geocodificar (metros)"
+              "geocode_distance": "Distância mínima para geocodificar (ft)"
             }
           },
           "stops": {
             "name": "Paragens",
             "description": "Limiares de deteção de paragens.",
             "data": {
-              "stop_radius": "Raio de paragem (metros)",
+              "stop_radius": "Raio de paragem (ft)",
               "stop_time": "Tempo de paragem (segundos)",
               "reentry_gap": "Intervalo de reentrada (segundos)",
               "outside_gap": "Intervalo fora da área (segundos)"
@@ -105,8 +103,8 @@
             "name": "Precisão",
             "description": "Parâmetros para considerar posições.",
             "data": {
-              "gps_accuracy": "Precisão do GPS (metros)",
-              "max_speed": "Velocidade máxima (km/h)"
+              "gps_accuracy": "Precisão do GPS (ft)",
+              "max_speed": "Velocidade máxima (mph)"
             }
           },
           "anti_spike": {
@@ -115,7 +113,7 @@
             "data": {
               "anti_spike_factor_k": "Fator K",
               "anti_spike_detour_ratio": "Rácio de desvio",
-              "anti_spike_radius": "Raio anti-salto (metros)",
+              "anti_spike_radius": "Raio anti-salto (ft)",
               "anti_spike_time": "Tempo anti-salto (segundos)"
             }
           }
@@ -125,13 +123,13 @@
     "error": {
       "min_update_interval": "O intervalo de atualização deve ser de pelo menos 10 segundos.",
       "min_geocode_time": "O tempo de geocodificação deve ser de pelo menos 10 segundos.",
-      "min_geocode_distance": "A distância mínima para geocodificar deve ser de pelo menos 20 metros.",
+      "min_geocode_distance": "A distância mínima para geocodificar deve ser de pelo menos 66 ft.",
       "min_stop_radius": "O raio de paragem não pode ser negativo.",
       "min_stop_time": "O tempo de paragem não pode ser negativo.",
       "min_reentry_gap": "O intervalo de reentrada não pode ser negativo.",
       "min_outside_gap": "O intervalo fora da área não pode ser negativo.",
-      "min_gps_accuracy": "A precisão do GPS deve ser de pelo menos 10 metros.",
-      "min_max_speed": "A velocidade máxima deve ser de pelo menos 100 km/h.",
+      "min_gps_accuracy": "A precisão do GPS deve ser de pelo menos 33 ft.",
+      "min_max_speed": "A velocidade máxima deve ser de pelo menos 63 mph.",
       "min_anti_spike_factor_k": "O Fator K deve ser, no mínimo, 1,5.",
       "min_anti_spike_detour_ratio": "O rácio de desvio deve ser, no mínimo, 1,1.",
       "min_anti_spike_radius": "O raio anti-salto não pode ser negativo.",

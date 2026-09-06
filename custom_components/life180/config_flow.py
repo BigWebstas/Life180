@@ -14,35 +14,36 @@ DOMAIN = __package__.split(".")[-1]
 # ---------------------------------------------------------------------------
 #  Defaults y mínimos centralizados
 # ---------------------------------------------------------------------------
+# Distances are in feet and speeds in mph. The pipeline converts them to
+# metric (see units.py).
 DEFAULTS = {
     "update_interval": 10,
     "geocode_time": 30,
-    "geocode_distance": 20,
-    "stop_radius": 30,
+    "geocode_distance": 66,
+    "stop_radius": 100,
     "stop_time": 300,
     "reentry_gap": 60,
     "outside_gap": 300,
-    "gps_accuracy": 15,
-    "max_speed": 150,
+    "gps_accuracy": 50,
+    "max_speed": 95,
     "anti_spike_factor_k": 3.0,
     "anti_spike_detour_ratio": 1.7,
-    "anti_spike_radius": 30,
+    "anti_spike_radius": 100,
     "anti_spike_time": 600,
     "only_admin": False,
     "enable_debug": False,
-    "use_imperial": False,
 }
 
 MINIMUMS = {
     "update_interval": 10,
     "geocode_time": 10,
-    "geocode_distance": 20,
+    "geocode_distance": 66,
     "stop_radius": 0.0,
     "stop_time": 0,
     "reentry_gap": 0,
     "outside_gap": 0,
-    "gps_accuracy": 10.0,
-    "max_speed": 100.0,
+    "gps_accuracy": 33.0,
+    "max_speed": 63.0,
     "anti_spike_factor_k": 1.5,
     "anti_spike_detour_ratio": 1.1,
     "anti_spike_radius": 0,
@@ -69,7 +70,7 @@ def _validate_minimums(flat: dict) -> dict[str, str]:
 #  Config Flow
 # ---------------------------------------------------------------------------
 class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(self, user_input=None):
         # --- Single instance guard ---
@@ -81,7 +82,6 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required("update_interval", default=DEFAULTS["update_interval"]): vol.All(vol.Coerce(int)),
             vol.Required("only_admin", default=DEFAULTS["only_admin"]): bool,
             vol.Required("enable_debug", default=DEFAULTS["enable_debug"]): bool,
-            vol.Required("use_imperial", default=DEFAULTS["use_imperial"]): bool,
         })
 
         geocoding = vol.Schema({
@@ -202,7 +202,6 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
             vol.Required("update_interval", default=self._opts["update_interval"]): vol.All(vol.Coerce(int)),
             vol.Required("only_admin", default=self._opts["only_admin"]): bool,
             vol.Required("enable_debug", default=self._opts["enable_debug"]): bool,
-            vol.Required("use_imperial", default=self._opts["use_imperial"]): bool,
         })
 
         geocoding = vol.Schema({
