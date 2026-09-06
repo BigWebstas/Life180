@@ -3,7 +3,7 @@
 //
 
 import { map, fitBoundsSafe, focusPoint } from '../utils/map.js';
-import { formatDate, fmt0, fmt2, use_imperial, DEFAULT_ALPHA } from '../globals.js';
+import { formatDate, fmt0, fmt2, DEFAULT_ALPHA } from '../globals.js';
 import { fetchFilteredPositions, fetchResetReverseGeocodeCache } from '../ha/fetch.js';
 import { handleZonePosition, showZone, getZoneStyleById } from '../screens/zones.js';
 import { handlePersonsSelection, updatePersonsFilter } from '../screens/persons.js';
@@ -292,7 +292,7 @@ async function updatePositionsTable(positions) {
         const groupClass = `group-${groupClassIndex}`;
         const stop = pos?.stop ? `<img src="${STOP_ICON_16_16}" alt="" style="width:16px;height:16px;">` : "";
         const fecha = formatDate(pos.last_updated);
-        const velNum = Math.round((pos.attributes.speed || 0) * (use_imperial ? 2.23694 : 3.6));
+        const velNum = Math.round((pos.attributes.speed || 0) * 2.23694); // m/s -> mph
         const vel = fmt0(velNum);
         const uniqueId = `${pos.entity_id}_${new Date(pos.last_updated).toISOString()}`;
 
@@ -491,17 +491,17 @@ function gotoMaxSpeedPosition() {
 
 function applyServerSummary(summary) {
     // summary: { positions_count, total_time_s, distance_m, max_speed_mps, average_speed_mps, stops_count, stopped_time_s, ... }
-    const factor = use_imperial ? 2.23694 : 3.6; // m/s -> mph o km/h
-    const distValue = use_imperial ? (summary.distance_m / 1609.344) : (summary.distance_m / 1000);
+    const factor = 2.23694; // m/s -> mph
+    const distValue = summary.distance_m / 1609.344; // metros -> millas
 
     // helpers
     const fmtTime = (secs) => formatTotalTime(secs * 1000);
 
     document.getElementById('positions-count').textContent = fmt0(summary.positions_count);
     document.getElementById('total-time').textContent = fmtTime(summary.total_time_s);
-    document.getElementById('distance').textContent = `${fmt0(distValue)} ${t(use_imperial ? 'miles' : 'kilometres')}`;
-    document.getElementById('max-speed').textContent = `${fmt0(summary.max_speed_mps * factor)} ${t(use_imperial ? 'mi_per_hour' : 'km_per_hour')}`;
-    document.getElementById('average-speed').textContent = `${fmt0(summary.average_speed_mps * factor)} ${t(use_imperial ? 'mi_per_hour' : 'km_per_hour')}`;
+    document.getElementById('distance').textContent = `${fmt0(distValue)} ${t('miles')}`;
+    document.getElementById('max-speed').textContent = `${fmt0(summary.max_speed_mps * factor)} ${t('mi_per_hour')}`;
+    document.getElementById('average-speed').textContent = `${fmt0(summary.average_speed_mps * factor)} ${t('mi_per_hour')}`;
     document.getElementById('stops-count').textContent = fmt0(summary.stops_count);
     document.getElementById('stopped-time').textContent = fmtTime(summary.stopped_time_s);
 
@@ -807,7 +807,7 @@ function openInfoPopup(lat, lon, lastUpdated, speed, isStop = false) {
     const stopLine = isStop ? `<strong>${t('stop') || 'Stop'}</strong><br>` : '';
     const html = `
 	  ${stopLine}
-	  ${formatDate(lastUpdated)}<br>${t('speed')}: ${fmt0(speed)} ${t(use_imperial ? 'mi_per_hour' : 'km_per_hour')}
+	  ${formatDate(lastUpdated)}<br>${t('speed')}: ${fmt0(speed)} ${t('mi_per_hour')}
 	  <br><br><a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"><strong>${t('open_location')}</strong></a>
 	`;
 
@@ -1296,7 +1296,7 @@ async function updateSummaryZonesTable() {
         const stops = zoneStops?.[zoneName] || 0;
 
         const meters = zoneDistanceMeters?.[zoneName] || 0;
-        const distValue = use_imperial ? (meters / 1609.344) : (meters / 1000);
+        const distValue = meters / 1609.344; // metros -> millas
         const distText = `${fmt0(distValue)}`;
         const pretty = zoneName;
 
@@ -1389,7 +1389,7 @@ function updateSummaryZonesTableHeaders() {
 
         let arrow = (summaryZonesSortColumn === columnName) ? (summaryZonesSortAscending ? "▲" : "▼") : "";
         const label = columnKey === "distance"
-             ? (use_imperial ? t("miles") : t("kilometres"))
+             ? t("miles")
              : t(columnKey);
 
         header.innerHTML = `
@@ -1588,11 +1588,11 @@ function readPositionsFromTable() {
             }
         }
 
-        // Velocidad: de la UI (km/h o mph) a m/s
+        // Velocidad: de la UI (mph) a m/s
         const shownSpeed = Number(row.dataset.speed);
         let speedMps = null;
         if (Number.isFinite(shownSpeed)) {
-            const kmh = use_imperial ? (shownSpeed * 1.609344) : shownSpeed;
+            const kmh = shownSpeed * 1.609344; // mph -> km/h
             speedMps = kmh / 3.6;
         }
 
@@ -1676,18 +1676,18 @@ function doExportKml() {
         includeRoute: true,
         nameStop: (p) => `${formatDate(p.last_updated)}`,
         describeStop: (p) => {
-            const kmh = Math.round((p?.attributes?.speed || 0) * (use_imperial ? 2.23694 : 3.6));
-            const unit = t(use_imperial ? 'mi_per_hour' : 'km_per_hour');
+            const mph = Math.round((p?.attributes?.speed || 0) * 2.23694);
+            const unit = t('mi_per_hour');
             const batt = Number.isFinite(p?.battery) ? `${p.battery}%` : '';
             return `<table cellspacing="0" cellpadding="0" style="border-collapse:collapse">
         ${p.zone ? `<tr><td>● ${p.zone}</td></tr>` : ''}
         ${p.address ? `<tr><td>● ${p.address}</td></tr>` : ''}
-        <tr><td>● ${kmh} ${unit}</td></tr>
+        <tr><td>● ${mph} ${unit}</td></tr>
 		${batt ? `<tr><td>● ${t('battery')}: ${batt}</td></tr>` : ''}
       </table>`;
         },
         formatLocal: (d) => formatDate(d),
-        unitLabel: t(use_imperial ? 'mi_per_hour' : 'km_per_hour'),
+        unitLabel: t('mi_per_hour'),
         batteryLabel: t('battery')
     });
 }
@@ -1706,7 +1706,6 @@ function doExportCsv() {
 
     exportPositionsToCsv(positions, {
         filename,
-        useImperial: !!use_imperial,
         formatLocal: (d) => formatDate(d), // misma fecha local que en la tabla
         delimiter: ';', // recomendado para Excel ES; cambia a ',' si prefieres
         usePicker: false, // pon true si quieres forzar File Picker
@@ -1724,7 +1723,6 @@ async function doExportXlsx() {
     const filename = buildFilenameFromUI('xlsx');
     await exportPositionsToXlsx(positions, {
         filename,
-        useImperial: !!use_imperial,
         formatLocal: (d) => formatDate(d),
         sheetName: 'Posiciones',
     });
@@ -1777,7 +1775,7 @@ async function doExportPdf() {
                 ]);
 
         const keys = [...zoneKeys].sort((a, b) => a.localeCompare(b)); // orden alfabético
-        const unitShort = use_imperial ? 'mi' : 'km';
+        const unitShort = 'mi';
 
         for (const zoneName of keys) {
             const durationMs = zoneDurations?.[zoneName] || 0;
@@ -1785,7 +1783,7 @@ async function doExportPdf() {
             const stops = zoneStops?.[zoneName] || 0;
             const meters = zoneDistanceMeters?.[zoneName] || 0;
 
-            const distValue = use_imperial ? (meters / 1609.344) : (meters / 1000);
+            const distValue = meters / 1609.344; // metros -> millas
             const distance = `${fmt0(distValue)} ${unitShort}`;
 
             zonesRows.push({
@@ -1804,15 +1802,15 @@ async function doExportPdf() {
 
     // 3) POSICIONES (reducidas) + color de fondo por zona
     const reduced = reducePositionsForPdf(positions);
-    const unit = t(use_imperial ? 'mi_per_hour' : 'km_per_hour') || (use_imperial ? 'mph' : 'km/h');
+    const unit = t('mi_per_hour') || 'mph';
 
     const positionsRows = reduced.map(p => {
-        const kmh = Math.round((p?.attributes?.speed || 0) * (use_imperial ? 2.23694 : 3.6));
+        const mph = Math.round((p?.attributes?.speed || 0) * 2.23694);
         return {
             whenLocal: formatDate(p.last_updated), // ⬅️ local
             isStop: !!p.stop,
             zone: p.zone || '',
-            speed: Number.isFinite(kmh) ? `${kmh} ${unit}` : '',
+            speed: Number.isFinite(mph) ? `${mph} ${unit}` : '',
             battery: Number.isFinite(p?.battery) ? p.battery : '',
             address: p.address || '',
             _fillColor: p.zone ? blendedFill(p.zone, zonePositions, {

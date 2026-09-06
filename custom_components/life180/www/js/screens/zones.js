@@ -2,7 +2,7 @@
 // ZONES
 //
 
-import { isAdmin, fmt0, use_imperial, DEFAULT_COLOR, DEFAULT_ALPHA } from '../globals.js';
+import { isAdmin, fmt0, DEFAULT_COLOR, DEFAULT_ALPHA } from '../globals.js';
 import { map, getDistanceFromLatLonInMeters, fitBoundsSafe, focusPoint } from '../utils/map.js';
 import { deleteZone, updateZone, createZone, fetchZones } from '../ha/fetch.js';
 import { updatePersonsTable } from '../screens/persons.js';
@@ -819,7 +819,7 @@ async function updateZonesTable() {
         const typeAlt = zone.custom ? 'custom' : 'ha';
         const typeColumnContent = `<img src="${typeIcon}" alt="${typeAlt}" width="16" height="16" style="display:block;margin:auto;">`;
 
-        const radiusText = `${use_imperial ? fmt0(zone.radius * 3.28084) : fmt0(zone.radius)}`;
+        const radiusText = `${fmt0(zone.radius * 3.28084)}`; // metros -> pies
 
         // Actualizar el contenido de la fila si es necesario
         const newContent = `
@@ -942,7 +942,7 @@ function updateZonesTableHeaders() {
         }
 
         const label = (columnKey === 'radius')
-         ? `${use_imperial ? t('feet') : t('meters')}`
+         ? t('feet')
          : t(columnKey);
 
         header.innerHTML = `
@@ -997,8 +997,8 @@ function isZoneNameTaken(name, {
 function buildZonePopup(zone) {
     const { latitude, longitude, radius } = zone;
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
-    const r = use_imperial ? fmt0(radius * 3.28084) : fmt0(radius);
-    const unit = use_imperial ? t('feet') : t('meters');
+    const r = fmt0(radius * 3.28084); // metros -> pies
+    const unit = t('feet');
     return `
     <strong>${zone.name || t("zone_without_name")}</strong><br>
     ${t('radius')}: ${r} ${unit}

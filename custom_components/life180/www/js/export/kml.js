@@ -33,10 +33,10 @@ function kmlCData(s = '') {
     return `<![CDATA[${s}]]>`;
 }
 
-function kmhFromMps(v) {
+function mphFromMps(v) {
     if (!Number.isFinite(v))
         return 0;
-    return Math.round(v * 3.6);
+    return Math.round(v * 3.6 * 0.621371192);
 }
 
 // KML expects lon,lat[,alt]
@@ -72,7 +72,7 @@ export function buildKmlPositionsOnly(positions, options = {}) {
     routeColor = 'ff0000ff',
     routeWidth = 6,
     describeStop, nameStop, // ⬇️ añade estos dos con defaults
-    unitLabel = 'km/h',
+    unitLabel = 'mph',
     formatLocal, // si no se pasa, se usará ISO
     batteryLabel = 'Battery',
      } = options;
@@ -122,7 +122,7 @@ export function buildKmlPositionsOnly(positions, options = {}) {
 
         const whenIso = toDateIso(p.last_updated);
         const whenLocal = formatLocal ? formatLocal(p.last_updated) : whenIso;
-        const speedKmh = kmhFromMps(Number(p?.attributes?.speed));
+        const speedMph = mphFromMps(Number(p?.attributes?.speed));
         const defaultName = `${p?.entity_id || 'position'} #${idx + 1}`;
         const name = nameStop ? nameStop(p) : defaultName;
         const batteryPct = Number.isFinite(p?.battery) ? Math.round(p.battery) : null;
@@ -131,7 +131,7 @@ export function buildKmlPositionsOnly(positions, options = {}) {
         const bullet = '•';
         const zone = (p?.zone || '').trim();
         const address = (p?.address || '').trim();
-        const speedLn = `${speedKmh} ${unitLabel}`;
+        const speedLn = `${speedMph} ${unitLabel}`;
         const battLn = (batteryPct != null) ? `${batteryLabel}: ${batteryPct}%` : '';
 
 		const items = [zone, speedLn, battLn, address].filter(Boolean);
@@ -155,7 +155,7 @@ export function buildKmlPositionsOnly(positions, options = {}) {
 			<TimeStamp><when>${whenIso}</when></TimeStamp>
 			<ExtendedData>
 			  <Data name="entity_id"><value>${xmlEscape(p?.entity_id || '')}</value></Data>
-			  <Data name="speed_kmh"><value>${speedKmh}</value></Data>
+			  <Data name="speed_mph"><value>${speedMph}</value></Data>
 			  <Data name="is_stop"><value>true</value></Data>
 			  <Data name="zone"><value>${xmlEscape(zone)}</value></Data>
 			  <Data name="address"><value>${xmlEscape(address)}</value></Data>

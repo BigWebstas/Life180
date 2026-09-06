@@ -1,7 +1,7 @@
 
 import { t } from './i18n.js';
 import { map } from './map.js';
-import { use_imperial, SHOW_VISITS } from '../globals.js';
+import { SHOW_VISITS } from '../globals.js';
 import { updateZoneActionButtons } from '../screens/zones.js';
 
 const invalidateSoon = () => requestAnimationFrame(() => map?.invalidateSize(true));
@@ -57,9 +57,9 @@ export async function updateUI() {
     `;
 
     // FILTRO -> POSICIONES-> speed
-    const unitSpeed = use_imperial ? t('mi_per_hour') : t('km_per_hour');
-    const unitDistKm = use_imperial ? t('miles') : t('kilometres');
-    const unitDistMeters = use_imperial ? t('feet') : t('meters');
+    const unitSpeed = t('mi_per_hour');
+    const unitDistKm = t('miles');
+    const unitDistMeters = t('feet');
 
     document
     .querySelectorAll('#positions-table thead th[data-i18n="speed"], #positions thead th[data-i18n="speed"]')

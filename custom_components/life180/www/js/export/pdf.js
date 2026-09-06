@@ -456,10 +456,7 @@ export async function exportPositionsToPdf({
 
   // — POSICIONES —
   const { wDate, wStop, wZone, wSpeed, wBatt, wAddr } = computePositionColWidths(L.tableWidth);
-  const hasMph = (positionsRows || []).some(r => /\bmph\b/i.test(String(r.speed || '')));
-  const speedHeader = hasMph
-    ? `${t('speed') || 'Velocidad'} (${t('mi_per_hour') || 'mph'})`
-    : `${t('speed') || 'Velocidad'} (${t('km_per_hour') || 'km/h'})`;
+  const speedHeader = `${t('speed') || 'Velocidad'} (${t('mi_per_hour') || 'mph'})`;
 
   const body = (positionsRows || []).map(p => [
     p.whenLocal || '',
@@ -544,8 +541,7 @@ function formatZoneDistanceCell(z) {
     if (!Number.isFinite(m))
         return '';
 
-    const unitShort = (z._unitShort === 'mi' || z._unitShort === 'km') ? z._unitShort : 'km';
-    const value = unitShort === 'mi' ? (m / 1609.344) : (m / 1000);
- 
+    const value = m / 1609.344; // metros -> millas
+
     return `${value.toFixed(0)}`;
 }

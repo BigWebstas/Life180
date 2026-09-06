@@ -28,11 +28,9 @@ function toFixed6(n) {
   return Number.isFinite(v) ? Number(v.toFixed(6)) : null; // como número
 }
 
-function speedInConfiguredUnits(mps, useImperial) {
+function speedInConfiguredUnits(mps) {
   if (!Number.isFinite(mps)) return null;
-  const kmh = mps * 3.6;
-  const mph = kmh * 0.621371192;
-  return Math.round(useImperial ? mph : kmh);
+  return Math.round(mps * 3.6 * 0.621371192); // m/s -> mph
 }
 
 // Longitud máxima por líneas (para auto ancho)
@@ -64,7 +62,6 @@ function computeColWidths(rows, headers) {
 
 export async function exportPositionsToXlsx(positions, {
   filename = 'life180.xlsx',
-  useImperial = false,
   formatLocal = (d) => new Date(d).toLocaleString(),
   sheetName = t('positions'),
 } = {}) {
@@ -78,7 +75,7 @@ export async function exportPositionsToXlsx(positions, {
   const BASE_FONT  = { name: 'Verdana', size: 9 };
   const BASE_ALIGN = { vertical: 'middle', horizontal: 'left' };
 
-  const speedHeader = useImperial ? t('mi_per_hour') : t('km_per_hour');
+  const speedHeader = t('mi_per_hour');
 
   const headers = [
     t('date'),
@@ -97,7 +94,7 @@ export async function exportPositionsToXlsx(positions, {
     const stop  = p?.stop ? t('stop') : '';
     const lat   = toFixed6(p?.attributes?.latitude);
     const lon   = toFixed6(p?.attributes?.longitude);
-    const speed = speedInConfiguredUnits(Number(p?.attributes?.speed), useImperial);
+    const speed = speedInConfiguredUnits(Number(p?.attributes?.speed));
     const batt  = Number.isFinite(p?.battery) ? p.battery : null;
     const zone  = p?.zone || '';
     const address = (p?.address || '').replace(/\u00A0/g, ' ');
