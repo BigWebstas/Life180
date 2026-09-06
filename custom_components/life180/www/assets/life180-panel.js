@@ -1,6 +1,6 @@
-// life180.js — vanilla Web Component (producción)
+// life180.js - vanilla Web Component (production)
 
-// Lee la versión que pusiste en module_url: "...life180.js?v=0.0.30"
+// Reads the version set in module_url: "...life180.js?v=0.0.30"
 const PANEL_VERSION = (() => {
     try {
         return new URL(import.meta.url).searchParams.get("v") || "";
@@ -52,13 +52,13 @@ class Life180Panel extends HTMLElement {
         .content{ flex:1 1 auto; min-height:0; display:flex; overscroll-behavior:contain; }
         iframe{ flex:1 1 auto; min-height:0; width:100%; border:none; display:block; }
 
-        /* opcional: estilos si deseas reaccionar al modo estrecho */
+        /* optional: styles to react to the narrow mode */
         :host(.is-narrow) .title { font-size:18px; padding-left:8px; }
       </style>
 
       <div class="wrap">
         <header class="toolbar" role="toolbar">
-          <button type="button" class="menu-btn" aria-label="Abrir menú">
+          <button type="button" class="menu-btn" aria-label="Open menu">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path fill="currentColor" d="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16"/>
             </svg>
@@ -77,10 +77,10 @@ class Life180Panel extends HTMLElement {
         return ["narrow"];
     }
 
-    // Home Assistant te inyecta .hass y .narrow como props del custom element
+    // Home Assistant injects .hass and .narrow as props on the custom element
     set hass(val) {
         this._hass = val;
-        // Si cambia el contexto (p. ej. app móvil/proxy), reconstituye la URL
+        // If the context changes (e.g. mobile app/proxy), rebuild the URL
         if (this.isConnected)
             this._setIframeSrc();
     }
@@ -88,7 +88,7 @@ class Life180Panel extends HTMLElement {
         return this._hass;
     }
 
-    // Refleja la prop .narrow en una clase/atributo para estilos opcionales
+    // Reflect the .narrow prop into a class/attribute for optional styles
     set narrow(v) {
         const on = !!v;
         this.classList.toggle("is-narrow", on);
@@ -103,13 +103,13 @@ class Life180Panel extends HTMLElement {
     }
 
     connectedCallback() {
-        // Guarda y fuerza margen 0 del <body>, luego lo restauraremos en disconnected
+        // Save and force margin 0 on <body>, then restore it in disconnected
         this._prevBodyMargin = document.body.style.margin;
         document.body.style.margin = "0";
 
         const iframe = this.shadowRoot.getElementById("life180-iframe");
         if (iframe) {
-            // Endurece el iframe (seguridad)
+            // Harden the iframe (security)
             iframe.setAttribute(
                 "sandbox",
                 [
@@ -123,9 +123,9 @@ class Life180Panel extends HTMLElement {
                     "allow-downloads"
                 ].join(" "));
             iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
-            // Si necesitas APIs extra, descomenta: iframe.setAttribute("allow", "fullscreen; clipboard-write");
+            // If you need extra APIs, uncomment: iframe.setAttribute("allow", "fullscreen; clipboard-write");
 
-            // Señales de carga/fallo (detección de problemas de red/CORS)
+            // Load/failure signals (detecting network/CORS problems)
             iframe.addEventListener("error", () => {
                 console.error("iframe load error");
             }, {
@@ -147,7 +147,7 @@ class Life180Panel extends HTMLElement {
         this._msgHandler = this._handleTokenRequest.bind(this);
         this._themeHandler = () => this._syncThemeFromParent();
 
-        // Observa cambios de tema del padre (evento y mutaciones en <html>)
+        // Watch for parent theme changes (event and mutations on <html>)
         try {
             window.addEventListener("ha-theme-changed", this._themeHandler);
             const P = window.parent;
@@ -167,13 +167,13 @@ class Life180Panel extends HTMLElement {
         window.addEventListener("message", this._msgHandler);
         window.addEventListener("pageshow", this._pageShow);
 
-        // Inicialización
+        // Initialization
         this._syncThemeFromParent();
         this._setIframeSrc();
     }
 
     disconnectedCallback() {
-        // Limpieza de listeners
+        // Listener cleanup
         document.removeEventListener("visibilitychange", this._visHandler);
         window.removeEventListener("pageshow", this._pageShow);
         window.removeEventListener("message", this._msgHandler);
@@ -182,7 +182,7 @@ class Life180Panel extends HTMLElement {
             this._themeMO?.disconnect();
         } catch {}
 
-        // Restaura margen original del <body>
+        // Restore the original <body> margin
         if (this._prevBodyMargin !== undefined) {
             document.body.style.margin = this._prevBodyMargin;
         }
@@ -204,11 +204,11 @@ class Life180Panel extends HTMLElement {
                 u.searchParams.set("v", PANEL_VERSION);
             }
             url = u.toString();
-            // guarda el origin esperado del iframe
+            // store the iframe's expected origin
             this._iframeOrigin = u.origin;
         } catch (err) {
             console.error("URL error:", err?.message || err);
-            this._iframeOrigin = ""; // no disponible
+            this._iframeOrigin = ""; // unavailable
         }
 
         if (iframe.src !== url)
@@ -218,7 +218,7 @@ class Life180Panel extends HTMLElement {
     _toggleMenu() {
         const P = window.parent || window.top;
         try {
-            // evento oficial
+            // official event
             P.dispatchEvent(new P.CustomEvent("hass-toggle-menu", {
                     bubbles: true,
                     composed: true
@@ -230,7 +230,7 @@ class Life180Panel extends HTMLElement {
                 }));
         } catch {}
         try {
-            // fallback DOM interno
+            // internal DOM fallback
             const ha = P.document.querySelector("home-assistant");
             const main = ha?.shadowRoot?.querySelector("home-assistant-main");
             const sr = main?.shadowRoot;
@@ -298,22 +298,22 @@ class Life180Panel extends HTMLElement {
         if (!iframe || iframe.contentWindow !== ev.source)
             return;
 
-        // Seguridad: valida origin si lo conoces
+        // Security: validate origin if known
         if (this._iframeOrigin && ev.origin && ev.origin !== this._iframeOrigin) {
             console.log("Message ignored due to unexpected origin:", ev.origin, "≠", this._iframeOrigin);
             return;
         }
 
-        const SKEW_MS = 60_000; // refrescar si queda <60s de vida
-        const FALLBACK_TTL_MS = 8 * 60 * 1000; // por si el token no trae 'exp'
+        const SKEW_MS = 60_000; // refresh if <60s of life left
+        const FALLBACK_TTL_MS = 8 * 60 * 1000; // in case the token has no 'exp'
         this._lastToken ??= "";
         this._lastExpMs ??= 0;
         this._lastGotAt ??= 0;
 
-        // Funciones locales (todo en la misma función)
+        // Local functions (all in the same function)
         const getCurrentToken = () =>
-        this.hass?.auth?.data?.access_token || // preferido
-        this.hass?.connection?.options?.auth?.accessToken || ""; // respaldo
+        this.hass?.auth?.data?.access_token || // preferred
+        this.hass?.connection?.options?.auth?.accessToken || ""; // fallback
 
         const tokenExpMs = (tok) => {
             try {
@@ -324,7 +324,7 @@ class Life180Panel extends HTMLElement {
                 const base64 = part.replace(/-/g, "+").replace(/_/g, "/")
                     .padEnd(Math.ceil(part.length / 4) * 4, "=");
                 const payload = JSON.parse(atob(base64));
-                return payload?.exp ? payload.exp * 1000 : 0; // a ms
+                return payload?.exp ? payload.exp * 1000 : 0; // to ms
             } catch {
                 return 0;
             }
@@ -335,13 +335,13 @@ class Life180Panel extends HTMLElement {
                 return true;
             if (this._lastExpMs)
                 return (Date.now() + SKEW_MS) >= this._lastExpMs;
-            // si no hay exp, TTL de respaldo
+            // no exp: use the fallback TTL
             return (Date.now() - this._lastGotAt) > FALLBACK_TTL_MS;
         };
 
         const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-        // 1) Actualiza caché desde el runtime si ha cambiado
+        // 1) Update the cache from the runtime if it changed
         const runtime = getCurrentToken();
         if (runtime && runtime !== this._lastToken) {
             this._lastToken = runtime;
@@ -349,11 +349,11 @@ class Life180Panel extends HTMLElement {
             this._lastExpMs = tokenExpMs(runtime) || 0;
         }
 
-        // 2) Refresca si está cerca de expirar (con throttle)
+        // 2) Refresh if close to expiring (throttled)
         if (needRefresh()) {
             this._refreshing ??= (async() => {
                 for (let i = 0; i < 50 && !this.hass; i++)
-                    await sleep(100); // espera a hass
+                    await sleep(100); // wait for hass
                 try {
                     await this.hass?.auth?.refreshAccessToken?.();
                 } catch (e) {
@@ -379,7 +379,7 @@ class Life180Panel extends HTMLElement {
             return;
         }
 
-        // 3) Responder (incluye exp para que el iframe sepa cuándo volver a pedir)
+        // 3) Reply (includes exp so the iframe knows when to ask again)
         const targetOrigin = ev.origin || this._iframeOrigin || location.origin;
         try {
             ev.source.postMessage({

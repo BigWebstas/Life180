@@ -1,6 +1,6 @@
 import { html, css, LitElement } from "https://cdn.jsdelivr.net/npm/lit@2.8.0/+esm";
 
-// Lee la versión del propio recurso de la card: ...life180-card.js?v=X.Y.Z
+// Reads the version from the card resource itself: ...life180-card.js?v=X.Y.Z
 const CARD_VERSION = (() => {
     try {
         return new URL(import.meta.url).searchParams.get("v") || "";
@@ -27,14 +27,14 @@ class Life180Card extends LitElement {
     setConfig(config) {
         this.config = {
             title: config.title ?? "Life180",
-            height: config.height ?? "600px", // px, %, vh…
+            height: config.height ?? "600px", // px, %, vh...
             src: config.src,
         };
-        // altura usada por getCardSize()
+        // height used by getCardSize()
         this._height = this.config.height;
     }
 
-    /** Tamaño aproximado en “filas” (50 px) para el editor */
+    /** Approximate size in "rows" (50 px) for the editor */
     getCardSize() {
         const px = parseInt(this._height, 10) || 600;
         return Math.ceil(px / 50) + 1;
@@ -63,9 +63,9 @@ class Life180Card extends LitElement {
     }
   `;
 
-    /** Construye la URL del iframe respetando subrutas/proxy y añadiendo ?v= de la card */
+    /** Build the iframe URL, honoring sub-paths/proxy and adding the card's ?v= */
     _iframeSrc() {
-        // 1) si el usuario pasó un src en la config, úsalo (y añade ?v= si no está)
+        // 1) if the user passed a src in the config, use it (and add ?v= if absent)
         const base =
             this.config?.src ||
             this.hass?.hassUrl?.("/life180/index.html") ||
@@ -78,7 +78,7 @@ class Life180Card extends LitElement {
             }
             return u.toString();
         } catch {
-            // fallback si base no es una URL válida para new URL()
+            // fallback if base is not a valid URL for new URL()
             return CARD_VERSION && !String(base).includes("?")
              ? `${base}?v=${encodeURIComponent(CARD_VERSION)}`
              : base;
@@ -86,7 +86,7 @@ class Life180Card extends LitElement {
     }
 
     firstUpdated() {
-        // Prepara responder al token a peticiones del iframe y fija el origin
+        // Prepare to answer token requests from the iframe and set the origin
         this._setupTokenResponder();
         try {
             const src = this._iframeSrc();
@@ -100,7 +100,7 @@ class Life180Card extends LitElement {
         super.connectedCallback();
         this._startVersionWatcher();
 
-        // visibilitychange -> si volvemos a visible, reset del throttle si versiones coinciden
+        // visibilitychange -> when back to visible, reset the throttle if versions match
         this._onVisibilityBound = async() => {
             if (document.visibilityState === "visible") {
                 await this._maybeResetReloadThrottle();
@@ -108,7 +108,7 @@ class Life180Card extends LitElement {
         };
         document.addEventListener("visibilitychange", this._onVisibilityBound);
 
-        // IntersectionObserver -> cuando la card entra en viewport, reset del throttle si versiones coinciden
+        // IntersectionObserver -> when the card enters the viewport, reset the throttle if versions match
         this._onIntersectBound = async(entries) => {
             if (entries.some((e) => e.isIntersecting)) {
                 await this._maybeResetReloadThrottle();
@@ -193,8 +193,8 @@ class Life180Card extends LitElement {
     }
 
     _setupTokenResponder() {
-        const SKEW_MS = 60_000; // refrescar si queda <60s
-        const FALLBACK_TTL_MS = 8 * 60 * 1000; // si el token no trae 'exp'
+        const SKEW_MS = 60_000; // refresh if <60s left
+        const FALLBACK_TTL_MS = 8 * 60 * 1000; // if the token has no 'exp'
 
         let lastToken = "";
         let lastExpMs = 0;
@@ -206,7 +206,7 @@ class Life180Card extends LitElement {
         this.hass?.connection?.options?.auth?.accessToken ||
         "";
 
-        // Decodifica JWT (Base64URL -> Base64) y saca 'exp' en ms
+        // Decode the JWT (Base64URL -> Base64) and get 'exp' in ms
         const tokenExpMs = (tok) => {
             try {
                 const part = tok?.split(".")?.[1];
@@ -221,7 +221,7 @@ class Life180Card extends LitElement {
             }
         };
 
-        // ¿Hace falta refrescar?
+        // Does it need refreshing?
         const needRefresh = (tok) => {
             if (!tok)
                 return true;
@@ -231,7 +231,7 @@ class Life180Card extends LitElement {
                 lastExpMs = expMs;
                 return (Date.now() + SKEW_MS) >= expMs;
             }
-            // sin 'exp': usa TTL de respaldo desde que lo obtuvimos
+            // no 'exp': use the fallback TTL since we obtained it
             return (Date.now() - lastGotAt) > FALLBACK_TTL_MS;
         };
 
@@ -240,7 +240,7 @@ class Life180Card extends LitElement {
             if (!needRefresh(t))
                 return t;
 
-            // Throttle de refresh para evitar paralelos
+            // Refresh throttle to avoid parallel refreshes
             refreshing ??= (async() => {
                 try {
                     await this.hass?.auth?.refreshAccessToken?.();
@@ -267,14 +267,14 @@ class Life180Card extends LitElement {
             if (ev.data?.type !== "request-token")
                 return;
 
-            // Seguridad: origin + ventana del iframe
+            // Security: origin + iframe window
             if (this._iframeOrigin && ev.origin && ev.origin !== this._iframeOrigin)
                 return;
             const iframe = this.renderRoot.querySelector("#life180-iframe");
             if (!iframe || iframe.contentWindow !== ev.source)
                 return;
 
-            // espera a que hass exista (dashboard asíncrono)
+            // wait for hass to exist (async dashboard)
             for (let i = 0; i < 50 && !this.hass; i++)
                 await new Promise(r => setTimeout(r, 100));
 
@@ -284,7 +284,7 @@ class Life180Card extends LitElement {
                 return;
             }
 
-            // Actualiza cache si cambió
+            // Update the cache if it changed
             if (token !== lastToken) {
                 lastToken = token;
                 lastExpMs = tokenExpMs(token) || 0;
@@ -315,11 +315,11 @@ class Life180Card extends LitElement {
             return true;
         } catch {}
 
-        // Fallback sin sessionStorage (navegación privada estricta, etc.)
+        // Fallback without sessionStorage (strict private browsing, etc.)
         if (!this._noStoragePromise) {
             this._noStoragePromise = new Promise((resolve) => {
                 setTimeout(() => {
-                    this._noStoragePromise = null; // libera para futuros intentos
+                    this._noStoragePromise = null; // release for future attempts
                     resolve(true);
                 }, waitTime);
             });
@@ -355,7 +355,7 @@ if (!customElements.get("life180-card")) {
     customElements.define("life180-card", Life180Card);
 }
 
-/* Carta visible en el editor visual */
+/* Card visible in the visual editor */
 window.customCards = window.customCards || [];
 window.customCards.push({
     type: "life180-card",
