@@ -11,11 +11,42 @@ from datetime import datetime
 
 from homeassistant.components.http import HomeAssistantView
 
+try:  # HA 2024.x+: the storage-backed (UI-managed) zone collection
+    from homeassistant.components.zone import DATA_ZONE_STORAGE_COLLECTION
+except ImportError:  # pragma: no cover - older HA
+    DATA_ZONE_STORAGE_COLLECTION = "zone"
+
 DOMAIN = __package__.split(".")[-2]
 
 _LOGGER = logging.getLogger(__name__)
 
 ZONES_FILE = "life180_zones.json"
+
+
+def _zone_storage(hass):
+    """Return HA's storage-backed zone collection, or None if unavailable.
+
+    When present, manually added zones become first-class Home Assistant
+    zones (editable under Settings > Areas & Zones) instead of Life180-only
+    entries injected as ``zone.<id>`` states.
+    """
+    try:
+        coll = hass.data.get(DATA_ZONE_STORAGE_COLLECTION)
+    except Exception:  # noqa: BLE001
+        return None
+    if coll is not None and hasattr(coll, "async_create_item") and hasattr(coll, "data"):
+        return coll
+    return None
+
+
+def _storage_zone_key(coll, zone_id_s):
+    """Return the real storage key whose sanitized form matches zone_id_s."""
+    if not coll:
+        return None
+    for key in coll.data:
+        if sanitize_id(key) == zone_id_s:
+            return key
+    return None
 
 DEFAULT_COLOR = "#008000"  # default green (CSS 'green')
 MAX_ZONE_NAME_LEN = 30     # maximum zone name length
@@ -51,7 +82,12 @@ class ZonesAPI(HomeAssistantView):
         store = await _read_store(zones_path)
         custom_zones = store["zones"]
 
-        # Get the Home Assistant zones
+        # Get the Home Assistant zones. Storage-backed (UI-managed) zones are
+        # editable from Life180, so they are flagged "custom" too.
+        storage_coll = _zone_storage(hass)
+        storage_ids = (
+            {sanitize_id(k) for k in storage_coll.data} if storage_coll else set()
+        )
         ha_zones = [
             {
                 "id": (state.entity_id.split("zone.", 1)[1]),
@@ -61,7 +97,7 @@ class ZonesAPI(HomeAssistantView):
                 "radius": state.attributes.get("radius", 100),
                 "icon": state.attributes.get("icon", "mdi:map-marker"),
                 "passive": state.attributes.get("passive", False),
-                "custom": False,
+                "custom": sanitize_id(state.entity_id.split("zone.", 1)[1]) in storage_ids,
                 "color": normalize_color(state.attributes.get("color", DEFAULT_COLOR)),
                 "visible": True,  # visible by default
             }
@@ -156,12 +192,41 @@ class ZonesAPI(HomeAssistantView):
         data["custom"] = True  # Only manually created zones are "custom"
         if "visible" not in data:
             data["visible"] = True
-        zones.append(data)
 
-        # Save to file
+        # Preferred: create a first-class Home Assistant zone (storage-backed,
+        # editable under Settings > Areas & Zones). Life180 keeps only the
+        # colour / visibility as an override.
+        coll = _zone_storage(hass)
+        if coll is not None:
+            try:
+                new_zone = {
+                    "name": data["name"],
+                    "latitude": float(data["latitude"]),
+                    "longitude": float(data["longitude"]),
+                    "radius": float(data["radius"]),
+                    "passive": bool(data.get("passive", False)),
+                }
+                if data.get("icon"):
+                    new_zone["icon"] = data["icon"]
+                created = await coll.async_create_item(new_zone)
+            except Exception as e:  # noqa: BLE001
+                _LOGGER.error("Failed to create HA zone: %s", e)
+                return self.json({"error": "Could not create zone"}, status_code=500)
+
+            new_id = sanitize_id(created.get("id", data["id"]))
+            store.setdefault("ha_overrides", {})[new_id] = {
+                "color": data["color"],
+                "visible": bool(data.get("visible", True)),
+            }
+            await _write_store(zones_path, store)
+            return self.json(
+                {"success": True, "message": "Zone created", "id": new_id}
+            )
+
+        # Fallback (older HA without the storage collection): Life180-only zone.
+        zones.append(data)
         store["zones"] = zones
         await _write_store(zones_path, store)
-
         await register_zones(hass)
 
         msg = {"success": True, "message": "Zone created", "id": data["id"]}
@@ -188,7 +253,20 @@ class ZonesAPI(HomeAssistantView):
         store = await _read_store(zones_path)
         zones = store["zones"]
 
-        # Find the target zone by sanitized ID
+        # 1) A native (storage-backed) HA zone -> delete it from HA.
+        coll = _zone_storage(hass)
+        storage_key = _storage_zone_key(coll, zone_id_s)
+        if storage_key is not None:
+            try:
+                await coll.async_delete_item(storage_key)
+            except Exception as e:  # noqa: BLE001
+                _LOGGER.error("Failed to delete HA zone %s: %s", storage_key, e)
+                return self.json({"error": "Could not delete zone"}, status_code=500)
+            if store.get("ha_overrides", {}).pop(zone_id_s, None) is not None:
+                await _write_store(zones_path, store)
+            return self.json({"success": True, "message": "Zone deleted successfully"})
+
+        # 2) A legacy Life180-only zone -> remove it from the zones file.
         target_idx = None
         for i, z in enumerate(zones):
             if sanitize_id(z.get("id", "")) == zone_id_s:
@@ -234,7 +312,65 @@ class ZonesAPI(HomeAssistantView):
         zones_path = os.path.join(hass.config.path(), ZONES_FILE)
         store = await _read_store(zones_path)
         zones = store["zones"]
-        
+
+        # A native (storage-backed) HA zone: update its geometry in HA and keep
+        # colour / visibility as a Life180 override.
+        coll = _zone_storage(hass)
+        storage_key = _storage_zone_key(coll, zone_id_s)
+        if storage_key is not None:
+            updates = {}
+            if "name" in data:
+                new_key = name_key(data["name"])
+                if new_key != name_key(coll.data[storage_key].get("name", "")):
+                    others = {
+                        name_key(v.get("name", ""))
+                        for k, v in coll.data.items()
+                        if k != storage_key
+                    } | {
+                        name_key(z.get("name", "")) for z in zones if z.get("name")
+                    }
+                    if new_key in others:
+                        return self.json(
+                            {"error": "Zone name already exists"}, status_code=400
+                        )
+                updates["name"] = data["name"]
+            for key, caster in (
+                ("latitude", float), ("longitude", float),
+                ("radius", float), ("passive", bool),
+            ):
+                if key in data:
+                    try:
+                        updates[key] = caster(data[key])
+                    except (TypeError, ValueError):
+                        return self.json(
+                            {"error": f"Invalid {key}"}, status_code=400
+                        )
+            if data.get("icon"):
+                updates["icon"] = data["icon"]
+
+            if updates:
+                try:
+                    await coll.async_update_item(storage_key, updates)
+                except Exception as e:  # noqa: BLE001
+                    _LOGGER.error("Failed to update HA zone %s: %s", storage_key, e)
+                    return self.json(
+                        {"error": "Could not update zone"}, status_code=500
+                    )
+
+            ov_changes = {}
+            if "color" in data:
+                ov_changes["color"] = normalize_color(data["color"])
+            if "visible" in data:
+                ov_changes["visible"] = bool(data["visible"])
+            if ov_changes:
+                store.setdefault("ha_overrides", {})[zone_id_s] = {
+                    **store.get("ha_overrides", {}).get(zone_id_s, {}),
+                    **ov_changes,
+                }
+                await _write_store(zones_path, store)
+
+            return self.json({"success": True, "message": "Zone updated successfully"})
+
         # Locate the zone by sanitized ID
         target_idx = None
         for i, z in enumerate(zones):
