@@ -1,7 +1,3 @@
-<p>
-  <a href="https://paypal.me/vgcouso" target="_blank" rel="noreferrer noopener"><img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg" alt="PayPal Logo"></a>
-  <a href="https://www.buymeacoffee.com/vgcouso" target="_blank" rel="noreferrer noopener"><img src="https://bmc-cdn.nyc3.digitaloceanspaces.com/BMC-button-images/custom_images/orange_img.png" alt="Buy Me A Coffee"></a>
-</p>
 <div style="text-align: center;">
   <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/logo_512x512.png" alt="Life180 logo" width="128" height="128" style="display: block; margin: 0 auto;" />
   <br>
@@ -28,7 +24,6 @@
     - [Users](#users)
     - [Zonas](#zones)
     - [Filters](#filters)
-  - [ChatGPT](#chatgpt)
   - [Automations](#automations)
 - [Changelog](#changelog)
 
@@ -40,7 +35,6 @@
 - You can manage specific zones of the application
 - It also allows you to filter positions between two dates, grouped by zone, and obtain a detailed summary with statistics
 - It offers a **panel** and a **card** for home assistant as well as a **blueprint** to create **automations**
-- It is also integrated with **ChatGPT** using a GPT to query users' positions over time
 
 ---
 
@@ -478,31 +472,6 @@ In addition, there is the possibility of **exporting** the filters made to vario
   <br>
   <em>This is the chart screen</em>
 </div>
-
----
-
-## ChatGPT
-
-- At the moment **GPT for Life180** is in **beta version**
-- Due to restrictions set by **Cloudflare**, which acts as a proxy between GPT and your Home Assistant, the number of requests for all users is limited when using the **free** version
-- You can find the GPT at this link: **[Life180 for Home Assistant](https://chatgpt.com/g/g-68ae8f968b2081918b9f7cb0e170c315-ha-tracker-for-home-assistant)** 
-- When you open GPT, it will ask you for your Home Assistant's address, which must be **https**. Also, you **cannot** enter HOST names with port
-- Once you have logged into the HOST and clicked the **"Continue"** button, you will be redirected to a screen to log in to your Home Assistant and connect it to the GPT for use.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/gpt.png" alt="Home Assistant URL" style="width: 80%; max-width: 100%; height: auto;" />
-  <br>
-  <em>This is the screen to enter the Home Assistant URL</em>
-</div>
-
-- Within the GPT you can perform a multitude of queries:
-  - Give me a summary of what [user] did yesterday
-  - Where are the users now?
-  - Where was [user] yesterday at 6:00 PM?
-  - What zones did [user] visit?
-  - What time were you in each area today [user]?
-  - Give me [user]'s stops yesterday
-  - Give me [user]'s stats for today
 
 ---
 
