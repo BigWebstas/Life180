@@ -38,8 +38,6 @@
           "only_admin": "Только администраторы",
           "use_imperial": "Использовать имперские единицы",
           "owntracks_webhook_url": "URL вебхука OwnTracks (только для чтения)",
-          "gpslogger_webhook_url": "URL вебхука GPSLogger (только для чтения)",
-          "traccar_webhook_url": "URL вебхука Traccar (только для чтения)",
           "stop_radius": "Радиус остановки (метры)",
           "stop_time": "Время остановки (секунды)",
           "reentry_gap": "Интервал повторного входа (секунды)",
@@ -52,9 +50,7 @@
           "anti_spike_time": "Время фильтра всплесков (секунды)"
         },
         "data_description": {
-          "owntracks_webhook_url": "Скопируйте этот URL в приложение OwnTracks.",
-          "gpslogger_webhook_url": "Скопируйте этот URL в приложение GPSLogger.",
-          "traccar_webhook_url": "Скопируйте этот URL в сервер/приложение Traccar."
+          "owntracks_webhook_url": "Скопируйте этот URL в приложение OwnTracks."
         }
       }
     },
@@ -135,14 +131,10 @@
             "name": "Источники",
             "description": "Копируемые URL вебхуков для мобильных приложений.",
             "data": {
-              "owntracks_webhook_url": "URL вебхука OwnTracks (только для чтения)",
-              "gpslogger_webhook_url": "URL вебхука GPSLogger (только для чтения)",
-              "traccar_webhook_url": "URL вебхука Traccar (только для чтения)"
+              "owntracks_webhook_url": "URL вебхука OwnTracks (только для чтения)"
             },
             "data_description": {
-              "owntracks_webhook_url": "Скопируйте этот URL в приложение OwnTracks.",
-              "gpslogger_webhook_url": "Скопируйте этот URL в приложение GPSLogger.",
-              "traccar_webhook_url": "Скопируйте этот URL в сервер/приложение Traccar."
+              "owntracks_webhook_url": "Скопируйте этот URL в приложение OwnTracks."
             }
           }
         }
