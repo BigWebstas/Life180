@@ -24,10 +24,6 @@
           "anti_spike": {
             "name": "防跳点",
             "description": "过滤偶发位置跳变的参数。"
-          },
-          "sources": {
-            "name": "来源",
-            "description": "可复制的移动应用 Webhook URL。"
           }
         },
         "data": {
@@ -37,7 +33,6 @@
           "geocode_distance": "触发地理编码的最小距离（米）",
           "only_admin": "仅管理员可用",
           "use_imperial": "使用英制单位",
-          "owntracks_webhook_url": "OwnTracks Webhook URL（只读）",
           "stop_radius": "停留半径（米）",
           "stop_time": "停留时间（秒）",
           "reentry_gap": "重新进入间隔（秒）",
@@ -48,9 +43,6 @@
           "anti_spike_detour_ratio": "绕行比",
           "anti_spike_radius": "防跳点半径（米）",
           "anti_spike_time": "防跳点时间（秒）"
-        },
-        "data_description": {
-          "owntracks_webhook_url": "将此 URL 复制到 OwnTracks 应用中。"
         }
       }
     },
@@ -125,16 +117,6 @@
               "anti_spike_detour_ratio": "绕行比",
               "anti_spike_radius": "防跳点半径（米）",
               "anti_spike_time": "防跳点时间（秒）"
-            }
-          },
-          "sources": {
-            "name": "来源",
-            "description": "可复制的移动应用 Webhook URL。",
-            "data": {
-              "owntracks_webhook_url": "OwnTracks Webhook URL（只读）"
-            },
-            "data_description": {
-              "owntracks_webhook_url": "将此 URL 复制到 OwnTracks 应用中。"
             }
           }
         }

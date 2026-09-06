@@ -46,8 +46,6 @@ STATIC_DIR = (Path(__file__).parent / "www").resolve()
 PANEL_URL = "/life180/assets/life180-panel.js"
 CARD_URL  = "/life180/assets/life180-card.js"
 
-BASE_OWNTRACKS = "custom_components/life180/integrations/owntracks"
-
 
 # --------------------------------------------------------------------------- #
 #  SETUP                                                                      #

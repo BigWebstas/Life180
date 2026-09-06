@@ -24,10 +24,6 @@
           "anti_spike": {
             "name": "Фильтр всплесков",
             "description": "Фильтры для случайных скачков местоположения."
-          },
-          "sources": {
-            "name": "Источники",
-            "description": "Копируемые URL вебхуков для мобильных приложений."
           }
         },
         "data": {
@@ -37,7 +33,6 @@
           "geocode_distance": "Минимальная дистанция для геокодирования (метры)",
           "only_admin": "Только администраторы",
           "use_imperial": "Использовать имперские единицы",
-          "owntracks_webhook_url": "URL вебхука OwnTracks (только для чтения)",
           "stop_radius": "Радиус остановки (метры)",
           "stop_time": "Время остановки (секунды)",
           "reentry_gap": "Интервал повторного входа (секунды)",
@@ -48,9 +43,6 @@
           "anti_spike_detour_ratio": "Коэффициент объезда",
           "anti_spike_radius": "Радиус фильтра всплесков (метры)",
           "anti_spike_time": "Время фильтра всплесков (секунды)"
-        },
-        "data_description": {
-          "owntracks_webhook_url": "Скопируйте этот URL в приложение OwnTracks."
         }
       }
     },
@@ -125,16 +117,6 @@
               "anti_spike_detour_ratio": "Коэффициент объезда",
               "anti_spike_radius": "Радиус фильтра всплесков (метры)",
               "anti_spike_time": "Время фильтра всплесков (секунды)"
-            }
-          },
-          "sources": {
-            "name": "Источники",
-            "description": "Копируемые URL вебхуков для мобильных приложений.",
-            "data": {
-              "owntracks_webhook_url": "URL вебхука OwnTracks (только для чтения)"
-            },
-            "data_description": {
-              "owntracks_webhook_url": "Скопируйте этот URL в приложение OwnTracks."
             }
           }
         }
