@@ -299,7 +299,7 @@ function _flushReadyQueue() {
 
 // === UI util ====
 function addRasterBasesIfMissing() {
-    if (!_ml.getSource('osm') && !_ml.getSource('esri')) {
+    if (!_ml.getSource('osm')) {
         _ml.addSource('osm', {
             type: 'raster',
             tiles: [tileUrl('osm')],
@@ -313,20 +313,6 @@ function addRasterBasesIfMissing() {
             source: 'osm',
             layout: {
                 visibility: 'visible'
-            }
-        });
-        _ml.addSource('esri', {
-            type: 'raster',
-            tiles: [tileUrl('esri')],
-            tileSize: 256,
-            attribution: '© Esri, Maxar, Earthstar Geographics'
-        });
-        _ml.addLayer({
-            id: 'esri',
-            type: 'raster',
-            source: 'esri',
-            layout: {
-                visibility: 'none'
             }
         });
     }
@@ -384,7 +370,7 @@ function switchBase(name) {
     }
 
     // Ensure we are on the "basic raster" style (not the OFM one)
-    if (!_ml.getSource('osm') && !_ml.getSource('esri')) {
+    if (!_ml.getSource('osm')) {
         _ml.setStyle({
             version: 8,
             sources: {},
@@ -727,8 +713,7 @@ export async function initMap() {
     _searchCtlRef = new SearchToggleControl();
     _ml.addControl(_searchCtlRef, 'top-left');
 
-    // LAYERS button (menu opens on the right)
-    _ml.addControl(new LayerControl(), 'top-left');
+    // The base map is locked to OpenStreetMap; no layer switcher.
 
     // >>> listen to global interactions to detect whether the open came from the table
     _onUiPointer = (ev) => _markUiSource(ev);
@@ -945,27 +930,8 @@ export async function initMap() {
                 }
             });
         }
-        if (!_ml.getSource('esri')) {
-            _ml.addSource('esri', {
-                type: 'raster',
-                tiles: [tileUrl('esri')],
-                tileSize: 256,
-                attribution: '© Esri, Maxar, Earthstar Geographics'
-            });
-            _ml.addLayer({
-                id: 'esri',
-                type: 'raster',
-                source: 'esri',
-                layout: {
-                    visibility: 'none'
-                }
-            });
-        }
-        // Bases for the layers menu
         _views = {
-            "OpenStreetMap": "osm",
-            "Esri Satellite": "esri",
-            "OpenFreeMap": "ofm"
+            "OpenStreetMap": "osm"
         };
         tryFlush();
     });
@@ -995,24 +961,12 @@ export async function initMap() {
             }
             // Rate limit
             if (status === 429) {
-                try {
-                    _ml.setLayoutProperty('osm', 'visibility', 'none');
-                } catch {}
-                try {
-                    _ml.setLayoutProperty('esri', 'visibility', 'visible');
-                } catch {}
-                console.warn('OSM rate-limited (429). Mostrando Esri.');
+                console.warn('[OSM] rate-limited (429). Tiles are served through the local cache; keeping OSM.');
                 return;
             }
-            // Fallback only for real CORS/permission errors
+            // Real CORS/permission errors: nothing to fall back to, keep OSM.
             if (status === 0 || status === 401 || status === 403 || looksCors) {
-                try {
-                    _ml.setLayoutProperty('osm', 'visibility', 'none');
-                } catch {}
-                try {
-                    _ml.setLayoutProperty('esri', 'visibility', 'visible');
-                } catch {}
-                console.warn('OSM desactivado (CORS/permisos). Mostrando Esri.');
+                console.warn('[OSM] tile request blocked (CORS/permissions).');
             }
         }
     });
