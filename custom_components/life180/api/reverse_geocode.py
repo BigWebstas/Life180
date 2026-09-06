@@ -116,7 +116,7 @@ HOT_SAVE_INTERVAL = 7_200.0  # 2 h
 HOT_TTL = CACHE_TTL
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"
-NOMINATIM_EMAIL: Optional[str] = "jwebstas@gmail.com"
+NOMINATIM_EMAIL: Optional[str] = None
 
 COMPACT_ADDRESS = True
 
