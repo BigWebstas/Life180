@@ -40,45 +40,20 @@ export async function initMap() {
         // Initialize the map
         map = L.map('map', mapOptions);
 
-        // Base layers
-        const tileLayerOptions = {
+        // Base layer: locked to OpenStreetMap, no layer switcher.
+        L.tileLayer(tileUrl('osm'), {
             maxZoom: 19,
             minZoom: 1,
-			crossOrigin: true, 
-        };
-        const baseLayers = {
-            "OpenStreetMap": L.tileLayer(tileUrl('osm'), {
-                ...tileLayerOptions,
-                attribution: '© OpenStreetMap contributors',
-            }),
-            "Esri Satellite": L.tileLayer(tileUrl('esri'), {
-                ...tileLayerOptions,
-                attribution: '© Esri, Maxar, Earthstar Geographics',
-            }),
-        };
-        baseLayers["OpenStreetMap"].addTo(map);
-		
+            crossOrigin: true,
+            attribution: '© OpenStreetMap contributors',
+        }).addTo(map);
+
 		map.attributionControl.setPosition('bottomleft');
-		
-        // Layer control
-        const layersControl = L.control.layers(baseLayers, null, {
-            position: 'topleft'
-        });
-        layersControl.addTo(map);
 
         // Scale in the bottom-left so it does not collide with the geocoder
         const scaleCtl = L.control.scale({
             position: 'bottomleft'
         }).addTo(map);
-
-        // Optional adjustment of the layer selector position via CSS/JS
-        const layersControlElement = document.querySelector('.leaflet-control-layers');
-        const zoomControlElement = document.querySelector('.leaflet-control-zoom');
-        if (layersControlElement && zoomControlElement) {
-            const zoomControlRect = zoomControlElement.getBoundingClientRect();
-            layersControlElement.style.position = 'absolute';
-            layersControlElement.style.left = `${zoomControlRect.right}px`;
-        }
 
         // ---- Invalidations for size/visibility ----
         const invalidate = () => map && map.invalidateSize(true);
