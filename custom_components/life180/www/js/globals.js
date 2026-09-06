@@ -29,7 +29,6 @@ export let geocodeTime = 30;
 export let geocodeDistance = 20;
 export let updatePos = 1;
 export let enableDebug = false;
-export let use_imperial = false;
 
 // Almacén para las referencias originales de console
 const originalConsole = {
@@ -96,9 +95,6 @@ export async function updateConfig() {
 			}	
 			if (typeof config.enable_debug === "boolean") {
 				enableDebug = config.enable_debug;
-			}	
-			if (typeof config.use_imperial === "boolean") {
-				use_imperial = config.use_imperial;
 			}
 		}
 		await configureConsole();		

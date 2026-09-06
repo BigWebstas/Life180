@@ -2,7 +2,7 @@
 // DEVICES
 //
 
-import { haUrl, formatDate, geocodeTime, geocodeDistance, use_imperial, DEFAULT_ALPHA } from '../globals.js';
+import { haUrl, formatDate, geocodeTime, geocodeDistance, DEFAULT_ALPHA } from '../globals.js';
 import { fetchPersons, fetchDevices } from '../ha/fetch.js';
 import { handleZonePosition } from '../screens/zones.js';
 import { map, isValidCoordinates, getDistanceFromLatLonInMeters, fitBoundsSafe, focusPoint } from '../utils/map.js';
@@ -293,7 +293,7 @@ async function updatePersonsMarkers() {
         const popupContent = `
 		  <strong>${ownerName}</strong> (${friendly_name})<br>
 		  ${formattedDate}<br>
-		  ${t('speed')}: ${Math.round((speed || 0) * (use_imperial ? 2.23694 : 3.6))} ${t(use_imperial ? 'mi_per_hour' : 'km_per_hour')}
+		  ${t('speed')}: ${Math.round((speed || 0) * 2.23694)} ${t('mi_per_hour')}
 		  ${batteryLevel}
 		  <br><br><a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"><strong>${t('open_location')}</strong></a>
 		`;
@@ -443,7 +443,7 @@ export function updatePersonsTableHeaders() {
         // Etiqueta que se mostrará en el TH
         const label =
             columnKey === "speed"
-             ? (use_imperial ? t("mi_per_hour") : t("km_per_hour"))
+             ? t("mi_per_hour")
              : t(columnKey);
 
         header.innerHTML = `
@@ -537,7 +537,7 @@ export async function updatePersonsTable() {
                 deviceName = device.attributes.friendly_name ? `(${device.attributes.friendly_name})` : "";
                 battery = readBattery(device);
                 time = formatDate(device.last_updated);
-                speed = Math.round((device.attributes.speed || 0) * (use_imperial ? 2.23694 : 3.6));
+                speed = Math.round((device.attributes.speed || 0) * 2.23694);
                 zone = handleZonePosition(device.attributes.latitude, device.attributes.longitude);
                 currentZoneName = zone ? zone.name : "";
 

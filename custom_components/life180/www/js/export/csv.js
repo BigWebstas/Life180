@@ -17,30 +17,27 @@ function toFixed6(n) {
     return Number.isFinite(v) ? v.toFixed(6) : '';
 }
 
-function speedInConfiguredUnits(mps, useImperial) {
+function speedInConfiguredUnits(mps) {
     if (!Number.isFinite(mps))
         return '';
-    const kmh = mps * 3.6;
-    const mph = kmh * 0.621371192;
-    return Math.round(useImperial ? mph : kmh);
+    const mph = mps * 3.6 * 0.621371192;
+    return Math.round(mph);
 }
 
 /**
- * Construye el CSV (texto).
+ * Construye el CSV (texto). Velocidad siempre en mph.
  *
  * @param {Array} positions  [{ last_updated, stop, battery, zone, address, attributes:{latitude, longitude, speed(m/s)}}, ...]
  * @param {Object} options
- * @param {boolean} options.useImperial   true => mph, false => km/h
  * @param {(d:any)=>string} options.formatLocal  formateador de fecha local (p.ej. formatDate)
  * @param {string} [options.delimiter=';']  separador (por defecto ';' para Excel ES)
  * @returns {string} CSV
  */
 export function buildCsv(positions, {
-    useImperial,
     formatLocal,
     delimiter = ';',
 } = {}) {
-    const speedHeader = useImperial ? t('mi_per_hour') : t('km_per_hour');
+    const speedHeader = t('mi_per_hour');
 
     const header = [
         t('date'),
@@ -61,7 +58,7 @@ export function buildCsv(positions, {
 
         const fechaLocal = formatLocal ? formatLocal(p?.last_updated) : (p?.last_updated || '');
         const parada = p?.stop ? t('stop') : '';
-        const vel = speedInConfiguredUnits(Number(p?.attributes?.speed), useImperial);
+        const vel = speedInConfiguredUnits(Number(p?.attributes?.speed));
         const bat = Number.isFinite(p?.battery) ? p.battery : '';
 
         const row = [
@@ -122,17 +119,15 @@ export async function saveCsvWithPicker(filename, csvString) {
 /**
  * Helper: construye y guarda el CSV.
  * @param {Array} positions
- * @param {Object} options  { filename, useImperial, formatLocal, delimiter=';', usePicker=false }
+ * @param {Object} options  { filename, formatLocal, delimiter=';', usePicker=false }
  */
 export async function exportPositionsToCsv(positions, {
     filename,
-    useImperial,
     formatLocal,
     delimiter = ';',
     usePicker = false,
 } = {}) {
     const csv = buildCsv(positions, {
-        useImperial,
         formatLocal,
         delimiter
     });

@@ -12,7 +12,6 @@
 
 import { loadCSSOnce, loadScriptOnce } from './loader.js';
 import { t } from './i18n.js';
-import { use_imperial } from '../globals.js'; // <-- usar variable importada
 
 export let map;
 let _ml, _popup, _views = {};
@@ -27,7 +26,7 @@ let _geocoderCtrl = null, _geocoderEl = null, _searchCtlRef = null;
 // AbortController para evitar carreras al teclear
 let _geocodeAbort = null;
 
-// Escala dinámica según use_imperial importado
+// Escala del mapa (siempre imperial)
 let _scaleCtrl = null, _lastImperial = null, _unitsPollId = null;
 
 // Listeners globales para poder limpiar
@@ -632,23 +631,22 @@ class LayerControl {
     }
 }
 
-// ==== Escala dinámica según use_imperial importado ====
-function _applyScaleUnit(wantImperial) {
+// ==== Escala (siempre imperial) ====
+function _applyScaleUnit() {
     if (_scaleCtrl) {
         try {
             _ml.removeControl(_scaleCtrl);
         } catch {}
     }
     _scaleCtrl = new maplibregl.ScaleControl({
-        unit: wantImperial ? 'imperial' : 'metric'
+        unit: 'imperial'
     });
     _ml.addControl(_scaleCtrl, 'bottom-left');
-    _lastImperial = !!wantImperial;
+    _lastImperial = true;
 }
 function _syncScaleFromGlobals() {
-    const want = !!use_imperial; // binding vivo de ES modules
-    if (want !== _lastImperial)
-        _applyScaleUnit(want);
+    if (_lastImperial !== true)
+        _applyScaleUnit();
 }
 
 // ==== API pública ====
@@ -884,7 +882,7 @@ export async function initMap() {
         console.info('[map] Plugin geocoder no disponible; el botón 🔍 no mostrará input.');
     }
 
-    // Escala: métrica/imperial dinámica según use_imperial importado
+    // Escala del mapa (siempre imperial)
     _syncScaleFromGlobals();
 
     // Atribución abajo a la izquierda (compacta)
