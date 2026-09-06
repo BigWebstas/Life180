@@ -519,8 +519,7 @@ export async function updatePersonsTable() {
             const personId = person.entity_id;
             const friendlyName = person.attributes.friendly_name || personId;
 
-            let deviceName = "",
-            time = "",
+            let time = "",
             speed = "",
             battery = null,
             currentZoneName = "",
@@ -534,7 +533,6 @@ export async function updatePersonsTable() {
 
             if (personsDevicesMap[personId]) {
                 const device = personsDevicesMap[personId];
-                deviceName = device.attributes.friendly_name ? `(${device.attributes.friendly_name})` : "";
                 battery = readBattery(device);
                 time = formatDate(device.last_updated);
                 speed = Math.round((device.attributes.speed || 0) * 2.23694);
@@ -584,7 +582,7 @@ export async function updatePersonsTable() {
             }
 
             const newContent = `
-				<td><p style="font-weight:bold;color:#003366;margin:0;">${friendlyName}</p>${deviceName}</td>
+				<td><p style="font-weight:bold;color:var(--l180-text);margin:0;">${friendlyName}</p></td>
 				<td>${time}</td>
 				<td>${currentZoneName}</td>
 				<td>${speed}</td>
