@@ -32,6 +32,8 @@ DEFAULTS = {
     "anti_spike_time": 600,
     "only_admin": False,
     "enable_debug": False,
+    "map_cache_enabled": False,
+    "map_cache_max_mb": 500,
 }
 
 MINIMUMS = {
@@ -48,6 +50,7 @@ MINIMUMS = {
     "anti_spike_detour_ratio": 1.1,
     "anti_spike_radius": 0,
     "anti_spike_time": 0,
+    "map_cache_max_mb": 50,
 }
 
 
@@ -108,12 +111,18 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required("anti_spike_time", default=DEFAULTS["anti_spike_time"]): vol.All(vol.Coerce(int)),
         })
 
+        map_cache = vol.Schema({
+            vol.Required("map_cache_enabled", default=DEFAULTS["map_cache_enabled"]): bool,
+            vol.Required("map_cache_max_mb", default=DEFAULTS["map_cache_max_mb"]): vol.All(vol.Coerce(int)),
+        })
+
         data_schema = vol.Schema({
             vol.Required("general"): section(general, {"collapsed": True}),
             vol.Required("geocoding"): section(geocoding, {"collapsed": True}),
             vol.Required("stops"): section(stops, {"collapsed": True}),
             vol.Required("accuracy"): section(accuracy, {"collapsed": True}),
             vol.Required("anti_spike"): section(anti_spike, {"collapsed": True}),
+            vol.Required("map_cache"): section(map_cache, {"collapsed": True}),
         })
 
         errors: dict[str, str] = {}
@@ -121,7 +130,7 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             # Flatten the sections before validating/saving
             flat: dict = {}
-            for sec in ("general", "geocoding", "stops", "accuracy", "anti_spike"):
+            for sec in ("general", "geocoding", "stops", "accuracy", "anti_spike", "map_cache"):
                 flat.update(user_input.get(sec, {}))
 
             # Global unique ID (single instance)
@@ -175,7 +184,7 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             # Flatten the sections
             flat: dict = {}
-            for sec in ("general", "geocoding", "stops", "accuracy", "anti_spike"):
+            for sec in ("general", "geocoding", "stops", "accuracy", "anti_spike", "map_cache"):
                 flat.update(user_input.get(sec, {}))
 
             errors: dict[str, str] = {}
@@ -228,11 +237,17 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
             vol.Required("anti_spike_time", default=self._opts["anti_spike_time"]): vol.All(vol.Coerce(int)),
         })
 
+        map_cache = vol.Schema({
+            vol.Required("map_cache_enabled", default=self._opts["map_cache_enabled"]): bool,
+            vol.Required("map_cache_max_mb", default=self._opts["map_cache_max_mb"]): vol.All(vol.Coerce(int)),
+        })
+
         data_schema = {
             vol.Required("general"): section(general, {"collapsed": True}),
             vol.Required("geocoding"): section(geocoding, {"collapsed": True}),
             vol.Required("stops"): section(stops, {"collapsed": True}),
             vol.Required("accuracy"): section(accuracy, {"collapsed": True}),
             vol.Required("anti_spike"): section(anti_spike, {"collapsed": True}),
+            vol.Required("map_cache"): section(map_cache, {"collapsed": True}),
         }
         return vol.Schema(data_schema)

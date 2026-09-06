@@ -30,6 +30,13 @@ export let geocodeDistance = 20;
 export let updatePos = 1;
 export let enableDebug = false;
 
+// Raster tile URL template for a base layer. Always routed through the local
+// tile endpoint; when the server-side cache is disabled that endpoint just
+// redirects to upstream. Libraries substitute {z}/{x}/{y}.
+export function tileUrl(source) {
+    return `${haUrl}/api/life180/tile/${source}/{z}/{x}/{y}`;
+}
+
 // Store for the original console references
 const originalConsole = {
     log: console.log,

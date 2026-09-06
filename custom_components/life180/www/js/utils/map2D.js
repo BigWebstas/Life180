@@ -2,6 +2,7 @@
 
 import { loadCSSOnce, loadScriptOnce } from './loader.js';
 import {t} from './i18n.js';
+import { tileUrl } from '../globals.js';
 
 export let map;
 
@@ -46,11 +47,11 @@ export async function initMap() {
 			crossOrigin: true, 
         };
         const baseLayers = {
-            "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            "OpenStreetMap": L.tileLayer(tileUrl('osm'), {
                 ...tileLayerOptions,
                 attribution: '© OpenStreetMap contributors',
             }),
-            "Esri Satellite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            "Esri Satellite": L.tileLayer(tileUrl('esri'), {
                 ...tileLayerOptions,
                 attribution: '© Esri, Maxar, Earthstar Geographics',
             }),

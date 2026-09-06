@@ -29,6 +29,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from .api import register_api_views
 from .api.zones import register_zones, unregister_zones
 from .api.reverse_geocode import async_init_reverse_cache
+from .api.tiles import async_init_tile_cache, async_stop_tile_cache
 from .units import imperial_to_metric, metric_to_imperial
 
 
@@ -167,6 +168,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # ------------------------------------------------------------------ #
     await async_init_reverse_cache(hass)
 
+    # ------------------------------------------------------------------ #
+    #  9. Start the map-tile cache eviction task                         #
+    # ------------------------------------------------------------------ #
+    await async_init_tile_cache(hass)
+
     return True
 
 
@@ -180,6 +186,9 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 async def async_unload_entry(hass: HomeAssistant, _entry: ConfigEntry) -> bool:
     """Fully uninstall the integration."""
+
+    # Stop the map-tile cache eviction task
+    async_stop_tile_cache(hass)
 
     # Remove zones
     await unregister_zones(hass)

@@ -12,6 +12,7 @@
 
 import { loadCSSOnce, loadScriptOnce } from './loader.js';
 import { t } from './i18n.js';
+import { tileUrl } from '../globals.js';
 
 export let map;
 let _ml, _popup, _views = {};
@@ -301,7 +302,7 @@ function addRasterBasesIfMissing() {
     if (!_ml.getSource('osm') && !_ml.getSource('esri')) {
         _ml.addSource('osm', {
             type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+            tiles: [tileUrl('osm')],
             tileSize: 256,
             attribution: '© OpenStreetMap contributors',
             maxzoom: 19
@@ -316,7 +317,7 @@ function addRasterBasesIfMissing() {
         });
         _ml.addSource('esri', {
             type: 'raster',
-            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+            tiles: [tileUrl('esri')],
             tileSize: 256,
             attribution: '© Esri, Maxar, Earthstar Geographics'
         });
@@ -930,7 +931,7 @@ export async function initMap() {
         if (!_ml.getSource('osm')) {
             _ml.addSource('osm', {
                 type: 'raster',
-                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                tiles: [tileUrl('osm')],
                 tileSize: 256,
                 attribution: '© OpenStreetMap contributors',
                 maxzoom: 19
@@ -947,7 +948,7 @@ export async function initMap() {
         if (!_ml.getSource('esri')) {
             _ml.addSource('esri', {
                 type: 'raster',
-                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                tiles: [tileUrl('esri')],
                 tileSize: 256,
                 attribution: '© Esri, Maxar, Earthstar Geographics'
             });
