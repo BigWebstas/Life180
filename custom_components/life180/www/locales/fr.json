@@ -36,7 +36,7 @@
   "mi_per_hour": "Mi/h",
   "disconnected": "Déconnecté du serveur",
   "tap_to_refresh": "Toucher pour actualiser",
-  "running_filter": "Exécution du filtre",
+  "running_filter": "Génération du rapport",
   "no_positions": "Aucune position valide trouvée pour le filtre sélectionné",
   "filter_problem": "Une erreur s'est produite lors de la tentative d'obtenir les positions filtrées",
   "select_device_filter": "Sélectionnez un appareil valide avant d'appliquer le filtre",

@@ -36,7 +36,7 @@
   "mi_per_hour": "Mph",
   "disconnected": "Vom Server getrennt",
   "tap_to_refresh": "Zum Aktualisieren tippen",
-  "running_filter": "Filter wird ausgeführt",
+  "running_filter": "Bericht wird erstellt",
   "no_positions": "Keine gültigen Positionen für den ausgewählten Filter gefunden",
   "filter_problem": "Beim Abrufen der gefilterten Positionen ist ein Fehler aufgetreten",
   "select_device_filter": "Bitte wählen Sie ein gültiges Gerät, bevor Sie den Filter anwenden",
