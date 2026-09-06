@@ -12,14 +12,14 @@ export const SHOW_VISITS = false;
 export const DEFAULT_COLOR = '#008000';
 export const DEFAULT_ALPHA = 0.3
 
-// Formateadores de números
+// Number formatters
 export const fmt0 = formatNumber({
     max: 0
-}); // enteros (auto locale -> en-GB fallback)
+}); // integers (auto locale -> en-GB fallback)
 export const fmt2 = formatNumber({
     min: 2,
     max: 2
-}); // 2 decimales (auto locale -> en-GB fallback)
+}); // 2 decimals (auto locale -> en-GB fallback)
 
 export let isAdmin = false;
 export let isConnected = false;
