@@ -5,10 +5,9 @@ from __future__ import annotations
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import callback, HomeAssistant
+from homeassistant.core import callback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.data_entry_flow import section
-from homeassistant.helpers.network import get_url
 
 DOMAIN = __package__.split(".")[-1]
 
@@ -67,28 +66,6 @@ def _validate_minimums(flat: dict) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-#  Cálculo de URLs de webhooks (locales a este archivo)
-# ---------------------------------------------------------------------------
-async def get_owntracks_webhook_url(hass: HomeAssistant) -> str | None:
-    """Obtiene la URL de OwnTracks priorizando cloudhook, si existe."""
-    entries = hass.config_entries.async_entries(domain="owntracks")
-    if not entries:
-        return None
-    entry = entries[0]
-
-    cloudhook = entry.data.get("cloudhook_url")
-    if cloudhook:
-        return cloudhook
-
-    webhook_id = entry.data.get("webhook_id")
-    if not webhook_id:
-        return None
-
-    base_url = get_url(hass, prefer_external=True)
-    return f"{base_url}/api/webhook/{webhook_id}"
-
-
-# ---------------------------------------------------------------------------
 #  Config Flow
 # ---------------------------------------------------------------------------
 class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -98,9 +75,6 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # --- Single instance guard ---
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
-
-        # URLs informativas para mostrarlas en el formulario
-        own_url = await get_owntracks_webhook_url(self.hass) or "OwnTracks no configurado"
 
         # ---- Construcción de secciones (instalación con grupos) ----
         general = vol.Schema({
@@ -134,18 +108,12 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required("anti_spike_time", default=DEFAULTS["anti_spike_time"]): vol.All(vol.Coerce(int)),
         })
 
-        # Solo URLs informativas (no se persisten)
-        sources = vol.Schema({
-            vol.Optional("owntracks_webhook_url", default=own_url): str,
-        })
-
         data_schema = vol.Schema({
             vol.Required("general"): section(general, {"collapsed": True}),
             vol.Required("geocoding"): section(geocoding, {"collapsed": True}),
             vol.Required("stops"): section(stops, {"collapsed": True}),
             vol.Required("accuracy"): section(accuracy, {"collapsed": True}),
             vol.Required("anti_spike"): section(anti_spike, {"collapsed": True}),
-            vol.Required("sources"): section(sources, {"collapsed": True}),
         })
 
         errors: dict[str, str] = {}
@@ -153,11 +121,8 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             # Aplana las secciones antes de validar/guardar
             flat: dict = {}
-            for sec in ("general", "geocoding", "stops", "accuracy", "anti_spike", "sources"):
+            for sec in ("general", "geocoding", "stops", "accuracy", "anti_spike"):
                 flat.update(user_input.get(sec, {}))
-
-            # No persistir los campos informativos
-            flat.pop("owntracks_webhook_url", None)
 
             # Unique ID global (instancia única)
             await self.async_set_unique_id(DOMAIN)
@@ -196,7 +161,7 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 #  Options Flow (un único formulario seccionado)
 # ---------------------------------------------------------------------------
 class Life180OptionsFlowHandler(config_entries.OptionsFlow):
-    """Opciones agrupadas en secciones, con URLs informativas calculadas a demanda."""
+    """Opciones agrupadas en secciones."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         self._entry = config_entry
@@ -205,22 +170,13 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
             **(self._entry.data or {}),
             **(self._entry.options or {}),
         }
-        self._webhook_urls: dict[str, str] = {
-            "own": "OwnTracks no configurado",
-        }
 
     async def async_step_init(self, user_input=None):
-        # Refrescar URLs cada vez que se abre la pantalla de opciones
-        self._webhook_urls["own"] = await get_owntracks_webhook_url(self.hass) or "OwnTracks no configurado"
-
         if user_input is not None:
             # Aplana secciones
             flat: dict = {}
-            for sec in ("general", "geocoding", "stops", "accuracy", "anti_spike", "sources"):
+            for sec in ("general", "geocoding", "stops", "accuracy", "anti_spike"):
                 flat.update(user_input.get(sec, {}))
-
-            # No persistir los campos informativos
-            flat.pop("owntracks_webhook_url", None)
 
             errors: dict[str, str] = {}
             errors.update(_validate_minimums(flat))
@@ -273,17 +229,11 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
             vol.Required("anti_spike_time", default=self._opts["anti_spike_time"]): vol.All(vol.Coerce(int)),
         })
 
-        # Solo URLs informativas (no se persisten)
-        sources = vol.Schema({
-            vol.Optional("owntracks_webhook_url", default=self._webhook_urls["own"]): str,
-        })
-
         data_schema = {
             vol.Required("general"): section(general, {"collapsed": True}),
             vol.Required("geocoding"): section(geocoding, {"collapsed": True}),
             vol.Required("stops"): section(stops, {"collapsed": True}),
             vol.Required("accuracy"): section(accuracy, {"collapsed": True}),
             vol.Required("anti_spike"): section(anti_spike, {"collapsed": True}),
-            vol.Required("sources"): section(sources, {"collapsed": True}),
         }
         return vol.Schema(data_schema)

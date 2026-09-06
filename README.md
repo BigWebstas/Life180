@@ -14,7 +14,6 @@
   - [Options](#options)
   - [Device Trackers](#device-trackers)
     - [Home Assistant](#home-assistant)
-	- [OwnTracks](#owntracks)
 - [Quick Start](#quick-start)
   - [3D Map](#3d-map)
   - [Screens](#screens)
@@ -163,18 +162,11 @@ By default, Home Assistant stores **10 days**. You can increase this time, but k
 
   You must adjust these two parameters according to the application used to send the positions and the device on which it is installed.
 
-- **Sources:**
-  Copyable mobile app webhook URLs
-  - **OwnTracks webhook URL** 
-    - Copy this URL into the OwnTracks app
-
 <br>
 
 The server requests addresses from openstreetmap.org which has a limit of one request per second
 
 Increase Geocoding Time and Minimum Distance for Geocoding if you have many open applications and connected devices
-
-The OwnTracks URL must be **changed** and is used in the mobile app to access the properties that will connect it to the Home Assistant integration
 
 <br>
   
@@ -188,7 +180,7 @@ The OwnTracks URL must be **changed** and is used in the mobile app to access th
 
 ## Device Trackers
 
-You must install an app on your smartphone to send managed positions through Home Assistant **integrations**. We'll look at some of them below.
+You must install an app on your smartphone to send managed positions through a Home Assistant **integration**.
 
 Integrations create Device Trackers in Home Assistant when connected and they are shown in the integration where you can rename them in:  **"Settings &rarr; Devices and Services &rarr; Integration &rarr; Pencil icon next to the device"**
 
@@ -216,36 +208,6 @@ Home Assistant for mobile is the official app and is available for both: **[iOS]
 In **Android** make sure in the **"Settings &rarr; Companion app"** that:
 - **Background access** is enabled
 - **"Manage sensors &rarr; background location"** is enabled. Here you can activate **High precision mode** (consumes more battery but provides more positions) and define every how many seconds you want to receive positions.
-
----
-
-### OwnTracks
-
-[OwnTracks](https://owntracks.org/) is an **[iOS](https://apps.apple.com/us/app/owntracks/id692424691)** and **[Android](https://play.google.com/store/apps/details?id=org.owntracks.android)** app designed to send your phone's positions to a URL.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/owntracks.png" alt="OwnTracks screen" style="width: 300px; max-width: 100%; height: auto;" />
-  <br>
-  <em>This is the OwnTracks screen</em>
-</div>
-
-The first thing you need to do is install the **OwnTracks integration**:
-  - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
-  - Search for **OwnTracks**, select it. The **configuration screen** will open
-  - Press **Send** button and integration will be created
-
-Then you can then install OwnTracks on your devices from **[iOS](https://apps.apple.com/us/app/owntracks/id692424691)** and **[Android](https://play.google.com/store/apps/details?id=org.owntracks.android)**. Then:
-  - Allow the permissions that the application requests for its correct operation.
-  - On some **Android** versions, restarting your phone requires you to open the app to send positions. Sometimes setting the app to use the **battery without restrictions**, **always allow location** and **allow notifications** fixes it.
-  - On some devices you must enable the option to run in the background
-
-To configure the application: [here's a link](https://www.home-assistant.io/integrations/owntracks/)
-  - Set a unique **Device ID** and **Tracker ID** for each phone
-  - The URL provided to you when setting up the integration can also be found under **"Settings &rarr; Devices & services &rarr; Life180 &rarr; Configuration &rarr; Sources"**
-
-- In Home Assistant, you'll find connected devices under **"Settings &rarr; Devices & services &rarr; OwnTracks"**
-  - There you can change its name in Home Assistant
-- Finally, assign the device to a person in Home Assistant: **"Settings &rarr; People"**
 
 ---
 

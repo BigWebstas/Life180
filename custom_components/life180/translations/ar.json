@@ -24,10 +24,6 @@
           "anti_spike": {
             "name": "مكافحة القفزات",
             "description": "مرشحات للقفزات العشوائية في الموقع."
-          },
-          "sources": {
-            "name": "المصادر",
-            "description": "روابط Webhook قابلة للنسخ لتطبيقات الهاتف المحمول."
           }
         },
         "data": {
@@ -37,7 +33,6 @@
           "geocode_distance": "أدنى مسافة للترميز الجغرافي (متر)",
           "only_admin": "المشرفون فقط",
           "use_imperial": "استخدام الوحدات الإمبريالية",
-          "owntracks_webhook_url": "رابط Webhook لـ OwnTracks (للقراءة فقط)",
           "stop_radius": "نصف قطر التوقف (متر)",
           "stop_time": "زمن التوقف (ثوانٍ)",
           "reentry_gap": "فاصل إعادة الدخول (ثوانٍ)",
@@ -48,9 +43,6 @@
           "anti_spike_detour_ratio": "نسبة الالتفاف",
           "anti_spike_radius": "نصف قطر مكافحة القفزات (متر)",
           "anti_spike_time": "زمن مكافحة القفزات (ثوانٍ)"
-        },
-        "data_description": {
-          "owntracks_webhook_url": "انسخ هذا الرابط إلى تطبيق OwnTracks."
         }
       }
     },
@@ -125,16 +117,6 @@
               "anti_spike_detour_ratio": "نسبة الالتفاف",
               "anti_spike_radius": "نصف قطر مكافحة القفزات (متر)",
               "anti_spike_time": "زمن مكافحة القفزات (ثوانٍ)"
-            }
-          },
-          "sources": {
-            "name": "المصادر",
-            "description": "روابط Webhook قابلة للنسخ لتطبيقات الهاتف المحمول.",
-            "data": {
-              "owntracks_webhook_url": "رابط Webhook لـ OwnTracks (للقراءة فقط)"
-            },
-            "data_description": {
-              "owntracks_webhook_url": "انسخ هذا الرابط إلى تطبيق OwnTracks."
             }
           }
         }

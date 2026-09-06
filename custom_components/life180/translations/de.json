@@ -24,10 +24,6 @@
           "anti_spike": {
             "name": "Ausreißerfilter",
             "description": "Filter für sporadische Positionssprünge."
-          },
-          "sources": {
-            "name": "Quellen",
-            "description": "Kopierbare Webhook-URLs für Mobile Apps."
           }
         },
         "data": {
@@ -37,7 +33,6 @@
           "geocode_distance": "Mindestentfernung für Geokodierung (Meter)",
           "only_admin": "Nur Administratoren",
           "use_imperial": "Imperiale Einheiten verwenden",
-          "owntracks_webhook_url": "OwnTracks-Webhook-URL (nur Lesen)",
           "stop_radius": "Stopp-Radius (Meter)",
           "stop_time": "Stopp-Zeit (Sekunden)",
           "reentry_gap": "Wiedereintrittsintervall (Sekunden)",
@@ -48,9 +43,6 @@
           "anti_spike_detour_ratio": "Umweg-Verhältnis",
           "anti_spike_radius": "Ausreißer-Radius (Meter)",
           "anti_spike_time": "Ausreißer-Zeit (Sekunden)"
-        },
-        "data_description": {
-          "owntracks_webhook_url": "Diese URL in der OwnTracks-App einfügen."
         }
       }
     },
@@ -125,16 +117,6 @@
               "anti_spike_detour_ratio": "Umweg-Verhältnis",
               "anti_spike_radius": "Ausreißer-Radius (Meter)",
               "anti_spike_time": "Ausreißer-Zeit (Sekunden)"
-            }
-          },
-          "sources": {
-            "name": "Quellen",
-            "description": "Kopierbare Webhook-URLs für Mobile Apps.",
-            "data": {
-              "owntracks_webhook_url": "OwnTracks-Webhook-URL (nur Lesen)"
-            },
-            "data_description": {
-              "owntracks_webhook_url": "Diese URL in der OwnTracks-App einfügen."
             }
           }
         }

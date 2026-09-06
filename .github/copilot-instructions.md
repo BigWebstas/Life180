@@ -27,7 +27,6 @@ Objetivo: dar a un agente de IA la información mínima y accionable para trabaj
   - Blueprints: plantilla en `blueprints/persons_in_zones_alert.yaml`. El instalador copia el blueprint al path de Home Assistant usando `_ensure_blueprint`.
 
 - Ejemplos concretos útiles
-  - Obtener webhook de OwnTracks: función `get_owntracks_webhook_url` en `config_flow.py`. Prefiere `cloudhook_url` y si no existe usa `webhook_id` + `get_url(hass, prefer_external=True)`.
   - Endpoint para devices: `/api/life180/devices` (ver `api/devices.py`) que normaliza batería, velocidad y filtra coordenadas inválidas.
   - Panel y card URLs: `/life180/assets/life180-panel.js` y `/life180/assets/life180-card.js` (definidas en `__init__.py` como PANEL_URL y CARD_URL).
 
