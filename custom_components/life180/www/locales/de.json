@@ -86,7 +86,7 @@
   "last_24h": "Letzte 24 Stunden",
   "export": "Exportieren",
   "export_positions": "Möchten Sie auch die Positionen exportieren?",
-  "filter_date_range": "Datumsbereich zum Filtern wählen",
+  "filter_date_range": "Daten für den Bericht auswählen",
   "long_zone": "Der Zonenname ist zu lang",
   "select_color": "Wählen Sie eine Farbe",
   "error_creating_zone": "Die Zone konnte nicht erstellt werden",

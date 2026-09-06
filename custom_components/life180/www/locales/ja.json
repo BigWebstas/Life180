@@ -86,7 +86,7 @@
   "last_24h": "過去24時間",
   "export": "エクスポート",
   "export_positions": "位置情報もエクスポートしますか？",
-  "filter_date_range": "フィルター用の日付範囲を選択してください",
+  "filter_date_range": "レポート用の日付を選択してください",
   "long_zone": "ゾーン名が長すぎます",
   "select_color": "色を選択してください",
   "error_creating_zone": "ゾーンを作成できませんでした",

@@ -86,7 +86,7 @@
   "last_24h": "过去24小时",
   "export": "导出",
   "export_positions": "是否也要导出位置？",
-  "filter_date_range": "请选择用于筛选的日期范围",
+  "filter_date_range": "请选择用于报告的日期范围",
   "long_zone": "区域名称过长",
   "select_color": "请选择颜色",
   "error_creating_zone": "无法创建区域",
