@@ -38,8 +38,6 @@
           "only_admin": "केवल प्रशासक",
           "use_imperial": "इम्पीरियल इकाइयों का उपयोग करें",
           "owntracks_webhook_url": "OwnTracks webhook URL (केवल पढ़ने हेतु)",
-          "gpslogger_webhook_url": "GPSLogger webhook URL (केवल पढ़ने हेतु)",
-          "traccar_webhook_url": "Traccar webhook URL (केवल पढ़ने हेतु)",
           "stop_radius": "रुकावट त्रिज्या (मीटर)",
           "stop_time": "रुकावट समय (सेकंड)",
           "reentry_gap": "पुन: प्रवेश अंतराल (सेकंड)",
@@ -52,9 +50,7 @@
           "anti_spike_time": "एंटी-स्पाइक समय (सेकंड)"
         },
         "data_description": {
-          "owntracks_webhook_url": "इस URL को OwnTracks ऐप में पेस्ट करें।",
-          "gpslogger_webhook_url": "इस URL को GPSLogger ऐप में पेस्ट करें।",
-          "traccar_webhook_url": "इस URL को Traccar सर्वर/ऐप में पेस्ट करें।"
+          "owntracks_webhook_url": "इस URL को OwnTracks ऐप में पेस्ट करें।"
         }
       }
     },
@@ -135,14 +131,10 @@
             "name": "स्रोत",
             "description": "मोबाइल ऐप्स के कॉपी करने योग्य webhook URLs।",
             "data": {
-              "owntracks_webhook_url": "OwnTracks webhook URL (केवल पढ़ने हेतु)",
-              "gpslogger_webhook_url": "GPSLogger webhook URL (केवल पढ़ने हेतु)",
-              "traccar_webhook_url": "Traccar webhook URL (केवल पढ़ने हेतु)"
+              "owntracks_webhook_url": "OwnTracks webhook URL (केवल पढ़ने हेतु)"
             },
             "data_description": {
-              "owntracks_webhook_url": "इस URL को OwnTracks ऐप में पेस्ट करें।",
-              "gpslogger_webhook_url": "इस URL को GPSLogger ऐप में पेस्ट करें।",
-              "traccar_webhook_url": "इस URL को Traccar सर्वर/ऐप में पेस्ट करें।"
+              "owntracks_webhook_url": "इस URL को OwnTracks ऐप में पेस्ट करें।"
             }
           }
         }

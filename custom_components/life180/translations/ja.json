@@ -38,8 +38,6 @@
           "only_admin": "管理者のみ",
           "use_imperial": "ヤード・ポンド法を使用",
           "owntracks_webhook_url": "OwnTracks Webhook URL（読み取り専用）",
-          "gpslogger_webhook_url": "GPSLogger Webhook URL（読み取り専用）",
-          "traccar_webhook_url": "Traccar Webhook URL（読み取り専用）",
           "stop_radius": "停止半径（m）",
           "stop_time": "停止時間（秒）",
           "reentry_gap": "再入間隔（秒）",
@@ -52,9 +50,7 @@
           "anti_spike_time": "スパイク抑制時間（秒）"
         },
         "data_description": {
-          "owntracks_webhook_url": "この URL を OwnTracks アプリに貼り付けてください。",
-          "gpslogger_webhook_url": "この URL を GPSLogger アプリに貼り付けてください。",
-          "traccar_webhook_url": "この URL を Traccar サーバ／アプリに設定してください。"
+          "owntracks_webhook_url": "この URL を OwnTracks アプリに貼り付けてください。"
         }
       }
     },
@@ -135,14 +131,10 @@
             "name": "ソース",
             "description": "モバイルアプリ用のコピー可能な Webhook URL。",
             "data": {
-              "owntracks_webhook_url": "OwnTracks Webhook URL（読み取り専用）",
-              "gpslogger_webhook_url": "GPSLogger Webhook URL（読み取り専用）",
-              "traccar_webhook_url": "Traccar Webhook URL（読み取り専用）"
+              "owntracks_webhook_url": "OwnTracks Webhook URL（読み取り専用）"
             },
             "data_description": {
-              "owntracks_webhook_url": "この URL を OwnTracks アプリに貼り付けてください。",
-              "gpslogger_webhook_url": "この URL を GPSLogger アプリに貼り付けてください。",
-              "traccar_webhook_url": "この URL を Traccar サーバ／アプリに設定してください。"
+              "owntracks_webhook_url": "この URL を OwnTracks アプリに貼り付けてください。"
             }
           }
         }

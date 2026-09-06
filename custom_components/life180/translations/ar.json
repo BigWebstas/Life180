@@ -38,8 +38,6 @@
           "only_admin": "المشرفون فقط",
           "use_imperial": "استخدام الوحدات الإمبريالية",
           "owntracks_webhook_url": "رابط Webhook لـ OwnTracks (للقراءة فقط)",
-          "gpslogger_webhook_url": "رابط Webhook لـ GPSLogger (للقراءة فقط)",
-          "traccar_webhook_url": "رابط Webhook لـ Traccar (للقراءة فقط)",
           "stop_radius": "نصف قطر التوقف (متر)",
           "stop_time": "زمن التوقف (ثوانٍ)",
           "reentry_gap": "فاصل إعادة الدخول (ثوانٍ)",
@@ -52,9 +50,7 @@
           "anti_spike_time": "زمن مكافحة القفزات (ثوانٍ)"
         },
         "data_description": {
-          "owntracks_webhook_url": "انسخ هذا الرابط إلى تطبيق OwnTracks.",
-          "gpslogger_webhook_url": "انسخ هذا الرابط إلى تطبيق GPSLogger.",
-          "traccar_webhook_url": "انسخ هذا الرابط إلى خادم/تطبيق Traccar."
+          "owntracks_webhook_url": "انسخ هذا الرابط إلى تطبيق OwnTracks."
         }
       }
     },
@@ -135,14 +131,10 @@
             "name": "المصادر",
             "description": "روابط Webhook قابلة للنسخ لتطبيقات الهاتف المحمول.",
             "data": {
-              "owntracks_webhook_url": "رابط Webhook لـ OwnTracks (للقراءة فقط)",
-              "gpslogger_webhook_url": "رابط Webhook لـ GPSLogger (للقراءة فقط)",
-              "traccar_webhook_url": "رابط Webhook لـ Traccar (للقراءة فقط)"
+              "owntracks_webhook_url": "رابط Webhook لـ OwnTracks (للقراءة فقط)"
             },
             "data_description": {
-              "owntracks_webhook_url": "انسخ هذا الرابط إلى تطبيق OwnTracks.",
-              "gpslogger_webhook_url": "انسخ هذا الرابط إلى تطبيق GPSLogger.",
-              "traccar_webhook_url": "انسخ هذا الرابط إلى خادم/تطبيق Traccar."
+              "owntracks_webhook_url": "انسخ هذا الرابط إلى تطبيق OwnTracks."
             }
           }
         }

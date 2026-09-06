@@ -15,9 +15,6 @@
   - [Device Trackers](#device-trackers)
     - [Home Assistant](#home-assistant)
 	- [OwnTracks](#owntracks)
-    - [GPSLogger](#gpslogger)
-	- [Traccar Client](#traccar-client)
-	- [Traccar Server](#traccar-server)	
 - [Quick Start](#quick-start)
   - [3D Map](#3d-map)
   - [Screens](#screens)
@@ -170,10 +167,6 @@ By default, Home Assistant stores **10 days**. You can increase this time, but k
   Copyable mobile app webhook URLs
   - **OwnTracks webhook URL** 
     - Copy this URL into the OwnTracks app
-  - **GPSLogger webhook URL** 
-    - Copy this URL into the GPSLogger app
-  - **Traccar webhook URL** 
-    - Copy this URL into the Traccar app
 
 <br>
 
@@ -181,7 +174,7 @@ The server requests addresses from openstreetmap.org which has a limit of one re
 
 Increase Geocoding Time and Minimum Distance for Geocoding if you have many open applications and connected devices
 
-The URLs for OwnTracks and GPSLogger must be **changed** and are used in the mobile apps to access the properties that will connect it to the Home Assistant integration
+The OwnTracks URL must be **changed** and is used in the mobile app to access the properties that will connect it to the Home Assistant integration
 
 <br>
   
@@ -198,12 +191,6 @@ The URLs for OwnTracks and GPSLogger must be **changed** and are used in the mob
 You must install an app on your smartphone to send managed positions through Home Assistant **integrations**. We'll look at some of them below.
 
 Integrations create Device Trackers in Home Assistant when connected and they are shown in the integration where you can rename them in:  **"Settings &rarr; Devices and Services &rarr; Integration &rarr; Pencil icon next to the device"**
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/gpslogger.png" alt="Change name screen" style="width: 80%; max-width: 100%; height: auto;" />
-  <br>
-  <em>This is the change name screen</em>
-</div>
 
 Device Trackers must be assigned to users: **"Settings &rarr; People &rarr; Username &rarr; Devices that belong to this person"**
 
@@ -262,116 +249,6 @@ To configure the application: [here's a link](https://www.home-assistant.io/inte
 
 ---
 
-### GPSLogger
-
-[GPSLogger](https://gpslogger.app/) is an **Android** app designed to store or send your phone's positions to a URL.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/gpslogger-android.png" alt="GPSLogger Android screen" style="width: 300px; max-width: 100%; height: auto;" />
-  <br>
-  <em>This is the GPSLogger Android screen</em>
-</div>
-
-The first thing you need to do is install the **GPSLogger integration**:
-  - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
-  - Search for **GPSLogger**, select it. The **configuration screen** will open.
-  - Press **Send** button and integration will be created
- 
-Then you can then install GPSLogger on your devices through the **F-Droid** Android app store.
-
-<p align="left">
-  <a href="https://f-droid.org/packages/com.mendhak.gpslogger">
-    <img
-      src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-      alt="Get it on F-Droid"
-      width="200"
-    />
-  </a>
-</p>
-
-To install GpsLogger:
-  - Allow the permissions that the application requests for its correct operation.
-  - On some **Android** versions, restarting your phone requires you to open the app to send positions. Sometimes setting the app to use the **battery without restrictions**, **always allow location** and **allow notifications** fixes it.
-  - On some devices you must enable the option to run in the background
-  
-To configure the application: [here's a link](https://www.home-assistant.io/integrations/gpslogger/)
-  - The URL provided to you when setting up the integration can also be found under **"Settings &rarr; Devices & services &rarr; Life180 &rarr; Configuration &rarr; Sources"**
-
-- In Home Assistant, you'll find connected devices under **"Settings &rarr; Devices & services &rarr; GPSLogger"**
-  - There you can change its name in Home Assistant
-- Finally, assign the device to a person in Home Assistant: **"Settings &rarr; People"**
-
-### Traccar Client
-
-[Traccar Client](https://www.traccar.org/) is an **[iOS](https://apps.apple.com/us/app/traccar-client/id843156974)** and **[Android](https://play.google.com/store/apps/details?id=org.traccar.client)** app designed to send your phone's positions to a URL.
-
-The first thing you need to do is install the **Traccar Client integration**:
-  - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
-  - Search for **Traccar Client**, select it. The **configuration screen** will open.
-  - Press **Send** button and integration will be created
- 
-Then you can then install OwnTracks on your devices from **[iOS](https://apps.apple.com/us/app/traccar-client/id843156974))** and **[Android](https://play.google.com/store/apps/details?id=org.traccar.client)**. Then:
-  - Allow the permissions that the application requests for its correct operation.
-  - On some **Android** versions, restarting your phone requires you to open the app to send positions. Sometimes setting the app to use the **battery without restrictions**, **always allow location** and **allow notifications** fixes it.
-  - On some devices you must enable the option to run in the background
-
-To configure the application: [here's a link](https://www.traccar.org/client-configuration/)
-  - Set a unique **Device identifier**
-  - The URL provided to you when setting up the integration can also be found under **"Settings &rarr; Devices & services &rarr; Life180 &rarr; Configuration &rarr; Sources"**
-
-- In Home Assistant, you'll find connected devices under **"Settings &rarr; Devices & services &rarr; OwnTracks"**
-  - There you can change its name in Home Assistant
-- Finally, assign the device to a person in Home Assistant: **"Settings &rarr; People"**
-
----  
-
-### Traccar Server
-[Traccar Server](https://www.traccar.org/) allows you to view the real-time location of your GPS devices.
-
-In Traccar server you need to create two **Computed Attributes**:
-  - For **Battery** with: 
-    - Description: "batteryLevel"
-    - Attribute: "Battery level"
-    - Expression: "batteryLevel"
-  - For **Speed** with:
-    - Description: "speedMps"
-    - Attribute: "Speed"
-    - Expression: "speed * 0.514444"
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/traccar-server-computed-attributes.png" alt="Traccar Server Computed Attributes" style="width: 80%; max-width: 100%; height: auto;" />
-  <br>
-  <em>Traccar Server Computed Attributes</em>
-</div>
-	
-These Computed Attributes need to be assigned to **groups** and/or **devices** in Traccar Server.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/traccar-server-groups.png" alt="Traccar Server Groups" style="width: 80%; max-width: 100%; height: auto;" />
-  <br>
-  <em>Traccar Server Groups</em>
-</div>
-	
-The first thing you need to do in Home Assistant is install the **Traccar Server integration**:
-  - Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
-  - Search for **Traccar Server**, select it. The **configuration screen** will open.
-  - Complete the fields with those of the Traccar server
-  - Press **Send** button and integration will be created
-
-In **"Settings &rarr; Devices and Services &rarr; Traccar Server &rarr; Options"** it is necessary to add two **Custom Attributes**: **batteryLevel** and **speedMps**
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/traccar-server-options.png" alt="Traccar Server Options" style="width: 80%; max-width: 100%; height: auto;" />
-  <br>
-  <em>Traccar Server Options</em>
-</div>
-  
-- In Home Assistant, you'll find connected devices under **"Settings &rarr; Devices & services &rarr; Traccar Server"**
-  - There you can change its name in Home Assistant
-- Finally, assign the device to a person in Home Assistant: **"Settings &rarr; People"**
-
----  
-	
 # QUICK START
 
 ## 3D Map

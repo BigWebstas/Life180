@@ -38,8 +38,6 @@
           "only_admin": "Solo amministratori",
           "use_imperial": "Usa unità imperiali",
           "owntracks_webhook_url": "URL webhook OwnTracks (sola lettura)",
-          "gpslogger_webhook_url": "URL webhook GPSLogger (sola lettura)",
-          "traccar_webhook_url": "URL webhook Traccar (sola lettura)",
           "stop_radius": "Raggio di sosta (metri)",
           "stop_time": "Tempo di sosta (secondi)",
           "reentry_gap": "Intervallo di rientro (secondi)",
@@ -52,9 +50,7 @@
           "anti_spike_time": "Tempo anti-spike (secondi)"
         },
         "data_description": {
-          "owntracks_webhook_url": "Copia questo URL nell'app OwnTracks.",
-          "gpslogger_webhook_url": "Copia questo URL nell'app GPSLogger.",
-          "traccar_webhook_url": "Copia questo URL nel server/app Traccar."
+          "owntracks_webhook_url": "Copia questo URL nell'app OwnTracks."
         }
       }
     },
@@ -135,14 +131,10 @@
             "name": "Sorgenti",
             "description": "URL di webhook per app mobili (copiabili).",
             "data": {
-              "owntracks_webhook_url": "URL webhook OwnTracks (sola lettura)",
-              "gpslogger_webhook_url": "URL webhook GPSLogger (sola lettura)",
-              "traccar_webhook_url": "URL webhook Traccar (sola lettura)"
+              "owntracks_webhook_url": "URL webhook OwnTracks (sola lettura)"
             },
             "data_description": {
-              "owntracks_webhook_url": "Copia questo URL nell'app OwnTracks.",
-              "gpslogger_webhook_url": "Copia questo URL nell'app GPSLogger.",
-              "traccar_webhook_url": "Copia questo URL nel server/app Traccar."
+              "owntracks_webhook_url": "Copia questo URL nell'app OwnTracks."
             }
           }
         }

@@ -88,44 +88,6 @@ async def get_owntracks_webhook_url(hass: HomeAssistant) -> str | None:
     return f"{base_url}/api/webhook/{webhook_id}"
 
 
-async def get_gpslogger_webhook_url(hass: HomeAssistant) -> str | None:
-    """Obtiene la URL de GPSLogger priorizando cloudhook, si existe."""
-    entries = hass.config_entries.async_entries(domain="gpslogger")
-    if not entries:
-        return None
-    entry = entries[0]
-
-    cloudhook = entry.data.get("cloudhook_url")
-    if cloudhook:
-        return cloudhook
-
-    webhook_id = entry.data.get("webhook_id")
-    if not webhook_id:
-        return None
-
-    base_url = get_url(hass, prefer_external=True)
-    return f"{base_url}/api/webhook/{webhook_id}"
-
-
-async def get_traccar_webhook_url(hass: HomeAssistant) -> str | None:
-    """Obtiene la URL de Traccar priorizando cloudhook, si existe."""
-    entries = hass.config_entries.async_entries(domain="traccar")
-    if not entries:
-        return None
-    entry = entries[0]
-
-    cloudhook = entry.data.get("cloudhook_url")
-    if cloudhook:
-        return cloudhook
-
-    webhook_id = entry.data.get("webhook_id")
-    if not webhook_id:
-        return None
-
-    base_url = get_url(hass, prefer_external=True)
-    return f"{base_url}/api/webhook/{webhook_id}"
-
-
 # ---------------------------------------------------------------------------
 #  Config Flow
 # ---------------------------------------------------------------------------
@@ -139,8 +101,6 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # URLs informativas para mostrarlas en el formulario
         own_url = await get_owntracks_webhook_url(self.hass) or "OwnTracks no configurado"
-        gps_url = await get_gpslogger_webhook_url(self.hass) or "GPSLogger no configurado"
-        trc_url = await get_traccar_webhook_url(self.hass) or "Traccar no configurado"
 
         # ---- Construcción de secciones (instalación con grupos) ----
         general = vol.Schema({
@@ -177,8 +137,6 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Solo URLs informativas (no se persisten)
         sources = vol.Schema({
             vol.Optional("owntracks_webhook_url", default=own_url): str,
-            vol.Optional("gpslogger_webhook_url", default=gps_url): str,
-            vol.Optional("traccar_webhook_url", default=trc_url): str,
         })
 
         data_schema = vol.Schema({
@@ -200,8 +158,6 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # No persistir los campos informativos
             flat.pop("owntracks_webhook_url", None)
-            flat.pop("gpslogger_webhook_url", None)
-            flat.pop("traccar_webhook_url", None)
 
             # Unique ID global (instancia única)
             await self.async_set_unique_id(DOMAIN)
@@ -251,15 +207,11 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
         }
         self._webhook_urls: dict[str, str] = {
             "own": "OwnTracks no configurado",
-            "gps": "GPSLogger no configurado",
-            "trc": "Traccar no configurado",
         }
 
     async def async_step_init(self, user_input=None):
         # Refrescar URLs cada vez que se abre la pantalla de opciones
         self._webhook_urls["own"] = await get_owntracks_webhook_url(self.hass) or "OwnTracks no configurado"
-        self._webhook_urls["gps"] = await get_gpslogger_webhook_url(self.hass) or "GPSLogger no configurado"
-        self._webhook_urls["trc"] = await get_traccar_webhook_url(self.hass) or "Traccar no configurado"
 
         if user_input is not None:
             # Aplana secciones
@@ -269,8 +221,6 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
 
             # No persistir los campos informativos
             flat.pop("owntracks_webhook_url", None)
-            flat.pop("gpslogger_webhook_url", None)
-            flat.pop("traccar_webhook_url", None)
 
             errors: dict[str, str] = {}
             errors.update(_validate_minimums(flat))
@@ -326,8 +276,6 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
         # Solo URLs informativas (no se persisten)
         sources = vol.Schema({
             vol.Optional("owntracks_webhook_url", default=self._webhook_urls["own"]): str,
-            vol.Optional("gpslogger_webhook_url", default=self._webhook_urls["gps"]): str,
-            vol.Optional("traccar_webhook_url", default=self._webhook_urls["trc"]): str,
         })
 
         data_schema = {
