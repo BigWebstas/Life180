@@ -17,7 +17,73 @@
   
   <!-- Styles -->
 
-  
+  <!-- Home Assistant theme bridge: when embedded in HA and same-origin with
+       the parent, copy the parent theme's CSS variables onto :root so the app
+       follows the user's HA theme (custom themes and dark mode included).
+       Standalone / cross-origin: no-op, styles.css fallbacks apply. -->
+  <script>
+    (function () {
+      var VARS = [
+        "--primary-color", "--accent-color",
+        "--primary-text-color", "--secondary-text-color", "--text-primary-color",
+        "--primary-background-color", "--secondary-background-color",
+        "--card-background-color", "--divider-color",
+        "--error-color", "--warning-color", "--success-color",
+        "--app-header-background-color", "--app-header-text-color",
+        "--ha-card-border-radius", "--ha-card-box-shadow",
+        "--mdc-typography-font-family", "--paper-font-body1_-_font-family"
+      ];
+      var root = document.documentElement;
+
+      function parentDoc() {
+        try {
+          if (window.self === window.top) return null;
+          var d = window.parent.document;         // throws if cross-origin
+          return d && d.documentElement ? d : null;
+        } catch (e) { return null; }
+      }
+
+      function apply() {
+        var pdoc = parentDoc();
+        if (!pdoc) return;
+        try {
+          var cs = window.parent.getComputedStyle(pdoc.documentElement);
+          for (var i = 0; i < VARS.length; i++) {
+            var v = cs.getPropertyValue(VARS[i]);
+            if (v && v.trim()) root.style.setProperty(VARS[i], v.trim());
+            else root.style.removeProperty(VARS[i]);
+          }
+          var scheme = cs.getPropertyValue("color-scheme").trim();
+          if (scheme) root.style.setProperty("color-scheme", scheme);
+          // Dark heuristic when the theme doesn't set color-scheme
+          var bg = cs.getPropertyValue("--primary-background-color").trim()
+                || cs.backgroundColor || "";
+          var m = bg.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+          if (m) {
+            var lum = (0.299 * +m[1] + 0.587 * +m[2] + 0.114 * +m[3]);
+            root.setAttribute("data-ha-dark", lum < 128 ? "1" : "0");
+          }
+        } catch (e) { /* cross-origin race: ignore */ }
+      }
+
+      apply();
+      document.addEventListener("DOMContentLoaded", apply);
+      window.addEventListener("load", apply);
+      try {
+        window.parent.addEventListener("ha-theme-changed", apply);
+        var pdoc = parentDoc();
+        if (pdoc && window.MutationObserver) {
+          new MutationObserver(apply).observe(pdoc.documentElement, {
+            attributes: true, attributeFilter: ["style", "class"]
+          });
+        }
+      } catch (e) { /* ignore */ }
+      // A few delayed passes for slow parent theme application
+      [150, 500, 1500].forEach(function (t) { setTimeout(apply, t); });
+    })();
+  </script>
+
+
 </head>
 <body hidden>
   <div id="container">

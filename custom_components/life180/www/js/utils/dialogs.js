@@ -60,10 +60,10 @@ function ensureOverlay() {
 
 export function showWindowOverlay(
   message = 'Mensaje',
-  bgColor = 'rgba(0, 0, 255, 0.5)',
-  textColor = 'white',
-  borderColor = 'rgba(0, 0, 200, 0.8)',
-  overlayBg = 'rgba(0,0,0,.35)'
+  bgColor = 'var(--l180-primary, #03a9f4)',
+  textColor = 'var(--l180-on-primary, #fff)',
+  borderColor = 'var(--brand-border, rgba(0,0,0,.2))',
+  overlayBg = 'var(--modal-backdrop, rgba(0,0,0,.35))'
 ) {
   ensureOverlay();
   if (overlay.style.display === 'flex') return;
