@@ -1152,3 +1152,28 @@ body.no-scroll { overflow: hidden; }
 #map.l180-map-dark .l180-base-tiles {
   filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.85);
 }
+
+/* ===== Moving-person badge (speed + battery above the map marker) ===== */
+.l180-move-badge {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  border-radius: 9px;
+  background: var(--l180-primary, #03a9f4);
+  color: var(--l180-on-primary, #fff);
+  font: 700 11px/1.25 var(--l180-font, system-ui, -apple-system, "Segoe UI", sans-serif);
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+.l180-move-badge::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--l180-primary, #03a9f4);
+}
