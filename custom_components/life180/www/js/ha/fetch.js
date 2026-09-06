@@ -416,7 +416,7 @@ export async function fetchAuthCallback(code) {
             return;
         }
 
-        const newUrl = `${haUrl}/life180/index.html`;
+        const newUrl = `${haUrl}/life180_static/index.html`;
         window.history.replaceState({}, document.title, newUrl);
     } catch (error) {
         console.error("Error while obtaining token", error);

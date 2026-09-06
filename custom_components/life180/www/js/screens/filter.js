@@ -1844,7 +1844,7 @@ async function doExportPdf() {
         summaryRows,
         zonesRows,
         positionsRows,
-        stopIconUrl: new URL('/life180/images/stop16x16.png', window.location.origin).href,
+        stopIconUrl: new URL('/life180_static/images/stop16x16.png', window.location.origin).href,
         header,
     });
 }

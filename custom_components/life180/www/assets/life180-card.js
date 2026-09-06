@@ -68,8 +68,8 @@ class Life180Card extends LitElement {
         // 1) if the user passed a src in the config, use it (and add ?v= if absent)
         const base =
             this.config?.src ||
-            this.hass?.hassUrl?.("/life180/index.html") ||
-            new URL("life180/index.html", location.href).toString();
+            this.hass?.hassUrl?.("/life180_static/index.html") ||
+            new URL("life180_static/index.html", location.href).toString();
 
         try {
             const u = new URL(base, location.href);
