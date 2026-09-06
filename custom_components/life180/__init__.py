@@ -129,7 +129,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         webcomponent_name="life180-panel",      # <life180> (your custom element)
         module_url = f"{PANEL_URL}?v={hass.data[DOMAIN]['version']}",                                   # better with ?v= for cache-busting
         sidebar_title="Life180",
-        sidebar_icon="mdi:crosshairs-gps",
+        sidebar_icon="mdi:at",
         require_admin=config.get("only_admin", False),
         embed_iframe=True,                   # <- the key part
     )    
