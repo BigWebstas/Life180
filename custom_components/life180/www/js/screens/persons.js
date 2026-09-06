@@ -281,6 +281,12 @@ async function updatePersonsMarkers() {
         const bat = readBattery(device);
         const batteryLevel = bat != null ? `<br>${t('battery')}: ${bat}${t('percentage')}` : "";
 
+        // Floating badge above the marker while the person is moving
+        const speedMph = Math.round((Number(speed) || 0) * 2.23694);
+        const moveBadge = speedMph >= 1
+            ? `<div class="l180-move-badge">${speedMph} ${t('mi_per_hour')}${bat != null ? ` · ${bat}%` : ''}</div>`
+            : '';
+
         if (!isValidCoordinates(latitude, longitude))
             return;
 
@@ -300,7 +306,7 @@ async function updatePersonsMarkers() {
 
         const markerIcon = L.divIcon({
             className: '',
-            html: `<img src="${iconUrl}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;" />`,
+            html: `<div style="position:relative;width:48px;height:48px;">${moveBadge}<img src="${iconUrl}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;" /></div>`,
             iconSize: [48, 48],
             iconAnchor: [24, 24],
             popupAnchor: [0, -24],
