@@ -1,4 +1,4 @@
-# HA Tracker
+# Life180
 
 This integration allows you to keep track of users created in Home Assistant who have the app installed on their smartphones
 
@@ -10,4 +10,4 @@ This integration allows you to keep track of users created in Home Assistant who
 - Advanced filter of positions between two dates with grouping by zone and detailed summary
 
 
-For more details, visit the [GitHub repository](https://github.com/vgcouso/ha-tracker)
+For more details, visit the [GitHub repository](https://github.com/BigWebstas/Life180)
