@@ -1,22 +1,22 @@
 // ./charts/positions.js
-// Gráfico segmentado en tramos de 4/6/8/12 horas en el TAB "Chart"
-// - Rango global: 00:00 (primer día) → 23:59 (último día)
-// - Horas fuera del rango real de datos: en blanco
-// - Cursor pointer al pasar por la gráfica
-// - Sin padding/gutter extra: evita huecos a izquierda/derecha
-// - Cabeceras:
-//     * Fecha (solo en el primer tramo del día) usando formatDate()
-//     * Horas (debajo de cada tramo): inicio HH:mm a la izquierda y fin HH:mm a la derecha
-// - Separadores:
-//     * Línea gris fina pegada al gráfico (encima de las horas) en TODOS los tramos
-//     * Línea azul de fin de día (1px) debajo de las horas en el ÚLTIMO tramo de cada día
-// - Marcador:
-//     * Triángulo arriba del gráfico, apuntando hacia ABAJO, con franja reservada fija (sin cambios dinámicos)
-//     * La línea vertical se mete dentro del triángulo hasta su centro
-//     * Triángulo y línea usan el mismo color que fecha/horas
-// - Click en el gráfico: selecciona la fila más cercana en la tabla
+// Chart split into 4/6/8/12-hour segments in the "Chart" TAB
+// - Global range: 00:00 (first day) -> 23:59 (last day)
+// - Hours outside the real data range: blank
+// - Pointer cursor when hovering the chart
+// - No extra padding/gutter: avoids gaps on the left/right
+// - Headers:
+//     * Date (only on the first segment of the day) using formatDate()
+//     * Hours (below each segment): start HH:mm on the left and end HH:mm on the right
+// - Separators:
+//     * Thin gray line flush with the chart (above the hours) on EVERY segment
+//     * Blue end-of-day line (1px) below the hours on the LAST segment of each day
+// - Marker:
+//     * Triangle above the chart, pointing DOWN, with a fixed reserved strip (no dynamic changes)
+//     * The vertical line goes into the triangle up to its center
+//     * Triangle and line use the same color as the date/hours
+// - Click on the chart: selects the nearest row in the table
 //
-// Uso: renderPositionsChart(positions, { segmentHours: 6, graphHeight: 50 })
+// Usage: renderPositionsChart(positions, { segmentHours: 6, graphHeight: 50 })
 
 import { handleZonePosition, getZoneStyleById } from '../screens/zones.js';
 import { toRgba } from '../utils/dialogs.js';
@@ -26,7 +26,7 @@ const ALPHA = 0.3;
 
 // Colores
 const COLOR_DARK_BLUE = '#003366';
-const COLOR_SEP_GRAY  = '#d1d5db'; // gris fino para separador pegado al gráfico
+const COLOR_SEP_GRAY  = '#d1d5db'; // thin gray for the separator flush with the chart
 
 // Alturas (en px)
 const DATE_HDR_H               = 18;
@@ -36,17 +36,17 @@ const INTRA_DAY_TOP_GAP        = 0;
 const TIME_FOOTER_H            = 12;
 const DAY_END_EXTRA_FOOTER_PAD = 18;
 
-// Marcador (triángulo ARRIBA del gráfico, apuntando hacia ABAJO)
+// Marker (triangle ABOVE the chart, pointing DOWN)
 const MARKER_TRI_W   = 10;
 const MARKER_TRI_H   = 10;
-const MARKER_STRIP_H = 10; // franja fija del marcador
+const MARKER_STRIP_H = 10; // fixed marker strip
 
-// Altura base fija del área de gráfico
+// Fixed base height of the chart area
 const DEFAULT_GRAPH_H = 50;
 
-// Estado
+// State
 let stackHost = null;
-let scrollContainer = null; // se resolverá al contenedor desplazable real
+let scrollContainer = null; // resolves to the real scrollable container
 let panels = [];            // [{ canvas, ctx, t0, t1, labelEnd, isDayStart, isDayEnd, _topGap, _footerH }]
 let resizeObs = null;
 let containerResizeObs = null;
@@ -54,13 +54,13 @@ let containerResizeObs = null;
 let lastData = null; // { positions, opts, dataT0, dataT1, vmax, rangeStart, rangeEnd }
 let clickBound = false;
 
-/** Inicializa/garantiza el host de la cabecera segmentada en el TAB Chart */
+/** Initializes/guarantees the segmented-header host in the Chart TAB */
 export function initPositionsChart() {
   const chartSlot = document.getElementById('positions-chart');
   const chartContainer = document.querySelector('#chart .table-container');
   const positionsContainer = document.querySelector('#positions .table-container');
 
-  // Preferimos el contenedor del Tab Chart si existe
+  // Prefer the Chart tab container if it exists
   scrollContainer = chartContainer || positionsContainer || scrollContainer || null;
 
   const hostParent = chartSlot || scrollContainer;
@@ -74,7 +74,7 @@ export function initPositionsChart() {
     stackHost.style.margin = '0';
     hostParent.prepend(stackHost);
 
-    // Reserva del thead solo en Positions (para sticky thead)
+    // Reserve thead space only in Positions (for the sticky thead)
     if (scrollContainer === positionsContainer) {
       positionsContainer.classList.add('chart-has-header');
     }
@@ -87,7 +87,7 @@ export function initPositionsChart() {
     }
   }
 
-  // Vincula listeners al scroller real (puede cambiar si cambian pestañas)
+  // Bind listeners to the real scroller (can change when tabs change)
   bindRealScroller();
 
   updateHeaderMetrics();
@@ -95,17 +95,17 @@ export function initPositionsChart() {
 }
 
 export function onChartTabShown() {
-  initPositionsChart();   // asegura host
-  bindRealScroller();     // re-resuelve el scroller real si cambió con el tab
-  updateHeaderMetrics();  // recalcula métricas de cabecera
+  initPositionsChart();   // ensure the host
+  bindRealScroller();     // re-resolve the real scroller if it changed with the tab
+  updateHeaderMetrics();  // recompute the header metrics
 
   const t = toTsMs(lastData?.opts?.markerTs);
   if (Number.isFinite(t)) {
-    afterReflow(() => ensureMarkerPanelInView(t)); // centra el tramo del marcador
+    afterReflow(() => ensureMarkerPanelInView(t)); // center the marker segment
   }
 }
 
-/** Limpia por completo la cabecera y el estado gráfico */
+/** Fully clears the header and the chart state */
 export function clearPositionsChart() {
   if (!stackHost) return;
   stackHost.innerHTML = '';
@@ -115,7 +115,7 @@ export function clearPositionsChart() {
   updateHeaderMetrics();
 }
 
-/** Renderiza posiciones. opts puede llevar { segmentHours: 4|6|8|12, markerTs, graphHeight } */
+/** Renders positions. opts may carry { segmentHours: 4|6|8|12, markerTs, graphHeight } */
 export function renderPositionsChart(positions, opts = {}) {
   initPositionsChart();
   if (!stackHost) return;
@@ -129,7 +129,7 @@ export function renderPositionsChart(positions, opts = {}) {
     (a, b) => +new Date(a.last_updated) - +new Date(b.last_updated)
   );
 
-  // Extremos de datos (respetando posible stop_start/stop_end)
+  // Data extremes (honoring possible stop_start/stop_end)
   const startOf = (p) => {
     const tLU = +new Date(p.last_updated);
     const tSS = (p.stop && p.stop_start) ? +new Date(p.stop_start) : NaN;
@@ -148,7 +148,7 @@ export function renderPositionsChart(positions, opts = {}) {
     dataT1 = Math.max(dataT1, endOf(data[i]));
   }
 
-  // Rango global segmentado: 00:00 primer día → 23:59:59.999 último día (hora local)
+  // Segmented global range: 00:00 first day -> 23:59:59.999 last day (local time)
   const rangeStart = floorToLocalMidnight(new Date(dataT0));
   const rangeEnd   = setLocalTime(new Date(dataT1), 23, 59, 59, 999);
 
@@ -165,29 +165,29 @@ export function renderPositionsChart(positions, opts = {}) {
 
   lastData = { positions: data, opts, dataT0, dataT1, vmax, rangeStart: +rangeStart, rangeEnd: +rangeEnd };
 
-  // Construcción/actualización de paneles con marcas de inicio y fin de día
+  // Build/update panels with day start and end markers
   ensurePanelsWithDayMarkers(segments);
 
-  // Cursor “pointer” cuando hay datos
+  // "pointer" cursor when there is data
   stackHost.style.cursor = 'pointer';
   for (const p of panels) p.canvas.style.cursor = 'pointer';
 
-  // Dibujar todos los paneles
+  // Draw all panels
   drawAll(data, opts);
 
   updateHeaderMetrics();
 
-  // --- NUEVO: si ya hay un marcador, asegúrate de hacer scroll al tramo al entrar al tab ---
+  // --- NEW: if there is already a marker, make sure to scroll to its segment when entering the tab ---
   const markerTs = toTsMs(lastData?.opts?.markerTs);
   if (Number.isFinite(markerTs)) {
-    // espera a que el tab sea visible y haya reflow del canvas
+    // wait for the tab to be visible and the canvas to reflow
     waitUntilVisible(stackHost, () => afterReflow(() => ensureMarkerPanelInView(markerTs)));
   }
 
   ensureClickHandlers();
 }
 
-/** Marca una posición temporal (línea vertical). */
+/** Marks a time position (vertical line). */
 export function setPositionsMarker(tsLike) {
   initPositionsChart();
   if (!lastData) return;
@@ -195,7 +195,7 @@ export function setPositionsMarker(tsLike) {
   lastData.opts = { ...(lastData.opts || {}), markerTs: t };
   drawAll(lastData.positions, lastData.opts);
 
-  // --- NUEVO: intenta desplazar al tramo ya mismo (si no visible, reintenta al hacerse visible) ---
+  // --- NEW: try to scroll to the segment right away (if not visible, retry when it becomes visible) ---
   waitUntilVisible(stackHost, () => afterReflow(() => ensureMarkerPanelInView(t)));
 }
 
@@ -242,7 +242,7 @@ function normalizeSegHours(h) {
  * Construye tramos desde startDate hasta endDate (INCLUSIVE),
  * guardando:
  * - t0..t1: fin real a pintar (recortado a endDate)
- * - labelEnd: fin lógico del tramo (p.ej., 00:00 del día siguiente)
+ * - labelEnd: logical end of the segment (e.g. 00:00 of the next day)
  */
 function buildSegments(startDate, endDate, segH) {
   const segs = [];
@@ -273,10 +273,10 @@ function fmtHM(ts) {
   return `${hh}:${mm}`;
 }
 
-/* ===================== construcción de paneles ===================== */
+/* ===================== panel construction ===================== */
 
 function ensurePanelsWithDayMarkers(segments) {
-  // Si longitud coincide, actualiza tiempos y recalcula flags
+  // If the length matches, update times and recompute flags
   if (panels.length === segments.length) {
     for (let i = 0; i < panels.length; i++) {
       panels[i].t0 = segments[i].t0;
@@ -325,12 +325,12 @@ function drawAll(positions, opts) {
   const dataT0 = lastData?.dataT0 ?? +new Date(positions[0].last_updated);
   const dataT1 = lastData?.dataT1 ?? +new Date(positions.at(-1).last_updated);
 
-  // Altura base fija del área de gráfico
+  // Fixed base height of the chart area
   const graphH = Number.isFinite(+opts.graphHeight) && +opts.graphHeight > 0
     ? Math.round(+opts.graphHeight)
     : DEFAULT_GRAPH_H;
 
-  // 1) Ajusta ALTURA de cada panel (gap superior FIJO + franja fija del marcador)
+  // 1) Adjust the HEIGHT of each panel (FIXED top gap + fixed marker strip)
   for (const panel of panels) {
     const dateH   = panel.isDayStart ? DATE_HDR_H : 0;
     const topGap  = panel.isDayStart ? DATE_BOTTOM_GAP : INTRA_DAY_TOP_GAP;
@@ -343,7 +343,7 @@ function drawAll(positions, opts) {
     panel.canvas.style.height = `${totalH}px`;
   }
 
-  // 2) Dibuja cada panel
+  // 2) Draw each panel
   for (const panel of panels) {
     drawPanel(panel, positions, { vmax, dataT0, dataT1, markerTs: toTsMs(opts?.markerTs), graphH });
   }
@@ -364,13 +364,13 @@ function drawPanel(panel, positions, meta) {
   const W = cssW;
   const H = cssH;
 
-  // Cabeceras (gap superior fijo) + franja fija del marcador
+  // Headers (fixed top gap) + fixed marker strip
   const dateH   = isDayStart ? DATE_HDR_H : 0;
   const topGap  = panel._topGap != null ? panel._topGap : (isDayStart ? DATE_BOTTOM_GAP : INTRA_DAY_TOP_GAP);
   const footerH = panel._footerH != null ? panel._footerH : (TIME_FOOTER_H + (isDayEnd ? DAY_END_EXTRA_FOOTER_PAD : 0));
   const headerH = MARKER_STRIP_H + dateH + topGap;
 
-  // Área del gráfico (dos filas)
+  // Chart area (two rows)
   const GAP_TRACKS = 0;
   const tracksH = Math.max(10, H - headerH - footerH);
   const trackH  = (tracksH - GAP_TRACKS) / 2;
@@ -382,7 +382,7 @@ function drawPanel(panel, positions, meta) {
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, W, H);
 
-  // === Cabecera de FECHA (solo primer tramo del día) ===
+  // === DATE header (only the first segment of the day) ===
   if (dateH > 0) {
     ctx.save();
     ctx.fillStyle = COLOR_DARK_BLUE;
@@ -394,17 +394,17 @@ function drawPanel(panel, positions, meta) {
     ctx.restore();
   }
 
-  // Intersección con el rango real de datos
+  // Intersection with the real data range
   const vis0 = Math.max(t0, meta.dataT0);
   const vis1 = Math.min(t1, meta.dataT1);
 
-  // Escala X local al tramo
+  // X scale local to the segment
   const xAt = (t) => {
     const span = Math.max(1, (t1 - t0));
     return ((t - t0) / span) * W;
   };
 
-  // Puntos que intersectan el tramo visible
+  // Points that intersect the visible segment
   const data = positions.filter(p => {
     const ts = +new Date(p.last_updated);
     const tsStart = p.stop && p.stop_start ? Math.min(ts, +new Date(p.stop_start)) : ts;
@@ -412,13 +412,13 @@ function drawPanel(panel, positions, meta) {
     return !(tsEnd < vis0 || tsStart > vis1);
   });
 
-  // Bandas y línea de velocidad
+  // Bands and speed line
   if (vis1 > vis0 && data.length) {
     drawBandByZone(ctx, data, { xAt, topY,        height: trackH, colorAlpha: ALPHA, clipStart: vis0, clipEnd: vis1 });
     drawBandStopMove(ctx, data, { xAt, topY: botY, height: trackH,                 clipStart: vis0, clipEnd: vis1 });
     drawSpeedStepLine(ctx, data, { xAt, topY: botY, height: trackH, vmax: lastData.vmax, clipStart: vis0, clipEnd: vis1 });
 
-    // Marcador: triángulo ARRIBA + línea entrando hasta el centro del triángulo
+    // Marker: triangle ABOVE + line going in up to the center of the triangle
     const mTs = toTsMs(lastData?.opts?.markerTs);
     if (Number.isFinite(mTs) && mTs >= vis0 && mTs <= vis1) {
       const x = Math.round(xAt(mTs));
@@ -428,9 +428,9 @@ function drawPanel(panel, positions, meta) {
       ctx.fillStyle = COLOR_DARK_BLUE;
       ctx.strokeStyle = COLOR_DARK_BLUE;
 
-      // Triángulo por encima del gráfico
-      const apexY = topY;                 // punta
-      const baseY = apexY - MARKER_TRI_H; // base superior
+      // Triangle above the chart
+      const apexY = topY;                 // apex
+      const baseY = apexY - MARKER_TRI_H; // top base
       ctx.beginPath();
       ctx.moveTo(x - MARKER_TRI_W / 2, baseY);
       ctx.lineTo(x + MARKER_TRI_W / 2, baseY);
@@ -438,7 +438,7 @@ function drawPanel(panel, positions, meta) {
       ctx.closePath();
       ctx.fill();
 
-      // Línea vertical: empieza en mitad del triángulo y baja
+      // Vertical line: starts at the middle of the triangle and goes down
       const insideY = apexY - (MARKER_TRI_H / 2);
       ctx.beginPath();
       ctx.moveTo(x, insideY);
@@ -450,13 +450,13 @@ function drawPanel(panel, positions, meta) {
     }
   }
 
-  // Separador gris pegado al gráfico (justo encima de las horas)
+  // Gray separator flush with the chart (just above the hours)
   drawGraphBottomSeparator(ctx, W, headerH + tracksH);
 
   // Footer con horas
   drawTimesFooter(ctx, W, H, footerH, t0, labelEnd);
 
-  // Línea azul de fin de día
+  // Blue end-of-day line
   if (isDayEnd) drawDayEndLine(ctx, W, H);
 }
 
@@ -639,10 +639,10 @@ function drawDayEndLine(ctx, W, H) {
 function resolveScrollContainer() {
   if (!stackHost) return document.scrollingElement || document.documentElement;
 
-  // Si ya tenemos un scroller válido que contiene a stackHost, úsalo
+  // If we already have a valid scroller that contains stackHost, use it
   if (scrollContainer && scrollContainer.contains?.(stackHost)) return scrollContainer;
 
-  // Sube por los ancestros buscando overflowY desplazable
+  // Walk up the ancestors looking for a scrollable overflowY
   for (let el = stackHost.parentElement; el; el = el.parentElement) {
     const cs = getComputedStyle(el);
     if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll' || cs.overflowY === 'overlay') &&
@@ -704,7 +704,7 @@ function findPanelForTs(ts) {
   for (const p of panels) if (ts >= p.t0 && ts < p.labelEnd) return p;
   if (ts === panels.at(-1)?.labelEnd) return panels.at(-1);
 
-  // el más cercano
+  // the nearest one
   let best = null;
   for (const p of panels) {
     const mid = (p.t0 + p.labelEnd) / 2;
@@ -744,9 +744,9 @@ function ensureMarkerPanelInView(ts) {
 }
 
 /**
- * Espera hasta que el elemento sea "visible" (tenga layout y tamaño)
+ * Waits until the element is "visible" (has layout and size)
  * y entonces ejecuta cb(). Si ya es visible, ejecuta ya.
- * Se desmonta automáticamente a los 5s como salvaguarda.
+ * Auto-detaches after 5s as a safeguard.
  */
 function waitUntilVisible(el, cb) {
   if (!el?.isConnected) return;
@@ -754,7 +754,7 @@ function waitUntilVisible(el, cb) {
     if (!el?.isConnected) return false;
     const r = el.getBoundingClientRect();
     const cs = getComputedStyle(el);
-    // antes exigía offsetParent !== null; eso falla con ciertos layouts
+    // it used to require offsetParent !== null; that fails with certain layouts
     return r.width > 0 && r.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden';
   };
 
@@ -767,10 +767,10 @@ function waitUntilVisible(el, cb) {
     }
   });
   mo.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
-  setTimeout(() => mo.disconnect(), 5000); // salvaguarda
+  setTimeout(() => mo.disconnect(), 5000); // safeguard
 }
 
-/* ===================== interacción (click -> seleccionar fila) ===================== */
+/* ===================== interaction (click -> select row) ===================== */
 
 function ensureClickHandlers() {
   if (!stackHost || !panels.length) return;
@@ -779,7 +779,7 @@ function ensureClickHandlers() {
   stackHost.addEventListener('click', (ev) => {
     if (!lastData || !Array.isArray(lastData.positions) || lastData.positions.length === 0) return;
 
-    // Localiza el panel clicado por Y
+    // Locate the clicked panel by Y
     let chosen = null;
     for (const panel of panels) {
       const r = panel.canvas.getBoundingClientRect();
@@ -791,13 +791,13 @@ function ensureClickHandlers() {
     const x = ev.clientX - rect.left;
     const W = rect.width || 1;
 
-    // Mapea X a tiempo dentro del panel
+    // Map X to time within the panel
     const t = chosen.t0 + (Math.max(0, Math.min(W, x)) / W) * (chosen.t1 - chosen.t0);
 
-    // Solo si cae dentro del rango real de datos (no blanco)
+    // Only if it falls within the real data range (not blank)
     if (!(t >= lastData.dataT0 && t <= lastData.dataT1)) return;
 
-    // Posición más cercana
+    // Nearest position
     let best = null;
     for (const p of lastData.positions) {
       const ts = +new Date(p.last_updated);
@@ -806,10 +806,10 @@ function ensureClickHandlers() {
     }
     if (!best) return;
 
-    // Marca en el gráfico (esto a su vez forzará scroll si hace falta)
+    // Mark on the chart (this in turn forces a scroll if needed)
     setPositionsMarker(best.p.last_updated);
 
-    // Dispara evento para que FILTER seleccione la fila
+    // Fire an event so FILTER selects the row
     const uniqueId = `${best.p.entity_id}_${new Date(best.p.last_updated).toISOString()}`;
     document.dispatchEvent(new CustomEvent('positions:select-by-id', {
       detail: { uniqueId }
@@ -819,16 +819,16 @@ function ensureClickHandlers() {
   clickBound = true;
 }
 
-/* ===================== métricas de cabecera / scrollbar ===================== */
+/* ===================== header metrics / scrollbar ===================== */
 
 function updateHeaderMetrics() {
   if (!stackHost) return;
 
-  // Sin paddings laterales
+  // No side padding
   stackHost.style.paddingLeft = '0px';
   stackHost.style.paddingRight = '0px';
 
-  // Reservar altura del thead SOLO si usamos el contenedor de POSITIONS
+  // Reserve thead height ONLY when using the POSITIONS container
   const positionsContainer = document.querySelector('#positions .table-container');
   const sc = resolveScrollContainer();
   if (positionsContainer && sc === positionsContainer) {
