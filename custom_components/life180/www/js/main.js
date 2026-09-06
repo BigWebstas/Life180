@@ -14,10 +14,10 @@ import { showWindowOverlay, hideWindowOverlay } from './utils/dialogs.js';
 
 document.addEventListener("DOMContentLoaded", async() => {
     try {
-        // Manejar autenticación si hay un parámetro `code`
+        // Handle authentication if there is a `code` parameter
         await authCallback();
 
-        // Inicializar la aplicación
+        // Initialize the app
         await init();
     } catch (error) {
         console.error("Error during DOMContentLoaded:", error);
@@ -31,11 +31,11 @@ async function init() {
         await initZones();
         await initMap();
         await update();
-        await fitMapToAllPersons(); // Zoom al conjunto de dispositivos
+        await fitMapToAllPersons(); // zoom to the set of devices
         await loadUI();
 
-        // Ejecutar en segundo plano con manejo de errores iniciales
-        startUpdateLoop(); // sin .catch: ya gestionan sus propios errores
+        // Run in the background with initial error handling
+        startUpdateLoop(); // no .catch: these already handle their own errors
 
     } catch (error) {
         console.error("Error during init:", error);
@@ -43,15 +43,15 @@ async function init() {
 }
 
 //
-// ------ UPDATE LOOP sincronizado con rAF ------
-// Ejecuta update() cada updateInterval segundos,
-// solo mientras el documento esté visible
+// ------ UPDATE LOOP synchronized with rAF ------
+// Runs update() every updateInterval seconds,
+// only while the document is visible
 //
 function startUpdateLoop() {
     let lastRun = performance.now();
 
     async function frame(now) {
-        // Si la UI está “congelada” (p.ej. Flatpickr abierto), no dispares updates
+        // If the UI is "frozen" (e.g. Flatpickr open), do not fire updates
         if (window.__freezeUpdates > 0) {
             requestAnimationFrame(frame);
             return;
@@ -66,15 +66,15 @@ function startUpdateLoop() {
                 console.error("update() failed:", err);
             }
         }
-        requestAnimationFrame(frame); // siguiente frame
+        requestAnimationFrame(frame); // next frame
     }
 
-    requestAnimationFrame(frame); // arranque
+    requestAnimationFrame(frame); // start
 }
 
 async function update() {
     try {
-        // Ejecutar funciones en orden y detenerse si ocurre un error
+        // Run the functions in order and stop if an error occurs
         const active = await isActive();
         if (active) {
             await updateConfig();

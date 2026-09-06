@@ -1,6 +1,6 @@
 // utils/loader.js  (ESM)
 
-// Registro global para deduplicar entre módulos
+// Global registry to deduplicate across modules
 const GLB = (typeof window !== 'undefined' ? window : globalThis);
 GLB.__assetLoader ??= {
     js: new Map(),
@@ -9,7 +9,7 @@ GLB.__assetLoader ??= {
 
 function onceExisting(el) {
     return new Promise((resolve, reject) => {
-        // Si ya cargó
+        // If already loaded
         if (el.dataset.loaded === 'true' || el.readyState === 'complete')
             return resolve();
         el.addEventListener('load', () => resolve(), {
@@ -61,7 +61,7 @@ export function loadScriptOnce(src, {
     matchPrefix = true,
     test = null
 } = {}) {
-    // Si el test ya pasa, no cargamos nada
+    // If the test already passes, load nothing
     try {
         if (typeof test === 'function' && test())
             return Promise.resolve();
@@ -75,7 +75,7 @@ export function loadScriptOnce(src, {
          : `script[src="${src}"]`;
     const existing = document.querySelector(sel);
     if (existing) {
-        // Si ya cargó, ok; si no, espera a su load/error
+        // If already loaded, ok; otherwise wait for its load/error
         const p = onceExisting(existing).then(() => {
             if (typeof test === 'function' && !test()) {
                 throw new Error('Script present but test() failed: ' + src);
@@ -111,7 +111,7 @@ export function loadScriptOnce(src, {
     return p.finally(() => GLB.__assetLoader.js.delete(key));
 }
 
-/** Carga en orden un array de recursos {type:'css'|'js', url, opts} */
+/** Load an array of resources {type:'css'|'js', url, opts} in order */
 export async function loadResources(resources = []) {
     for (const r of resources) {
         if (r.type === 'css')

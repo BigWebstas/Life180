@@ -1,11 +1,11 @@
 // export/excel_xlsx.js
-// Genera un .xlsx con ExcelJS:
-// - Cabeceras azul oscuro, texto blanco (Verdana 9)
-// - Primera fila congelada
-// - Ancho de columnas ajustado al contenido
-// - Fuente Verdana 9 en todo el libro
-// - Todas las celdas alineadas verticalmente al centro y horizontalmente a la izquierda
-// - Solo “Dirección” con wrap
+// Generates an .xlsx with ExcelJS:
+// - Dark blue headers, white text (Verdana 9)
+// - First row frozen
+// - Column widths fitted to content
+// - Verdana 9 font throughout the workbook
+// - Every cell aligned middle vertically and left horizontally
+// - Only "Address" wraps
 
 import { t } from '../utils/i18n.js';
 
@@ -25,7 +25,7 @@ async function ensureExcelJS() {
 
 function toFixed6(n) {
   const v = Number(n);
-  return Number.isFinite(v) ? Number(v.toFixed(6)) : null; // como número
+  return Number.isFinite(v) ? Number(v.toFixed(6)) : null; // as a number
 }
 
 function speedInConfiguredUnits(mps) {
@@ -33,16 +33,16 @@ function speedInConfiguredUnits(mps) {
   return Math.round(mps * 3.6 * 0.621371192); // m/s -> mph
 }
 
-// Longitud máxima por líneas (para auto ancho)
+// Maximum length per line (for auto width)
 function maxLineLen(s) {
   return String(s || '').split('\n').reduce((m, line) => Math.max(m, line.length), 0);
 }
 
-// Calcula anchos (en "char width") a partir del contenido
+// Compute widths (in "char width") from the content
 function computeColWidths(rows, headers) {
-  // índices: 0 fecha, 1 parada, 2 lat, 3 lon, 4 vel, 5 bat, 6 zona, 7 dir
-  const mins = [19, 6, 11, 11, 12, 8, 18, 30];  // mínimos razonables
-  const maxs = [40,10, 16, 16, 16,10, 50, 80];  // límites para no desbordar
+  // indices: 0 date, 1 stop, 2 lat, 3 lon, 4 speed, 5 batt, 6 zone, 7 addr
+  const mins = [19, 6, 11, 11, 12, 8, 18, 30];  // reasonable minimums
+  const maxs = [40,10, 16, 16, 16,10, 50, 80];  // limits so it does not overflow
   const lens = headers.map(h => maxLineLen(h));
 
   for (const r of rows) {
@@ -131,7 +131,7 @@ export async function exportPositionsToXlsx(positions, {
     c.alignment = headAlignment;
   });
 
-  // Datos (números como números; wrap solo en Dirección)
+  // Data (numbers as numbers; wrap only in Address)
   for (const r of rows) {
     const row = ws.addRow([
       r.date,
@@ -144,23 +144,23 @@ export async function exportPositionsToXlsx(positions, {
       r.address
     ]);
     row.font = BASE_FONT;
-    row.alignment = BASE_ALIGN; // todas las celdas: middle + left
+    row.alignment = BASE_ALIGN; // all cells: middle + left
   }
 
-  // Congelar primera fila
+  // Freeze the first row
   ws.views = [{ state: 'frozen', ySplit: 1 }];
 
-  // Ajuste de anchos + estilo/ALINEACIÓN por columna (con wrap en Dirección)
+  // Width fitting + per-column style/ALIGNMENT (with wrap in Address)
   const widths = computeColWidths(rows, headers);
   ws.columns = widths.map((w, i) => ({
     width: w,
     style: {
       font: BASE_FONT,
-      alignment: { ...BASE_ALIGN, wrapText: i === 7 } // i===7 -> “Dirección”
+      alignment: { ...BASE_ALIGN, wrapText: i === 7 } // i===7 -> "Address"
     }
   }));
 
-  // Reafirma la cabecera tras definir columnas
+  // Reassert the header after defining the columns
   ws.getRow(1).eachCell(c => {
     c.font = headFont;
     c.alignment = headAlignment;

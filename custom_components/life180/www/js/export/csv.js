@@ -1,6 +1,6 @@
 // export/csv.js
-// Construye y descarga un CSV con posiciones (paradas/no paradas)
-// Campos: fecha local, parada, lat, lon, velocidad, batería, zona, dirección.
+// Builds and downloads a CSV of positions (stops / non-stops)
+// Fields: local date, stop, lat, lon, speed, battery, zone, address.
 
 import { t } from '../utils/i18n.js';
 
@@ -8,7 +8,7 @@ function sanitizeField(v) {
     if (v == null)
         return '';
     const s = String(v).replace(/\r?\n/g, ' ').trim();
-    // CSV seguro entre comillas dobles (doblando comillas internas)
+    // CSV-safe within double quotes (doubling internal quotes)
     return `"${s.replace(/"/g, '""')}"`;
 }
 
@@ -79,7 +79,7 @@ export function buildCsv(positions, {
 }
 
 export function downloadCsv(filename, csvString) {
-    // Añadimos BOM para que Excel detecte UTF-8
+    // Add a BOM so Excel detects UTF-8
     const blob = new Blob(['\uFEFF' + csvString], {
         type: 'text/csv;charset=utf-8'
     });
