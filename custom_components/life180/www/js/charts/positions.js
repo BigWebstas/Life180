@@ -453,7 +453,7 @@ function drawPanel(panel, positions, meta) {
   // Gray separator flush with the chart (just above the hours)
   drawGraphBottomSeparator(ctx, W, headerH + tracksH);
 
-  // Footer con horas
+  // Footer with hours
   drawTimesFooter(ctx, W, H, footerH, t0, labelEnd);
 
   // Blue end-of-day line
@@ -635,7 +635,7 @@ function drawDayEndLine(ctx, W, H) {
 
 /* ===================== SCROLL AL TRAMO DEL MARCADOR ===================== */
 
-// Encuentra el scroller real que contiene a stackHost
+// Find the real scroller that contains stackHost
 function resolveScrollContainer() {
   if (!stackHost) return document.scrollingElement || document.documentElement;
 
