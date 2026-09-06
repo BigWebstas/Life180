@@ -1,4 +1,4 @@
-"""Módulo de inicialización para Life180"""
+"""Initialization module for Life180."""
 from __future__ import annotations 
 
 import json
@@ -33,7 +33,7 @@ from .units import imperial_to_metric, metric_to_imperial
 
 
 # --------------------------------------------------------------------------- #
-#  CONFIGURACIÓN BÁSICA                                                       #
+#  BASIC CONFIGURATION                                                        #
 # --------------------------------------------------------------------------- #
 
 DOMAIN = __package__.split(".")[-1]
@@ -52,15 +52,15 @@ CARD_URL  = "/life180/assets/life180-card.js"
 #  SETUP                                                                      #
 # --------------------------------------------------------------------------- #
 async def async_setup(_hass: HomeAssistant, _config) -> bool:
-    """Configuración inicial de la integración (vacío)."""
+    """Initial integration setup (empty)."""
     return True
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Migra entradas antiguas.
+    """Migrate old config entries.
 
-    v1 guardaba distancias/velocidades en métrico y un flag `use_imperial`.
-    v2 las guarda en pies / mph y no tiene flag.
+    v1 stored distances/speeds in metric with a `use_imperial` flag.
+    v2 stores them in feet / mph and has no flag.
     """
     if entry.version > 2:
         return False
@@ -79,10 +79,10 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Configura Life180 desde una entrada de configuración."""
+    """Set up Life180 from a config entry."""
 
-    # Mezcla de datos y opciones. Los valores se guardan en imperial (pies / mph);
-    # el pipeline trabaja en métrico.
+    # Merge data and options. Values are stored in imperial (feet / mph);
+    # the pipeline works in metric.
     raw_config: Dict[str, Any] = {**entry.data, **entry.options} if entry.options else dict(entry.data)
     config: Dict[str, Any] = imperial_to_metric(raw_config)
 
@@ -90,7 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     domain_data["config"] = config
 
     # ------------------------------------------------------------------ #
-    #  1. Obtener versión actual del manifest.json                       #
+    #  1. Get the current version from manifest.json                     #
     # ------------------------------------------------------------------ #
     current_version: str | None = await get_version_from_manifest()
     if current_version is None:
@@ -100,19 +100,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     domain_data["version"] = current_version
 
     # ------------------------------------------------------------------ #
-    #  2. registro de estáticos                                          #
+    #  2. Register static paths                                          #
     # ------------------------------------------------------------------ #
     await hass.http.async_register_static_paths([
         StaticPathConfig(url_path="/life180", path=str(STATIC_DIR), cache_headers=True),
     ])
 
     # ------------------------------------------------------------------ #
-    #  3. Registrar vistas REST (solo una vez)                           #
+    #  3. Register REST views (once only)                                #
     # ------------------------------------------------------------------ #
     register_api_views(hass)
 
     # ------------------------------------------------------------------ #
-    #  4. Registrar zonas                                                #
+    #  4. Register zones                                                 #
     # ------------------------------------------------------------------ #
     try:
         await register_zones(hass)
@@ -120,17 +120,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Error while registering zones: %s", err)
 
     # ------------------------------------------------------------------ #
-    #  5. Registrar panel lateral                                        #
+    #  5. Register the sidebar panel                                     #
     # ------------------------------------------------------------------ #
     await async_register_panel(
         hass=hass,
         frontend_url_path="life180",      # /life180
-        webcomponent_name="life180-panel",      # <life180> (tu custom element)
-        module_url = f"{PANEL_URL}?v={hass.data[DOMAIN]['version']}",                                   # mejor con ?v= para cache-busting
+        webcomponent_name="life180-panel",      # <life180> (your custom element)
+        module_url = f"{PANEL_URL}?v={hass.data[DOMAIN]['version']}",                                   # better with ?v= for cache-busting
         sidebar_title="Life180",
         sidebar_icon="mdi:crosshairs-gps",
         require_admin=config.get("only_admin", False),
-        embed_iframe=True,                   # ← aquí la clave
+        embed_iframe=True,                   # <- the key part
     )    
 
     # ------------------------------------------------------------------ #
@@ -145,11 +145,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if hass.state == CoreState.running:
         await _install_blueprint()
     else:
-        # IMPORTANTE: usar async_listen_once (callback async) — nada de create_task desde hilos
+        # IMPORTANT: use async_listen_once (async callback) - no create_task from threads
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _install_blueprint)
 
     # ------------------------------------------------------------------ #
-    #  7. Añadir recurso Lovelace (versión + caché)                      #
+    #  7. Add the Lovelace resource (version + cache)                    #
     # ------------------------------------------------------------------ #
     async def _register_resources(_event=None):
         await _ensure_lovelace_resource(hass, CARD_URL)
@@ -159,11 +159,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _register_resources)
 
-    # Escuchar cambios de opciones
+    # Listen for options changes
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     # ------------------------------------------------------------------ #
-    #  8. Pre-cargar la caché de reverse geocode                         #
+    #  8. Warm up the reverse-geocode cache                              #
     # ------------------------------------------------------------------ #
     await async_init_reverse_cache(hass)
 
@@ -174,38 +174,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 #  RELOAD / UNLOAD                                                            #
 # --------------------------------------------------------------------------- #
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Recargar la integración al cambiar opciones desde la UI."""
+    """Reload the integration when options change from the UI."""
     await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, _entry: ConfigEntry) -> bool:
-    """Desinstalar completamente la integración."""
+    """Fully uninstall the integration."""
 
-    # Eliminar zonas
+    # Remove zones
     await unregister_zones(hass)
 
-    # Quitar panel personalizado
+    # Remove the custom panel
     try:
         await async_remove_panel(hass, "life180")
     except Exception as err:
         _LOGGER.error("Error removing Life180 panel: %s", err)
 
-    # Quitar recurso de Lovelace
+    # Remove the Lovelace resource
     await _remove_lovelace_resource(hass, CARD_URL)
 
-    # Limpiar datos
+    # Clear data
     hass.data.pop(DOMAIN, None)
 
     return True
 
 # --------------------------------------------------------------------------- #
-#  MANEJO DEL RECURSO LOVELACE                                                #
+#  LOVELACE RESOURCE HANDLING                                                 #
 # --------------------------------------------------------------------------- #
 async def _ensure_lovelace_resource(
     hass: HomeAssistant,
-    path: str,  # «/life180/life180-card.js»
+    path: str,  # "/life180/life180-card.js"
 ) -> None:
-    """Añade o actualiza un recurso Lovelace sin tocar los demás."""
+    """Add or update a Lovelace resource without touching the others."""
     ll = hass.data.get("lovelace")
     resources: ResourceStorageCollection | None = getattr(ll, "resources", None)  # type: ignore[attr-defined]
 
@@ -216,19 +216,19 @@ async def _ensure_lovelace_resource(
     version = hass.data[DOMAIN].get("version", "0")
     expected_url = f"{path}?v={version}"
 
-    # Todos los recursos que son *exactamente* ese archivo
+    # Every resource that is *exactly* that file
     matches = [it for it in resources.async_items() if _base(it["url"]) == path]
 
     if matches:
-        # Quedarse con el primero → actualizar si hace falta
+        # Keep the first one -> update it if needed
         main = matches[0]
         if main["url"] != expected_url:
             await resources.async_update_item(main["id"], {"url": expected_url})
-        # Eliminar duplicados, si existieran
+        # Remove duplicates, if any
         for dup in matches[1:]:
             await resources.async_delete_item(dup["id"])
     else:
-        # No existe todavía → crearlo
+        # Does not exist yet -> create it
         await resources.async_create_item({"res_type": "module", "url": expected_url})
 
 async def _remove_lovelace_resource(hass: HomeAssistant, path: str) -> None:
@@ -246,22 +246,22 @@ async def _remove_lovelace_resource(hass: HomeAssistant, path: str) -> None:
 #  BLUEPRINTS                                                                 #
 # --------------------------------------------------------------------------- #
 async def _ensure_blueprint(hass: HomeAssistant) -> None:
-    """Copia el blueprint interno a la carpeta de HA si está ausente o ha cambiado,
-    sin bloquear el event loop."""
-    # Ruta del blueprint dentro del paquete de la integración
+    """Copy the bundled blueprint into the HA folder if missing or changed,
+    without blocking the event loop."""
+    # Path to the blueprint inside the integration package
     src_path = Path(__file__).parent / "blueprints" / "persons_in_zones_alert.yaml"
 
-    # Carpeta destino (dentro de /config)
+    # Destination folder (inside /config)
     bp_dir = Path(hass.config.path("blueprints/automation/life180"))
-    # mkdir es I/O → ejecutor
+    # mkdir is I/O -> executor
     await hass.async_add_executor_job(partial(bp_dir.mkdir, parents=True, exist_ok=True))
     dest = bp_dir / src_path.name
 
-    # Leer fuente (async)
+    # Read the source (async)
     async with aiofiles.open(src_path, "r", encoding="utf-8") as f:
         yaml_text = await f.read()
 
-    # Leer destino (async) si existe; evitar Path.exists() sincrono
+    # Read the destination (async) if it exists; avoid the sync Path.exists()
     current: str | None = None
     try:
         async with aiofiles.open(dest, "r", encoding="utf-8") as f:
@@ -274,10 +274,10 @@ async def _ensure_blueprint(hass: HomeAssistant) -> None:
             await f.write(yaml_text)
 
 # --------------------------------------------------------------------------- #
-#  UTILIDADES                                                                 #
+#  UTILITIES                                                                  #
 # --------------------------------------------------------------------------- #
 async def get_version_from_manifest() -> str | None:
-    """Leer versión desde manifest.json (asíncrono)."""
+    """Read the version from manifest.json (async)."""
     manifest_path = Path(__file__).parent / "manifest.json"
 
     try:
@@ -291,7 +291,7 @@ async def get_version_from_manifest() -> str | None:
 
 
 def _base(u: str) -> str:
-    """Devuelve la URL sin query ni fragmento."""
+    """Return the URL without query or fragment."""
     parts = list(urlsplit(u))
     parts[3] = parts[4] = ""  # query, fragment
     return urlunsplit(parts)

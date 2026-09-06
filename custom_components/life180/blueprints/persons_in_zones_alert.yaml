@@ -130,11 +130,11 @@ action:
         {% set bad = ['unknown','unavailable','none',''] %}
         {{ zone_to_l in bad or zone_from_l in bad }}
 
-      # Matching contra zonas configuradas
+      # Match against the configured zones
       to_hit: "{{ zone_to_l in zone_names_l }}"
       from_hit: "{{ zone_from_l in zone_names_l }}"
 
-      # Etiquetas bonitas por índice alineado
+      # Pretty labels via aligned index
       to_label: >
         {% set i = zone_names_l.index(zone_to_l) if zone_to_l in zone_names_l else -1 %}
         {{ zone_names[i] if i >= 0 else (zone_to_raw | title) }}
@@ -142,7 +142,7 @@ action:
         {% set i = zone_names_l.index(zone_from_l) if zone_from_l in zone_names_l else -1 %}
         {{ zone_names[i] if i >= 0 else (zone_from_raw | title) }}
 
-      # Clasificación (A→B => ONLY enter B)
+      # Classification (A->B => ONLY enter B)
       is_enter_raw: "{{ (not from_hit) and to_hit }}"
       is_leave_raw: "{{ from_hit and (not to_hit) }}"
       is_cross: "{{ from_hit and to_hit and (from_label != to_label) }}"

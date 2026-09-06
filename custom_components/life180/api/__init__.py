@@ -10,7 +10,7 @@ from .reverse_geocode import ReverseGeocodeEndpoint
 _VIEWS_REGISTERED = False
 
 def register_api_views(hass):
-    """Registra todos los endpoints de la API (idempotente)."""
+    """Register every API endpoint (idempotent)."""
     global _VIEWS_REGISTERED
     if _VIEWS_REGISTERED:
         return

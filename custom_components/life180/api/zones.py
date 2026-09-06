@@ -1,4 +1,4 @@
-"""Manejo de las zonas de Life180"""
+"""Life180 zone handling."""
 
 import json
 import logging
@@ -17,26 +17,26 @@ _LOGGER = logging.getLogger(__name__)
 
 ZONES_FILE = "life180_zones.json"
 
-DEFAULT_COLOR = "#008000"  # verde por defecto (CSS 'green')
-MAX_ZONE_NAME_LEN = 30     # longitud máxima del nombre de la zona
+DEFAULT_COLOR = "#008000"  # default green (CSS 'green')
+MAX_ZONE_NAME_LEN = 30     # maximum zone name length
 
 
 class ZonesAPI(HomeAssistantView):
-    """Punto de acceso a la API para manejar zonas"""
+    """API endpoint for managing zones."""
 
     url = "/api/life180/zones"
     name = "api:life180/zones"
     requires_auth = True
 
     async def get(self, request):
-        """Devuelve las zonas"""
+        """Return the zones."""
 
         hass = request.app["hass"]
 
-        # Devuelve solo si es administrador o only_admin es false
+        # Only return data if the user is an admin or only_admin is false
         only_admin = False
         entries = hass.config_entries.async_entries(DOMAIN)
-        if entries:  # Normalmente solo habrá una entrada
+        if entries:  # There is normally only one entry
             entry = entries[0]
             only_admin = entry.options.get(
                 "only_admin",
@@ -51,7 +51,7 @@ class ZonesAPI(HomeAssistantView):
         store = await _read_store(zones_path)
         custom_zones = store["zones"]
 
-        # Obtener zonas de Home Assistant
+        # Get the Home Assistant zones
         ha_zones = [
             {
                 "id": (state.entity_id.split("zone.", 1)[1]),
@@ -63,13 +63,13 @@ class ZonesAPI(HomeAssistantView):
                 "passive": state.attributes.get("passive", False),
                 "custom": False,
                 "color": normalize_color(state.attributes.get("color", DEFAULT_COLOR)),
-                "visible": True,  # por defecto visibles
+                "visible": True,  # visible by default
             }
             for state in hass.states.async_all()
             if state.entity_id.startswith("zone.")
         ]
         
-        # Aplica overrides (color/visible) a zonas de HA y limpia overrides huérfanos
+        # Apply overrides (color/visible) to HA zones and clean up orphaned overrides
         overrides = store.get("ha_overrides", {})
         valid_ids = set()
         for z in ha_zones:
@@ -80,7 +80,7 @@ class ZonesAPI(HomeAssistantView):
                 z["color"] = normalize_color(ov.get("color"))
             z["visible"] = bool(ov.get("visible", True))
 
-        # Elimina overrides de zonas HA que ya no existen
+        # Remove overrides for HA zones that no longer exist
         stale = [k for k in list(overrides.keys()) if k not in valid_ids]
         if stale:
             for k in stale:
@@ -88,13 +88,13 @@ class ZonesAPI(HomeAssistantView):
             await _write_store(zones_path, store)
         
 
-        # Agregar solo zonas de HA que no estén ya (comparando IDs sanitizados)
+        # Add only HA zones that are not already present (comparing sanitized IDs)
         sanitized_ids = {sanitize_id(z.get("id", "")) for z in custom_zones}
         for ha_zone in ha_zones:
             if sanitize_id(ha_zone["id"]) not in sanitized_ids:
                 custom_zones.append(ha_zone)
 
-        # Normaliza color y añade visible para TODAS las zonas
+        # Normalize color and add visible for ALL zones
         normalized = []
         for z in custom_zones:
             zz = dict(z)
@@ -106,7 +106,7 @@ class ZonesAPI(HomeAssistantView):
         return self.json(normalized)
 
     async def post(self, request):
-        """Crear una nueva zona."""
+        """Create a new zone."""
 
         user = request.get("hass_user")
         if not user or not user.is_admin:
@@ -117,12 +117,12 @@ class ZonesAPI(HomeAssistantView):
         hass = request.app["hass"]
         data = await request.json()
 
-        # Normaliza nombre y color
+        # Normalize name and color
         if "name" in data and isinstance(data["name"], str):
             data["name"] = data["name"].strip()
         data["color"] = normalize_color(data.get("color", DEFAULT_COLOR))
 
-        # Asegurar ID canónico
+        # Ensure a canonical ID
         if not data.get("id"):
             name = data.get("name", "").strip()
             ts = int(datetime.now().timestamp() * 1000)
@@ -131,7 +131,7 @@ class ZonesAPI(HomeAssistantView):
         else:
             data["id"] = sanitize_id(data["id"])
 
-        # Validar zona (requiere todos los campos)
+        # Validate the zone (all fields required)
         is_valid, error = validate_zone(data)
         if not is_valid:
             return self.json(
@@ -143,22 +143,22 @@ class ZonesAPI(HomeAssistantView):
         store = await _read_store(zones_path)
         zones = store["zones"]
 
-        # Evitar duplicados de ID (comparando IDs sanitizados)
+        # Avoid duplicate IDs (comparing sanitized IDs)
         new_id_s = sanitize_id(data["id"])
         if any(sanitize_id(z.get("id", "")) == new_id_s for z in zones):
             return self.json({"error": "Zone already exists"}, status_code=400)
 
-        # Evitar duplicados de NOMBRE (entre custom + HA)
+        # Avoid duplicate NAMES (across custom + HA)
         proposed_name_key = name_key(data["name"])
         if proposed_name_key in await existing_zone_name_keys(hass, zones):
             return self.json({"error": "Zone name already exists"}, status_code=400)
 
-        data["custom"] = True  # Solo las creadas manualmente son "custom"
+        data["custom"] = True  # Only manually created zones are "custom"
         if "visible" not in data:
             data["visible"] = True
         zones.append(data)
 
-        # Guardar en el archivo
+        # Save to file
         store["zones"] = zones
         await _write_store(zones_path, store)
 
@@ -168,7 +168,7 @@ class ZonesAPI(HomeAssistantView):
         return self.json(msg)
 
     async def delete(self, request):
-        """Eliminar una zona."""
+        """Delete a zone."""
 
         user = request.get("hass_user")
         if not user or not user.is_admin:
@@ -188,7 +188,7 @@ class ZonesAPI(HomeAssistantView):
         store = await _read_store(zones_path)
         zones = store["zones"]
 
-        # Buscar zona objetivo por ID sanitizado
+        # Find the target zone by sanitized ID
         target_idx = None
         for i, z in enumerate(zones):
             if sanitize_id(z.get("id", "")) == zone_id_s:
@@ -199,7 +199,7 @@ class ZonesAPI(HomeAssistantView):
             error_msg = {"error": "Zone not found or cannot be deleted"}
             return self.json(error_msg, status_code=404)
 
-        # Eliminar y guardar
+        # Delete and save
         del zones[target_idx]
         store["zones"] = zones
         await _write_store(zones_path, store)
@@ -208,7 +208,7 @@ class ZonesAPI(HomeAssistantView):
         return self.json({"success": True, "message": "Zone deleted successfully"})
 
     async def put(self, request):
-        """Actualizar una zona existente (admite actualización parcial)."""
+        """Update an existing zone (supports partial updates)."""
 
         user = request.get("hass_user")
         if not user or not user.is_admin:
@@ -222,7 +222,7 @@ class ZonesAPI(HomeAssistantView):
         if not zone_id:
             return self.json({"error": "Missing zone ID"}, status_code=400)
 
-        # Normaliza campos entrantes
+        # Normalize incoming fields
         if "name" in data and isinstance(data["name"], str):
             data["name"] = data["name"].strip()
         incoming_color = data.get("color", None)
@@ -235,7 +235,7 @@ class ZonesAPI(HomeAssistantView):
         store = await _read_store(zones_path)
         zones = store["zones"]
         
-        # Localizar zona por ID sanitizado
+        # Locate the zone by sanitized ID
         target_idx = None
         for i, z in enumerate(zones):
             if sanitize_id(z.get("id", "")) == zone_id_s:
@@ -243,8 +243,8 @@ class ZonesAPI(HomeAssistantView):
                 break
 
         if target_idx is None or not zones[target_idx].get("custom", False):
-            # No es custom: puede ser zona de HA -> actualizar overrides (solo color/visible)
-            # Verifica que exista en HA
+            # Not custom: may be an HA zone -> update overrides (color/visible only)
+            # Check that it exists in HA
             exists_in_ha = any(
                 sanitize_id(s.entity_id.split("zone.",1)[1]) == zone_id_s
                 for s in hass.states.async_all() if s.entity_id.startswith("zone.")
@@ -269,11 +269,11 @@ class ZonesAPI(HomeAssistantView):
 
         current = zones[target_idx].copy()
 
-        # Fusionar cambios (no permitimos cambiar el ID)
+        # Merge changes (the ID cannot be changed)
         updatable_keys = {"name", "latitude", "longitude", "radius", "icon", "passive", "color", "visible"}
         merged = current | {k: v for k, v in data.items() if k in updatable_keys}
 
-        # Validar el resultado completo
+        # Validate the full result
         is_valid, error = validate_zone(merged)
         if not is_valid:
             return self.json(
@@ -281,14 +281,14 @@ class ZonesAPI(HomeAssistantView):
                 status_code=400,
             )
 
-        # Si cambia o establece nombre, comprobar duplicidad contra:
-        # - Otras zonas CUSTOM (excluyendo la actual)
-        # - Zonas de HA (friendly_name)
+        # If the name is set or changed, check for duplicates against:
+        # - Other CUSTOM zones (excluding the current one)
+        # - HA zones (friendly_name)
         if "name" in data:
             old_key = name_key(current.get("name", ""))
             new_key = name_key(merged.get("name", ""))
 
-            # Solo si el nombre cambia (normalizado) chequeamos duplicados
+            # Only check duplicates when the (normalized) name changes
             if new_key != old_key:
                 name_keys_custom = {
                     name_key(z.get("name", ""))
@@ -310,7 +310,7 @@ class ZonesAPI(HomeAssistantView):
 
 
 async def unregister_zones(hass):
-    """Eliminar zonas personalizadas registradas en Home Assistant."""
+    """Remove custom zones registered in Home Assistant."""
     try:
         for state in hass.states.async_all():
             if state.entity_id.startswith("zone.") and state.attributes.get("custom", False):
@@ -320,7 +320,7 @@ async def unregister_zones(hass):
 
 
 async def register_zones(hass):
-    """Registrar zonas en Home Assistant."""
+    """Register zones in Home Assistant."""
 
     zones_path = os.path.join(hass.config.path(), ZONES_FILE)
 
@@ -333,7 +333,7 @@ async def register_zones(hass):
         store = await _read_store(zones_path)
         zones = store["zones"]
 
-        # Desregistrar zonas antes de volver a registrarlas
+        # Unregister zones before re-registering them
         await unregister_zones(hass)
 
         for zone in zones:
@@ -367,12 +367,12 @@ async def register_zones(hass):
         _LOGGER.error("Error registering zones: %s", e)
 
 
-# ---------- helpers de almacenamiento unificado ----------
+# ---------- unified storage helpers ----------
 async def _read_store(zones_path):
     """
-    Devuelve dict con forma:
+    Return a dict shaped like:
       { "zones": [ ...custom... ], "ha_overrides": { "<id>": {"color":"#rrggbb","visible": true/false}, ... } }
-    Acepta también el formato antiguo (lista) y lo adapta.
+    Also accepts the old format (a list) and adapts it.
     """
     data = await read_zones_file(zones_path)
     if isinstance(data, list):
@@ -386,7 +386,7 @@ async def _read_store(zones_path):
 
 
 async def _write_store(zones_path, store):
-    # Asegura claves mínimas
+    # Ensure the minimum keys are present
     payload = {
         "zones": store.get("zones", []) or [],
         "ha_overrides": store.get("ha_overrides", {}) or {},
@@ -395,7 +395,7 @@ async def _write_store(zones_path, store):
 
 
 async def read_zones_file(zones_path):
-    """Leer y parsear archivo JSON de zonas."""
+    """Read and parse the zones JSON file."""
     if not os.path.exists(zones_path):
         return []
 
@@ -412,9 +412,9 @@ async def read_zones_file(zones_path):
 
 
 async def write_zones_file(zones_path, data):
-    """Escribir en el archivo de zonas."""
+    """Write to the zones file."""
     try:
-        # Asegurar directorio existente
+        # Make sure the directory exists
         os.makedirs(os.path.dirname(zones_path), exist_ok=True)
         async with aiofiles.open(zones_path, mode="w") as f:
             await f.write(json.dumps(data, indent=4))
@@ -424,16 +424,16 @@ async def write_zones_file(zones_path, data):
 
 
 def validate_zone(zone):
-    """Valida que una zona tenga los datos correctos (requiere todos los campos)."""
+    """Validate that a zone has correct data (all fields required)."""
 
     required_keys = {"id", "name", "latitude", "longitude", "radius"}
 
-    # Validar que estén todos los campos requeridos
+    # Check that every required field is present
     if not required_keys.issubset(zone):
         error_msg = "Missing required fields"
         return False, error_msg
 
-    # Tipos numéricos correctos
+    # Correct numeric types
     try:
         lat = float(zone["latitude"])
         lon = float(zone["longitude"])
@@ -441,34 +441,34 @@ def validate_zone(zone):
     except (ValueError, TypeError):
         return False, "Latitude, longitude, and radius must be numeric"
 
-    # Rangos válidos
+    # Valid ranges
     if not -90 <= lat <= 90:
         return False, "Latitude must be between -90 and 90"
     if not -180 <= lon <= 180:
         return False, "Longitude must be between -180 and 180"
-    # radius llega en metros (Leaflet / zonas de Home Assistant); 20 m ~= 66 ft
+    # radius arrives in meters (Leaflet / Home Assistant zones); 20 m ~= 66 ft
     if radius < 20:
         return False, "Radius must be at least 66 feet"
 
-    # Nombre válido
+    # Valid name
     if not isinstance(zone["name"], str) or not zone["name"].strip():
         return False, "Name cannot be empty"
     if len(zone["name"].strip()) > MAX_ZONE_NAME_LEN:
         return False, f"Name cannot exceed {MAX_ZONE_NAME_LEN} characters"
 
-    # ID sanitizado y no vacío
+    # ID sanitized and non-empty
     if not sanitize_id(zone.get("id", "")):
         return False, "Invalid id after sanitization"
 
-    # Validar color si viene informado (opcional)
+    # Validate color if provided (optional)
     if "color" in zone and zone["color"] not in (None, ""):
         if not validate_color(str(zone["color"])):
             return False, "Color must be hex (#RGB or #RRGGBB)"
 
-    # Normalizar color a #rrggbb
+    # Normalize color to #rrggbb
     zone["color"] = normalize_color(zone.get("color", DEFAULT_COLOR))
-    
-    # visible opcional (bool)
+
+    # visible optional (bool)
     if "visible" in zone:
         zone["visible"] = bool(zone["visible"])
     else:
@@ -479,20 +479,20 @@ def validate_zone(zone):
 
 def sanitize_id(value: str) -> str:
     """
-    Convierte cualquier cadena a un object_id válido:
-    - minúsculas
-    - espacios y separadores -> '_'
-    - solo [a-z0-9_]
-    - colapsa múltiples '_' y recorta '_' al principio/fin
-    - si queda vacío, genera 'zone_<timestamp>'
+    Convert any string to a valid object_id:
+    - lowercase
+    - spaces and separators -> '_'
+    - only [a-z0-9_]
+    - collapse repeated '_' and trim '_' from the ends
+    - if empty, generate 'zone_<timestamp>'
     """
     s = (value or "").strip().lower()
     s = s.replace(" ", "_")
-    # Reemplaza todo lo no permitido por '_'
+    # Replace anything not allowed with '_'
     s = re.sub(r"[^a-z0-9_]+", "_", s)
-    # Colapsar múltiples '_'
+    # Collapse repeated '_'
     s = re.sub(r"_+", "_", s)
-    # Quitar '_' de extremos
+    # Trim '_' from the ends
     s = s.strip("_")
     if not s:
         s = f"zone_{int(datetime.now().timestamp())}"
@@ -500,7 +500,7 @@ def sanitize_id(value: str) -> str:
 
 
 def validate_color(color: str) -> bool:
-    """Acepta #RGB o #RRGGBB (hex)."""
+    """Accept #RGB or #RRGGBB (hex)."""
     if not isinstance(color, str):
         return False
     c = color.strip()
@@ -508,7 +508,7 @@ def validate_color(color: str) -> bool:
 
 
 def normalize_color(color: str | None) -> str:
-    """Normaliza a #rrggbb; si falta o no es válido, usa DEFAULT_COLOR."""
+    """Normalize to #rrggbb; fall back to DEFAULT_COLOR if missing or invalid."""
     if not color:
         return DEFAULT_COLOR
     c = color.strip().lower()
@@ -519,25 +519,25 @@ def normalize_color(color: str | None) -> str:
     return DEFAULT_COLOR
 
 
-# ===== Helpers para unicidad de nombre =====
+# ===== Helpers for name uniqueness =====
 
 def name_key(name: str) -> str:
     """
-    Normaliza el nombre para comparación de unicidad:
-    - quita espacios extremos
-    - colapsa espacios internos a uno
-    - pasa a minúsculas
-    - elimina acentos/diacríticos (NFKD)
+    Normalize the name for uniqueness comparison:
+    - trim surrounding whitespace
+    - collapse inner whitespace to a single space
+    - lowercase
+    - strip accents/diacritics (NFKD)
     """
     s = (name or "").strip().lower()
     s = re.sub(r"\s+", " ", s)
-    # Eliminar diacríticos
+    # Strip diacritics
     s = "".join(ch for ch in unicodedata.normalize("NFKD", s) if not unicodedata.combining(ch))
     return s
 
 
 def get_ha_zone_name_keys(hass) -> set[str]:
-    """Obtiene el conjunto de 'name_key' de las zonas de HA (friendly_name)."""
+    """Return the set of 'name_key' values for the HA zones (friendly_name)."""
     keys = set()
     for state in hass.states.async_all():
         if state.entity_id.startswith("zone."):
@@ -549,12 +549,12 @@ def get_ha_zone_name_keys(hass) -> set[str]:
 
 async def existing_zone_name_keys(hass, custom_zones: list[dict]) -> set[str]:
     """
-    Conjunto de claves de nombre existentes entre:
-      - Zonas personalizadas (archivo)
-      - Zonas HA (friendly_name)
+    Set of existing name keys across:
+      - Custom zones (file)
+      - HA zones (friendly_name)
     """
     keys = {name_key(z.get("name", "")) for z in custom_zones if z.get("name")}
     keys |= get_ha_zone_name_keys(hass)
-    # Eliminar clave de vacío por si acaso
+    # Drop the empty key just in case
     keys.discard(name_key(""))
     return keys

@@ -12,7 +12,7 @@ from homeassistant.data_entry_flow import section
 DOMAIN = __package__.split(".")[-1]
 
 # ---------------------------------------------------------------------------
-#  Defaults y mínimos centralizados
+#  Centralized defaults and minimums
 # ---------------------------------------------------------------------------
 # Distances are in feet and speeds in mph. The pipeline converts them to
 # metric (see units.py).
@@ -52,14 +52,14 @@ MINIMUMS = {
 
 
 def _validate_minimums(flat: dict) -> dict[str, str]:
-    """Devuelve un dict de errores con claves por campo si no cumple el mínimo numérico."""
+    """Return a per-field error dict for values below their numeric minimum."""
     errors: dict[str, str] = {}
     for key, minv in MINIMUMS.items():
         if key in flat:
             try:
                 value = float(flat[key])
             except (TypeError, ValueError):
-                # Deja que voluptuous marque error de tipo; aquí no añadimos error.
+                # Let voluptuous flag the type error; we do not add one here.
                 continue
             if value < float(minv):
                 errors[key] = f"min_{key}"
@@ -77,7 +77,7 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
-        # ---- Construcción de secciones (instalación con grupos) ----
+        # ---- Build the sections (grouped install form) ----
         general = vol.Schema({
             vol.Required("update_interval", default=DEFAULTS["update_interval"]): vol.All(vol.Coerce(int)),
             vol.Required("only_admin", default=DEFAULTS["only_admin"]): bool,
@@ -119,36 +119,36 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            # Aplana las secciones antes de validar/guardar
+            # Flatten the sections before validating/saving
             flat: dict = {}
             for sec in ("general", "geocoding", "stops", "accuracy", "anti_spike"):
                 flat.update(user_input.get(sec, {}))
 
-            # Unique ID global (instancia única)
+            # Global unique ID (single instance)
             await self.async_set_unique_id(DOMAIN)
             self._abort_if_unique_id_configured()
 
-            # Validaciones personalizadas (solo mínimos numéricos)
+            # Custom validation (numeric minimums only)
             errors.update(_validate_minimums(flat))
 
             if not errors:
                 return self.async_create_entry(title="Life180", data=flat)
 
-            # Si hay errores, volver a mostrar formulario
+            # On errors, show the form again
             return self.async_show_form(step_id="user", data_schema=data_schema, errors=errors)
 
-        # Primer render del formulario
+        # First render of the form
         return self.async_show_form(step_id="user", data_schema=data_schema, errors=errors)
 
     async def async_step_import(self, user_input):
-        """Soporta importaciones (p.ej. YAML) evitando duplicados."""
+        """Support imports (e.g. YAML) while avoiding duplicates."""
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
 
-        # Reutiliza la lógica de user (incluye validaciones y aplanado)
+        # Reuse the user step logic (includes validation and flattening)
         return await self.async_step_user(user_input)
 
     @staticmethod
@@ -158,10 +158,10 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 # ---------------------------------------------------------------------------
-#  Options Flow (un único formulario seccionado)
+#  Options Flow (single sectioned form)
 # ---------------------------------------------------------------------------
 class Life180OptionsFlowHandler(config_entries.OptionsFlow):
-    """Opciones agrupadas en secciones."""
+    """Options grouped into sections."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         self._entry = config_entry
@@ -173,7 +173,7 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
-            # Aplana secciones
+            # Flatten the sections
             flat: dict = {}
             for sec in ("general", "geocoding", "stops", "accuracy", "anti_spike"):
                 flat.update(user_input.get(sec, {}))
@@ -197,7 +197,7 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
         )
 
     def _build_schema(self) -> vol.Schema:
-        """Construye el esquema con secciones y defaults actuales (sin Range para permitir errores personalizados)."""
+        """Build the schema with sections and current defaults (no Range, so custom errors can be raised)."""
         general = vol.Schema({
             vol.Required("update_interval", default=self._opts["update_interval"]): vol.All(vol.Coerce(int)),
             vol.Required("only_admin", default=self._opts["only_admin"]): bool,

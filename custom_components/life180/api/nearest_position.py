@@ -13,7 +13,7 @@ DOMAIN = __package__.split(".")[-2]
 
 _LOGGER = logging.getLogger(__name__)
 
-NEAREST_WINDOW_MINUTES = 30  # ventana ±X min
+NEAREST_WINDOW_MINUTES = 30  # +/- X min window
 
 def _parse_date_to_utc(date_str):
     dt = dt_util.parse_datetime(date_str)
@@ -31,7 +31,7 @@ def _validate_query(q):
     return person_id, date_str, None
 
 def validate_person(hass, person_id):
-    """Valida que la persona y su dispositivo de rastreo sean válidos."""
+    """Validate that the person and their tracking device are valid."""
     person_state = hass.states.get(person_id)
     if not person_state:
         return None, {
@@ -62,7 +62,7 @@ class NearestPositionEndpoint(HomeAssistantView):
         try:
             hass = request.app["hass"]
 
-            # Respeta only_admin
+            # Honor only_admin
             only_admin = False
             entries = hass.config_entries.async_entries(DOMAIN)
             if entries:
@@ -101,7 +101,7 @@ class NearestPositionEndpoint(HomeAssistantView):
             _LOGGER.debug("nearest_position: person=%s device=%s window=[%s..%s] target=%s",
                           person_id, source_device_id, start_utc, end_utc, target_utc)
 
-            # --- Historial (intento principal) ---
+            # --- History (primary attempt) ---
             states = []
             try:
                 hist = await hass.async_add_executor_job(
@@ -110,13 +110,13 @@ class NearestPositionEndpoint(HomeAssistantView):
                         hass,
                         start_utc,
                         end_utc,
-                        entity_id=source_device_id,            # <- singular, string
+                        entity_id=source_device_id,            # <- singular string
                         include_start_time_state=True,
                         significant_changes_only=False,
-                        # no_attributes omitido por compatibilidad
+                        # no_attributes omitted for compatibility
                     )
                 )
-                # Algunas versiones devuelven dict; otras podrían devolver lista
+                # Some versions return a dict; others may return a list
                 if isinstance(hist, dict):
                     states = hist.get(source_device_id, [])
                 elif isinstance(hist, list):
@@ -124,7 +124,7 @@ class NearestPositionEndpoint(HomeAssistantView):
                 else:
                     states = hist or []
             except Exception as e:
-                _LOGGER.exception("nearest_position: error en state_changes_during_period: %s", e)
+                _LOGGER.exception("nearest_position: error in state_changes_during_period: %s", e)
                 states = []
 
             # --- Fallback ---
@@ -143,7 +143,7 @@ class NearestPositionEndpoint(HomeAssistantView):
                     if isinstance(sig, dict):
                         states = sig.get(source_device_id, [])
                 except Exception as e:
-                    _LOGGER.exception("nearest_position: error en get_significant_states: %s", e)
+                    _LOGGER.exception("nearest_position: error in get_significant_states: %s", e)
                     return self.json({"error": f"Error with history: {e}"}, status_code=500)
 
             _LOGGER.debug("nearest_position: states_count=%s", len(states) if states else 0)
@@ -151,7 +151,7 @@ class NearestPositionEndpoint(HomeAssistantView):
             if not states:
                 return self.json({})
 
-            # --- Selección más cercana ---
+            # --- Pick the closest ---
             target_sec = target_utc.replace(microsecond=0)
             best = None
             best_diff = None
@@ -168,7 +168,7 @@ class NearestPositionEndpoint(HomeAssistantView):
                         best = s
                         best_diff = diff
                 except Exception as e:
-                    _LOGGER.debug("nearest_position: saltando estado inválido: %s", e)
+                    _LOGGER.debug("nearest_position: skipping invalid state: %s", e)
                     continue
 
             if best is None:
@@ -190,6 +190,6 @@ class NearestPositionEndpoint(HomeAssistantView):
             })
 
         except Exception as e:
-            # Captura cualquier bug residual para no devolver 500 "vacío"
-            _LOGGER.exception("nearest_position: excepción no controlada: %s", e)
+            # Catch any residual bug so we do not return an "empty" 500
+            _LOGGER.exception("nearest_position: unhandled exception: %s", e)
             return self.json({"error": f"Unhandled error: {e}"}, status_code=500)
