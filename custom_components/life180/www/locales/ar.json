@@ -86,7 +86,7 @@
   "last_24h": "آخر ٢٤ ساعة",
   "export": "تصدير",
   "export_positions": "هل تريد تصدير المواقع أيضًا؟",
-  "filter_date_range": "اختر نطاق التاريخ للتصفية",
+  "filter_date_range": "اختر التواريخ للتقرير",
   "long_zone": "اسم المنطقة طويل جدًا",
   "select_color": "اختر لونًا",
   "error_creating_zone": "تعذر إنشاء المنطقة",
