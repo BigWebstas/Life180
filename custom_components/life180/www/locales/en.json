@@ -52,7 +52,7 @@
   "enter_zone_name": "Enter the name for the zone:",
   "confirm_delete_zone": "Are you sure you want to delete the zone: {name}?",
   "date_unavailable": "Date unavailable",
-  "select_user": "Select User",
+  "select_user": "Select A Person",
   "select_user_filter": "Select a valid user before applying the filter",
   "device_not_found": "Device not found",
   "person_not_found": "User not found",
