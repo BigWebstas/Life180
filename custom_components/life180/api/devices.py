@@ -5,6 +5,17 @@ import re
 import unicodedata
 
 from homeassistant.components.http import HomeAssistantView
+from homeassistant.helpers import entity_registry as er
+
+# Attribute keys that may carry a battery level, most specific first.
+_BATTERY_ATTR_KEYS = (
+    "battery_level",
+    "battery_percentage",
+    "battery_percent",
+    "batteryLevel",
+    "battery",
+    "bat",
+)
 
 DOMAIN = __package__.split(".")[-2]
 
@@ -44,6 +55,44 @@ def _normalize_battery(raw):
     # Clamp and round
     val = max(0.0, min(100.0, val))
     return int(round(val))
+
+
+def _battery_from_attrs(attributes):
+    """First numeric battery value found among the known attribute keys, or ''."""
+    for key in _BATTERY_ATTR_KEYS:
+        if key in attributes:
+            level = _normalize_battery(attributes.get(key))
+            if level != "":
+                return level
+    return ""
+
+
+def _battery_from_device_sensors(hass, ent_reg, tracker_entity_id):
+    """Look for a battery sensor on the same registry device as the tracker."""
+    try:
+        reg_entry = ent_reg.async_get(tracker_entity_id)
+        if not reg_entry or not reg_entry.device_id:
+            return ""
+        for entry in er.async_entries_for_device(
+            ent_reg, reg_entry.device_id, include_disabled_entities=False
+        ):
+            if not entry.entity_id.startswith("sensor."):
+                continue
+            is_battery = (
+                entry.original_device_class == "battery"
+                or getattr(entry, "device_class", None) == "battery"
+                or entry.entity_id.endswith(("_battery_level", "_battery"))
+            )
+            if not is_battery:
+                continue
+            state = hass.states.get(entry.entity_id)
+            if state:
+                level = _normalize_battery(state.state)
+                if level != "":
+                    return level
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.debug("battery sensor lookup failed for %s: %s", tracker_entity_id, err)
+    return ""
     
 
 class DevicesEndpoint(HomeAssistantView):
@@ -73,6 +122,7 @@ class DevicesEndpoint(HomeAssistantView):
         
         
         devices = hass.states.async_all("device_tracker")
+        ent_reg = er.async_get(hass)
         device_data = []
 
         for device in devices:
@@ -124,19 +174,21 @@ class DevicesEndpoint(HomeAssistantView):
 
 
             # --- Battery: rounding and normalization ---
-            battery_level = _normalize_battery(
-                device.attributes.get("battery_level")
-                or device.attributes.get("battery_percentage")
-                or device.attributes.get("battery_state")  # <- extra
-                or device.attributes.get("battery")
-                or device.attributes.get("bat")
-                or device.attributes.get("batteryLevel")
-            )
+            # 1) A numeric battery attribute on the tracker itself.
+            battery_level = _battery_from_attrs(device.attributes)
 
-            # If not present in the attributes, try the sensor.<friendly>_battery_level sensor
+            # 2) A battery sensor on the same registry device (covers the HA
+            #    Companion app, whose tracker has no battery attribute).
+            if battery_level == "":
+                battery_level = _battery_from_device_sensors(
+                    hass, ent_reg, device.entity_id
+                )
+
+            # 3) Legacy guess: sensor.<slugified friendly name>_battery_level.
             if battery_level == "" and friendly_name:
-                battery_sensor_id = f"sensor.{friendly_name}_battery_level"
-                batt_state = hass.states.get(battery_sensor_id)
+                batt_state = hass.states.get(
+                    f"sensor.{friendly_name}_battery_level"
+                )
                 if batt_state:
                     battery_level = _normalize_battery(batt_state.state)
 
