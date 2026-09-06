@@ -9,12 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.0.36] - 2025-10-
 
 ### Changes
-- The URL to connect to the Home Assistant server from a browser window is: https://HOST_1/ha-tracker/index.html and accepts 3 parameters:
+- The URL to connect to the Home Assistant server from a browser window is: https://HOST_1/life180/index.html and accepts 3 parameters:
   - debug=1: to avoid using minified JavaScript
   - haUrl=HOST_2: In case you need to connect to a host other than "HOST_1"
   - token=ll_token: Where "ll_token" is a long-lived token
-  Example: http://HOST_1/custom_components/ha_tracker/www/index.html?debug=1&haUrl=HOST_2&token=ll_token
-- Important: If there are multiple devices associated with a person, HA Tracker takes the first one #36
+  Example: http://HOST_1/custom_components/life180/www/index.html?debug=1&haUrl=HOST_2&token=ll_token
+- Important: If there are multiple devices associated with a person, Life180 takes the first one #36
 
 ### Fixed
 - Centering elements on the map on large screens
@@ -55,10 +55,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - At the stops we adjust the coordinates to the center of the positions that form it
 - Average speed only in motion and without stops
 - If stopped the speed is 0
-- Changing the /config/www/ha-tracker folder to /config/custom_components/ha_tracker/www
+- Changing the /config/www/life180 folder to /config/custom_components/life180/www
 - We have released the possibility of downloading MacroDroid
 - Removed the ability to download GpsLogger and OwnTracks configurations
-- Configured GpsLogger, OwnTracks, and Traccar Webhook URLs in HA Tracker options
+- Configured GpsLogger, OwnTracks, and Traccar Webhook URLs in Life180 options
 - Updated translations
 - Updated Readme.md
 
@@ -70,7 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.0.32] - 2025-09-21
 
 ### Changes
-- Possibility to hide zones on the map of both HA Tracker and Home Assistant #29
+- Possibility to hide zones on the map of both Life180 and Home Assistant #29
 - Possibility to change the color of Home Assistant zones
 - Added Map and Type columns to the Zones screen
 - The GPS accuracy in meters is configurable in the options
@@ -99,7 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changes
 - Added a Custom Card #22
-- HA Tracker GPT for ChatGPT (beta version)
+- Life180 GPT for ChatGPT (beta version)
 - Added a blueprint for creating automations
 - Integration with OnwTracks and GPSLogger as device trackers
 - Integration with MacroDroid to resolve the issue of OwnTracks starting after rebooting the phone.
@@ -112,8 +112,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - On the map you can search for places
 - On the filter screen there are three buttons to filter positions for today, yesterday or custom between two dates and times
 - Changed the way to obtain the Home Assistant token for panels and cards
-- Minified Javascript in the dist/ha-tracker.js file
-- Automatic versioning in index.html, styles.css and ha-tracker.js 
+- Minified Javascript in the dist/life180.js file
+- Automatic versioning in index.html, styles.css and life180.js 
 - Geocoding is now done on the server that caches the addresses
 - Changed the default Alert, Confirm and Prompt windows
 - Changed the date/time picker in the filter window 
@@ -124,8 +124,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Updated README.md with all the changes in this version
 
 ### Fixed
-- If HA Tracker is not active, it does not update to save resources.
-- Excessive page reloads in HA Tracker panel. Now not reload
+- If Life180 is not active, it does not update to save resources.
+- Excessive page reloads in Life180 panel. Now not reload
 - Notifications with: "Login attempt or request with invalid authentication..."
 - Problems with some characters in zone names when creating and modifying zones
 - OpenStreetMaps not showing tiles anymore, only message: https://wiki.openstreetmap.org/wiki/Blocked_tiles #27
@@ -187,7 +187,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.0.22] - 2025-02-20
 
 ### Fixed
-- HA Tracker won't load after creating new zones #4
+- Life180 won't load after creating new zones #4
   (Zones with non-alphanumeric names)
 
 
@@ -224,7 +224,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Files removed when integration is uninstalled
-- Add HA Tracker Dashboard after installing the integration
+- Add Life180 Dashboard after installing the integration
 
 ### Fixed
 - Getting addresses on the user screen
@@ -259,7 +259,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Changes in translations
 
 ### Fixed
-- Every time HA Tracker was updated, the zones were deleted
+- Every time Life180 was updated, the zones were deleted
 - zIndex of the markers
 
 
@@ -274,7 +274,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Check the connection with Home Assistant
-- The line **ha_tracker** of `configuration.yaml` in README.md
+- The line **life180** of `configuration.yaml` in README.md
 
 
 ## [0.0.12] - 2025-01-27

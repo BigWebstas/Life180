@@ -1,0 +1,13 @@
+{
+  "domain": "life180",
+  "name": "Life180",
+  "codeowners": ["@BigWebstas"],
+  "config_flow": true,
+  "dependencies": ["http", "lovelace", "recorder"],
+  "documentation": "https://github.com/BigWebstas/Life180",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/BigWebstas/Life180/issues",
+  "requirements": [],
+  "version": "0.0.36"
+}

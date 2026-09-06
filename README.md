@@ -3,9 +3,9 @@
   <a href="https://www.buymeacoffee.com/vgcouso" target="_blank" rel="noreferrer noopener"><img src="https://bmc-cdn.nyc3.digitaloceanspaces.com/BMC-button-images/custom_images/orange_img.png" alt="Buy Me A Coffee"></a>
 </p>
 <div style="text-align: center;">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/logo_512x512.png" alt="HA Tracker logo" width="128" height="128" style="display: block; margin: 0 auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/logo_512x512.png" alt="Life180 logo" width="128" height="128" style="display: block; margin: 0 auto;" />
   <br>
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/logo1.png" alt="HA Tracker logo" width="256" style="display: block; margin: 0 auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/logo1.png" alt="Life180 logo" width="256" style="display: block; margin: 0 auto;" />
 </div>
 
 ---
@@ -14,7 +14,7 @@
 - [Introducion](#introduction)
 - [Requirements](#requirements)
 - [Installation](#installation)
-  - [HA Tracker](#ha-tracker)
+  - [Life180](#life180)
   - [Options](#options)
   - [Device Trackers](#device-trackers)
     - [Home Assistant](#home-assistant)
@@ -36,7 +36,7 @@
 
 # INTRODUCTION
 
-- **HA Tracker** is an application designed to track the position of registered Home Assistant users who send positions through various **mobile applications**
+- **Life180** is an application designed to track the position of registered Home Assistant users who send positions through various **mobile applications**
 - You can manage specific zones of the application
 - It also allows you to filter positions between two dates, grouped by zone, and obtain a detailed summary with statistics
 - It offers a **panel** and a **card** for home assistant as well as a **blueprint** to create **automations**
@@ -49,7 +49,7 @@
 To install this integration in Home Assistant, you will need:
 - An installation of Home Assistant (see https://www.home-assistant.io/)
 - HACS installed in your Home Assistant environment (see https://hacs.xyz/)
-- For security, HA Tracker requires Home Assistant to work over **https**. For that you have several alternatives from **"Settings &rarr; Add-ons &rarr; Add-on store"**:
+- For security, Life180 requires Home Assistant to work over **https**. For that you have several alternatives from **"Settings &rarr; Add-ons &rarr; Add-on store"**:
   - **Duck DNS**
   - **Let's Encrypt**
   
@@ -59,18 +59,18 @@ To install this integration in Home Assistant, you will need:
 
 # INSTALLATION 
 
-## HA Tracker
+## Life180
 
 The steps to install this integration are as follows:
-1. Click [![hacs_badge](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=vgcouso&repository=ha-tracker&category=integration)
+1. Click [![hacs_badge](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=BigWebstas&repository=Life180&category=integration)
 2. Click on download and install
 3. Restart Home Assistant.
 4. Go to: **"Settings &rarr; Devices and Services &rarr; Add Integration"**
-5. Search for **HA Tracker**, select it and on the **Configuration screen**, configure **[options](#options)** and press **Send**
+5. Search for **Life180**, select it and on the **Configuration screen**, configure **[options](#options)** and press **Send**
 
 You can access the application by opening the panel from the menu on the left or also from a web browser at the address:
 
-   `https://HOST/ha-tracker/index.html`
+   `https://HOST/life180/index.html`
    
 This URL accepts 3 parameters:
   - **debug=1:** to avoid using minified JavaScript
@@ -79,18 +79,18 @@ This URL accepts 3 parameters:
   
 **Example:** 
     
-	`https://HOST/ha-tracker/index.html?debug=1&haUrl=HOST_2&token=ll_token`   
+	`https://HOST/life180/index.html?debug=1&haUrl=HOST_2&token=ll_token`   
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/install.png" alt="Install screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/install.png" alt="Install screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the install screen</em>
 </div>
 
-Once HA Tracker is installed a **Custom Card** will be available to place on the panels
+Once Life180 is installed a **Custom Card** will be available to place on the panels
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/card.png" alt="Card screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/card.png" alt="Card screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the card screen</em>
 </div>
@@ -122,7 +122,7 @@ By default, Home Assistant stores **10 days**. You can increase this time, but k
   - **Enable Debugging:** 
     - Messages in the web browser console (F12 key)
   - **Use imperial units** 
-    - Using Imperial Units in HA Tracker	
+    - Using Imperial Units in Life180	
 	
 - **Geocoding:**	
   Reverse geocoding parameters.
@@ -192,7 +192,7 @@ The URLs for OwnTracks and GPSLogger must be **changed** and are used in the mob
 <br>
   
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/options.png" alt="HA Tracker options screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/options.png" alt="Life180 options screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the options screen</em>
 </div>
@@ -206,14 +206,14 @@ You must install an app on your smartphone to send managed positions through Hom
 Integrations create Device Trackers in Home Assistant when connected and they are shown in the integration where you can rename them in:  **"Settings &rarr; Devices and Services &rarr; Integration &rarr; Pencil icon next to the device"**
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/gpslogger.png" alt="Change name screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/gpslogger.png" alt="Change name screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the change name screen</em>
 </div>
 
 Device Trackers must be assigned to users: **"Settings &rarr; People &rarr; Username &rarr; Devices that belong to this person"**
 
-**Important:** If there are multiple devices associated with a person, HA Tracker takes the first one.
+**Important:** If there are multiple devices associated with a person, Life180 takes the first one.
 
 ---
 
@@ -227,9 +227,9 @@ Home Assistant for mobile is the official app and is available for both: **[iOS]
 - In Home Assistant, you'll find connected devices under: **"Settings &rarr; Devices & services &rarr; Mobile App"**
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/home-assistant.png" alt="Home Assistant with HA Tracker" style="width: 300px; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/home-assistant.png" alt="Home Assistant with Life180" style="width: 300px; max-width: 100%; height: auto;" />
   <br>
-  <em>This is Home Assistant with HA Tracker</em>
+  <em>This is Home Assistant with Life180</em>
 </div>
 
 In **Android** make sure in the **"Settings &rarr; Companion app"** that:
@@ -243,7 +243,7 @@ In **Android** make sure in the **"Settings &rarr; Companion app"** that:
 [OwnTracks](https://owntracks.org/) is an **[iOS](https://apps.apple.com/us/app/owntracks/id692424691)** and **[Android](https://play.google.com/store/apps/details?id=org.owntracks.android)** app designed to send your phone's positions to a URL.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/owntracks.png" alt="OwnTracks screen" style="width: 300px; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/owntracks.png" alt="OwnTracks screen" style="width: 300px; max-width: 100%; height: auto;" />
   <br>
   <em>This is the OwnTracks screen</em>
 </div>
@@ -260,7 +260,7 @@ Then you can then install OwnTracks on your devices from **[iOS](https://apps.ap
 
 To configure the application: [here's a link](https://www.home-assistant.io/integrations/owntracks/)
   - Set a unique **Device ID** and **Tracker ID** for each phone
-  - The URL provided to you when setting up the integration can also be found under **"Settings &rarr; Devices & services &rarr; HA TRacker &rarr; Configuration &rarr; Sources"**
+  - The URL provided to you when setting up the integration can also be found under **"Settings &rarr; Devices & services &rarr; Life180 &rarr; Configuration &rarr; Sources"**
 
 - In Home Assistant, you'll find connected devices under **"Settings &rarr; Devices & services &rarr; OwnTracks"**
   - There you can change its name in Home Assistant
@@ -273,7 +273,7 @@ To configure the application: [here's a link](https://www.home-assistant.io/inte
 [GPSLogger](https://gpslogger.app/) is an **Android** app designed to store or send your phone's positions to a URL.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/gpslogger-android.png" alt="GPSLogger Android screen" style="width: 300px; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/gpslogger-android.png" alt="GPSLogger Android screen" style="width: 300px; max-width: 100%; height: auto;" />
   <br>
   <em>This is the GPSLogger Android screen</em>
 </div>
@@ -301,7 +301,7 @@ To install GpsLogger:
   - On some devices you must enable the option to run in the background
   
 To configure the application: [here's a link](https://www.home-assistant.io/integrations/gpslogger/)
-  - The URL provided to you when setting up the integration can also be found under **"Settings &rarr; Devices & services &rarr; HA TRacker &rarr; Configuration &rarr; Sources"**
+  - The URL provided to you when setting up the integration can also be found under **"Settings &rarr; Devices & services &rarr; Life180 &rarr; Configuration &rarr; Sources"**
 
 - In Home Assistant, you'll find connected devices under **"Settings &rarr; Devices & services &rarr; GPSLogger"**
   - There you can change its name in Home Assistant
@@ -323,7 +323,7 @@ Then you can then install OwnTracks on your devices from **[iOS](https://apps.ap
 
 To configure the application: [here's a link](https://www.traccar.org/client-configuration/)
   - Set a unique **Device identifier**
-  - The URL provided to you when setting up the integration can also be found under **"Settings &rarr; Devices & services &rarr; HA TRacker &rarr; Configuration &rarr; Sources"**
+  - The URL provided to you when setting up the integration can also be found under **"Settings &rarr; Devices & services &rarr; Life180 &rarr; Configuration &rarr; Sources"**
 
 - In Home Assistant, you'll find connected devices under **"Settings &rarr; Devices & services &rarr; OwnTracks"**
   - There you can change its name in Home Assistant
@@ -345,7 +345,7 @@ In Traccar server you need to create two **Computed Attributes**:
     - Expression: "speed * 0.514444"
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-computed-attributes.png" alt="Traccar Server Computed Attributes" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/traccar-server-computed-attributes.png" alt="Traccar Server Computed Attributes" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>Traccar Server Computed Attributes</em>
 </div>
@@ -353,7 +353,7 @@ In Traccar server you need to create two **Computed Attributes**:
 These Computed Attributes need to be assigned to **groups** and/or **devices** in Traccar Server.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-groups.png" alt="Traccar Server Groups" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/traccar-server-groups.png" alt="Traccar Server Groups" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>Traccar Server Groups</em>
 </div>
@@ -367,7 +367,7 @@ The first thing you need to do in Home Assistant is install the **Traccar Server
 In **"Settings &rarr; Devices and Services &rarr; Traccar Server &rarr; Options"** it is necessary to add two **Custom Attributes**: **batteryLevel** and **speedMps**
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/traccar-server-options.png" alt="Traccar Server Options" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/traccar-server-options.png" alt="Traccar Server Options" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>Traccar Server Options</em>
 </div>
@@ -396,7 +396,7 @@ In **"Settings &rarr; Devices and Services &rarr; Traccar Server &rarr; Options"
 - If you click on a user on the map, a popup will appear with the information of the last position and a link that directs to Google Maps.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/users.png" alt="HA Tracker users screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/users.png" alt="Life180 users screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the users screen</em>
 </div>
@@ -416,14 +416,14 @@ In **"Settings &rarr; Devices and Services &rarr; Traccar Server &rarr; Options"
   - The zone color is used as the background for cells in the user, zone, filter tables, and in the summary of visited zones.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/zones.png" alt="HA Tracker zones screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/zones.png" alt="Life180 zones screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the zones screen</em>
 </div>
 <br>
 <br>
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/zones-dialog.png" alt="HA Tracker dialog in zones" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/zones-dialog.png" alt="Life180 dialog in zones" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the dialog in zones</em>
 </div>
@@ -453,28 +453,28 @@ On the **map**, the filter is represented by:
 In addition, there is the possibility of **exporting** the filters made to various file formats.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/filter-calendar.png" alt="HA Tracker calendar on the filter screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/filter-calendar.png" alt="Life180 calendar on the filter screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the calendar on the filter screen</em>
 </div>
 <br>
 <br>
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/filter.png" alt="HA Tracker filter with positions screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/filter.png" alt="Life180 filter with positions screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the filter with positions screen</em>
 </div>
 <br>
 <br>
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/filter-summary.png" alt="HA Tracker summary screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/filter-summary.png" alt="Life180 summary screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the summary screen</em>
 </div>
 <br>
 <br>
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/filter-chart.png" alt="HA Tracker chart screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/filter-chart.png" alt="Life180 chart screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the chart screen</em>
 </div>
@@ -483,14 +483,14 @@ In addition, there is the possibility of **exporting** the filters made to vario
 
 ## ChatGPT
 
-- At the moment **GPT for HA Tracker** is in **beta version**
+- At the moment **GPT for Life180** is in **beta version**
 - Due to restrictions set by **Cloudflare**, which acts as a proxy between GPT and your Home Assistant, the number of requests for all users is limited when using the **free** version
-- You can find the GPT at this link: **[HA Tracker for Home Assistant](https://chatgpt.com/g/g-68ae8f968b2081918b9f7cb0e170c315-ha-tracker-for-home-assistant)** 
+- You can find the GPT at this link: **[Life180 for Home Assistant](https://chatgpt.com/g/g-68ae8f968b2081918b9f7cb0e170c315-ha-tracker-for-home-assistant)** 
 - When you open GPT, it will ask you for your Home Assistant's address, which must be **https**. Also, you **cannot** enter HOST names with port
 - Once you have logged into the HOST and clicked the **"Continue"** button, you will be redirected to a screen to log in to your Home Assistant and connect it to the GPT for use.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/gpt.png" alt="Home Assistant URL" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/gpt.png" alt="Home Assistant URL" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the screen to enter the Home Assistant URL</em>
 </div>
@@ -508,12 +508,12 @@ In addition, there is the possibility of **exporting** the filters made to vario
 
 ## Automations
 
-In **"Settings &rarr; Automations & scenes &rarr; Create automation"**, a new **Blueprint** is available called: **"Persons in Zones Alert (HA Tracker)"**
+In **"Settings &rarr; Automations & scenes &rarr; Create automation"**, a new **Blueprint** is available called: **"Persons in Zones Alert (Life180)"**
 
 Here you can create new automations that allow you to receive a custom text or voice notification, to the devices you define, when users enter or leave the zones.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vgcouso/ha-tracker/main/docs/images/automations.png" alt="Automations screen" style="width: 80%; max-width: 100%; height: auto;" />
+  <img src="https://raw.githubusercontent.com/BigWebstas/Life180/main/docs/images/automations.png" alt="Automations screen" style="width: 80%; max-width: 100%; height: auto;" />
   <br>
   <em>This is the automations screen</em>
 </div>
