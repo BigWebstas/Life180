@@ -588,7 +588,7 @@ export async function updatePersonsTable() {
 				<td>${time}</td>
 				<td>${currentZoneName}</td>
 				<td>${speed}</td>
-				<td>${battery ?? ''}</td>
+				<td>${battery != null ? battery + '%' : ''}</td>
 			  `;
             if (row.innerHTML !== newContent)
                 row.innerHTML = newContent;
@@ -679,5 +679,21 @@ export function zoneTintRgba(zone, alpha = DEFAULT_ALPHA) {
 }
 
 function readBattery(dev) {
-    return dev?.battery_level ?? dev?.attributes?.battery_level ?? null;
+    const candidates = [
+        dev?.battery_level,
+        dev?.attributes?.battery_level,
+        dev?.attributes?.battery_percentage,
+        dev?.attributes?.battery_percent,
+        dev?.attributes?.batteryLevel,
+        dev?.attributes?.battery,
+        dev?.attributes?.bat,
+    ];
+    for (let v of candidates) {
+        if (v === null || v === undefined || v === '') continue;
+        let n = Number(v);
+        if (!Number.isFinite(n)) continue;
+        if (n > 0 && n <= 1) n *= 100;          // 0-1 fraction -> percent
+        return Math.max(0, Math.min(100, Math.round(n)));
+    }
+    return null;
 }
