@@ -101,7 +101,7 @@ export async function initFilter() {
             try {
                 handleFilterRowSelection(id);
             } catch (e) {
-                console.error('No se pudo seleccionar la fila desde el gráfico:', e);
+                console.error('Could not select the row from the chart:', e);
             }
         }
     });
@@ -118,14 +118,14 @@ function retintFilterList() {
         const meta = zoneName && cachedZoneStats.zonePositions?.[zoneName] || null;
         const z = zoneName ? {
             name: zoneName,
-            color: meta?.color || null, // solo si hay color explícito
+            color: meta?.color || null, // only if there is an explicit color
         }
          : null;
         applyRowZoneTint(r, z, DEFAULT_ALPHA);
     });
 }
 
-// === Ajuste de vista DESPUÉS de dibujar marcadores ===
+// === View adjustment AFTER drawing the markers ===
 async function fitMapToFilter(positions, padding = 24) {
     try {
         if (!Array.isArray(positions) || positions.length === 0)
@@ -140,15 +140,15 @@ async function fitMapToFilter(positions, padding = 24) {
         if (coords.length === 0)
             return;
 
-        const Lg = window.L; // disponible en Leaflet y en el shim MapLibre
+        const Lg = window.L; // available in Leaflet and in the MapLibre shim
         if (!Lg)
             return;
 
-        // Espera 1 frame para asegurar que los marcadores DOM están en el árbol
+        // Wait 1 frame to make sure the DOM markers are in the tree
         await new Promise(r => requestAnimationFrame(r));
 
         if (coords.length === 1) {
-            // Un solo punto: céntralo y aplica un zoom razonable para ver los markers no-stop
+            // A single point: center it and apply a reasonable zoom to see the non-stop markers
             const z = Math.max((map.getZoom?.() || 0), MIN_ZOOM_TO_SHOW);
             focusPoint(coords[0], {
                 zoom: z,
@@ -158,8 +158,8 @@ async function fitMapToFilter(positions, padding = 24) {
         }
 
         const bounds = Lg.latLngBounds(coords);
-        // El shim de MapLibre y Leaflet aceptan el objeto bounds;
-        // padding por defecto 24 (coincide con el usado en el shim)
+        // The MapLibre shim and Leaflet accept the bounds object;
+        // default padding 24 (matches the one used in the shim)
         fitBoundsSafe(bounds, {
             animate: false,
             base: 24,
@@ -174,7 +174,7 @@ export async function setFilter(payload) {
     try {
         showPositionsTab();
 
-        // Back-compat: si payload es array, actúa como antes
+        // Back-compat: if payload is an array, behave as before
         const positions = Array.isArray(payload) ? payload : (payload?.positions || []);
         const summary = Array.isArray(payload) ? null : (payload?.summary || null);
         const zones = Array.isArray(payload) ? null : (payload?.zones || null);
@@ -192,24 +192,24 @@ export async function setFilter(payload) {
 
             renderPositionsChart(positions);
 
-            // Primero cacheamos zonas para tener los colores listos al pintar
+            // First cache the zones so the colors are ready when painting
             if (zones) {
                 setCachedZoneStatsFromServer(zones);
             }
 
-            // pintamos la tabla de posiciones con los colores correctos
+            // paint the positions table with the correct colors
             await updatePositionsTable(positions);
 
-            // Resumen del servidor (si viene)
+            // Server summary (if present)
             if (summary) {
                 applyServerSummary(summary);
             }
             await updateSummaryZonesTable();
 
-            // Por si acaso algún color cambia dinámicamente, retintamos todo
+            // In case some color changes dynamically, re-tint everything
             retintFilterList();
 
-            // Ajusta la vista al conjunto de posiciones/marcadores
+            // Fit the view to the set of positions/markers
             await fitMapToFilter(positions);
 
             await addRouteLine(positions, undefined, undefined, undefined, undefined, undefined, {
@@ -239,7 +239,7 @@ async function updatePositionsTable(positions) {
     if (!positions || positions.length === 0)
         return;
 
-    // --- PREESCAN: detecta grupos consecutivos por zona ---
+    // --- PRESCAN: detect consecutive groups by zone ---
     const groupRanges = [];
     let prevZonePre = null;
     let startIdx = 0;
@@ -269,7 +269,7 @@ async function updatePositionsTable(positions) {
             });
     });
 
-    // Observer para direcciones de paradas
+    // Observer for stop addresses
     const io = ensureFilterAddrObserver();
 
     // --- PINTADO ---
@@ -312,7 +312,7 @@ async function updatePositionsTable(positions) {
         row.style.cursor = "pointer";
 
         if (isFirstInGroup) {
-            // Rango del grupo para el botón filtro
+            // Group range for the filter button
             const range = groupRanges[groupClassIndex - 1];
             const startDate = new Date(positions[range.start].last_updated);
             const endDate = new Date(positions[range.end].last_updated);
@@ -354,7 +354,7 @@ async function updatePositionsTable(positions) {
                         return new Date(y, m - 1, d, 0, 0, 0, 0);
                     };
 
-                    // Actualiza el calendario (horas + días)
+                    // Update the calendar (times + days)
                     setTimes(sTimePart, eTimePart);
                     setRangeDates([toDateOnly(sDatePart), toDateOnly(eDatePart)], true);
 
@@ -388,7 +388,7 @@ async function updatePositionsTable(positions) {
 
         if (pos && pos.stop) {
             row.classList.add('has-address');
-            // Fila de dirección (con lazy geocode)
+            // Address row (with lazy geocode)
             const addressRow = document.createElement('tr');
             addressRow.dataset.address = '';
             addressRow.classList.add(groupClass, 'position-address-row', 'pin-visible');
@@ -397,7 +397,7 @@ async function updatePositionsTable(positions) {
             addressRow.style.display = 'table-row';
             addressRow.dataset.zone = zoneName || '';
 
-            // dataset necesarios para el observer
+            // datasets needed by the observer
             const tsMs = new Date(pos.last_updated).getTime();
             addressRow.dataset.latitude = String(+pos.attributes.latitude);
             addressRow.dataset.longitude = String(+pos.attributes.longitude);
@@ -412,30 +412,30 @@ async function updatePositionsTable(positions) {
             frag.appendChild(addressRow);
             applyRowZoneTint(addressRow, zone, DEFAULT_ALPHA);
 
-            // Observa para pedir dirección cuando entre en viewport
+            // Observe to request the address when it enters the viewport
             io.observe(addressRow);
         }
     });
 
-    // Vuelca de una sola vez
+    // Flush all at once
     tbody.innerHTML = '';
     tbody.appendChild(frag);
 
-    // Selección auto primera fila si existe
+    // Auto-select the first row if present
     if (positions.length > 0) {
         const firstRow = tbody.querySelector('tr');
         if (firstRow)
             selectRow(firstRow);
     }
 
-    // Toggle iconos visibles sólo si hay colapsables
+    // Toggle icons visible only if there are collapsibles
     const headers = tbody.querySelectorAll('.group-header');
     headers.forEach(headerRow => {
         const groupClass = Array.from(headerRow.classList).find(c => c.startsWith('group-'));
         if (!groupClass)
             return;
 
-        // Solo lo que se expande/colapsa de verdad
+        // Only what actually expands/collapses
         const nonPinned = tbody.querySelectorAll(`tr.${groupClass}:not(.group-header):not(.pin-visible)`);
         const hasToggleable = nonPinned.length > 0;
         const isCollapsed = hasToggleable && Array.from(nonPinned).some(r => r.style.display === 'none');
@@ -448,7 +448,7 @@ async function updatePositionsTable(positions) {
             toggleBtn.textContent = isCollapsed ? '►' : '▼';
         }
         if (filterBtn) {
-            // si quieres que siempre esté, déjalo siempre visible; si no, átalo a hasToggleable
+            // to always show it, keep it visible; otherwise tie it to hasToggleable
             filterBtn.style.display = hasToggleable ? '' : 'none';
         }
     });
@@ -459,12 +459,12 @@ function gotoMaxSpeedPosition() {
     if (!tbody)
         return;
 
-    // Filas “principales” (una por posición)
+    // "Main" rows (one per position)
     const rows = Array.from(tbody.querySelectorAll('tr.pos-main-row'));
     if (!rows.length)
         return;
 
-    // Elegimos la de mayor speed; si hay empate, la más reciente
+    // Pick the one with the highest speed; on a tie, the most recent
     let best = null;
     for (const r of rows) {
         const s = Number(r.dataset.speed) || 0;
@@ -479,8 +479,8 @@ function gotoMaxSpeedPosition() {
     }
 
     if (best && best.id) {
-        // Esto ya se encarga de expandir el grupo si está oculto, seleccionar la fila,
-        // cambiar a la pestaña de posiciones, centrar y abrir el popup.
+        // This already expands the group if hidden, selects the row,
+        // switches to the positions tab, centers and opens the popup.
         handleFilterRowSelection(best.id);
     } else {
         uiAlert(t('no_positions') || 'No hay posiciones.', {
@@ -505,7 +505,7 @@ function applyServerSummary(summary) {
     document.getElementById('stops-count').textContent = fmt0(summary.stops_count);
     document.getElementById('stopped-time').textContent = fmtTime(summary.stopped_time_s);
 
-    // Click a “máxima velocidad”: busca la posición más rápida.
+    // Click on "max speed": find the fastest position.
     const maxSpeedRow = document.querySelector('#summary table tbody tr:nth-child(4)');
     if (maxSpeedRow) {
         maxSpeedRow.style.cursor = "pointer";
@@ -530,7 +530,7 @@ function setCachedZoneStatsFromServer(zones) {
         cachedZoneStats.zoneStops[name] = z.stops || 0;
         cachedZoneStats.zoneDistanceMeters[name] = z.distance_m || 0;
 
-        // Resolver color y flags desde zones.js usando el ID de zona
+        // Resolve color and flags from zones.js using the zone ID
         if (z.id != null) {
             const style = getZoneStyleById(z.id);
             if (style) {
@@ -691,7 +691,7 @@ export async function resetFilter(resetCalendar = true, resetUsers = true) {
     // Reiniciar posiciones
     document.getElementById('filter-table-body').innerHTML = '';
 
-    // Reiniciar resumen
+    // Reset the summary
     document.getElementById('positions-count').textContent = '--';
     document.getElementById('total-time').textContent = '--';
     document.getElementById('distance').textContent = '--';
@@ -737,13 +737,13 @@ export async function resetFilter(resetCalendar = true, resetUsers = true) {
         _zoomHandlerBound = false;
     }
 
-    // Detener observer (las tareas activas se autogestionan por uniqueId)
+    // Stop the observer (active tasks self-manage by uniqueId)
     if (_filterAddrObserver) {
         _filterAddrObserver.disconnect();
         _filterAddrObserver = null;
     }
 
-    // recalcula visibilidad del rango de fechas y oculta export SIEMPRE tras un reset
+    // recompute the date-range visibility and ALWAYS hide export after a reset
     updateDaterangeVisibility();
     updateExportFilterVisibility(false);
 
@@ -882,21 +882,21 @@ async function handleFilterRowSelection(uniqueId) {
     });
 }
 
-// === Espera a que las capas MapLibre existan y se pinten al menos 1 frame ===
+// === Wait for the MapLibre layers to exist and paint at least 1 frame ===
 async function waitForMapLibrePaint(layerIds = []) {
     const ml = map && map._ml;
     if (!ml)
-        return; // Leaflet: no hace falta esperar
+        return; // Leaflet: no need to wait
 
-    // 1) Espera a que existan las capas/layers
-    for (let i = 0; i < 60; i++) { // ~3s máx
+    // 1) Wait for the layers to exist
+    for (let i = 0; i < 60; i++) { // ~3s max
         const ok = layerIds.every(id => id && ml.getLayer(id));
         if (ok)
             break;
         await new Promise(r => setTimeout(r, 50));
     }
 
-    // 2) Espera a un render con esas capas ya presentes
+    // 2) Wait for a render with those layers present
     await new Promise(resolve => {
         try {
             ml.once('render', resolve);
@@ -905,7 +905,7 @@ async function waitForMapLibrePaint(layerIds = []) {
             resolve();
         }
     });
-    // 3) Frame extra por si hay gradiente/simplificación diferida
+    // 3) Extra frame in case there is deferred gradient/simplification
     await new Promise(r => requestAnimationFrame(r));
 }
 
@@ -935,18 +935,18 @@ async function addRouteLine(
     if (coords.length < 2)
         return;
 
-    // Curva (cap de salida para evitar rutas infinitas)
+    // Curve (output cap to avoid infinite routes)
     if (curved && curveAlg === 'catmull') {
         const subs = Math.max(3, subdivisions);
         const MAX_SPLINE_POINTS = 6000;
         coords = catmullRomSplineCapped(coords, subs, alpha, MAX_SPLINE_POINTS);
     }
 
-    // === Heurística de “ruta pesada” ===
+    // === "Heavy route" heuristic ===
     const HEAVY_THRESHOLD = 5000;
     const isHeavy = coords.length >= HEAVY_THRESHOLD;
 
-    // Simplificación: rápido para primer frame, luego refinamos
+    // Simplification: fast for the first frame, then refine
     const SIMPLIFY_FAST = 3.0;
     const SIMPLIFY_FINAL = 0.5;
     const OUTLINE_SIMPL = isHeavy ? 1.5 : 0.8;
@@ -981,7 +981,7 @@ async function addRouteLine(
     map.getPane('routeOutline').style.zIndex = 390;
     map.getPane('routeColor').style.zIndex = 391;
 
-    // Renderer Canvas (si Leaflet real)
+    // Canvas renderer (if real Leaflet)
     if (!window._routeRenderer && typeof L?.canvas === 'function') {
         window._routeRenderer = L.canvas({
             padding: 0.5
@@ -991,7 +991,7 @@ async function addRouteLine(
     const supportsGradient = !!map?._ml;
     const ml = map._ml;
 
-    // Mantener orden (color por encima)
+    // Keep the order (color on top)
     function ensureOrder() {
         try {
             if (!ml)
@@ -1028,11 +1028,11 @@ async function addRouteLine(
         Math.round((colorStart[3] + colorEnd[3]) / 2)
 })`;
 
-    // === 1) OUTLINE: lo creamos ya, pero OCULTO (opacity: 0) ===
+    // === 1) OUTLINE: create it now, but HIDDEN (opacity: 0) ===
     window.routeOutline = L.polyline(coords, {
         color: outlineColor,
         weight: outlineWeight,
-        opacity: 0, // <-- clave: no mostrarlo aún
+        opacity: 0, // <-- key: do not show it yet
         lineCap: 'round',
         lineJoin: 'round',
         pane: 'routeOutline',
@@ -1041,11 +1041,11 @@ async function addRouteLine(
         simplifyHardCap: 10000
     }).addTo(map);
 
-    // === 2) COLOR: pinta INMEDIATO en sólido (mid). Gradiente y refinado después. ===
+    // === 2) COLOR: paint IMMEDIATELY as solid (mid). Gradient and refinement later. ===
     if (supportsGradient) {
-        // Capa única de color
+        // Single color layer
         window._routeColorLine = L.polyline(coords, {
-            color: mid, // sólido instantáneo
+            color: mid, // instant solid
             weight: lineWeight,
             opacity: 1,
             lineCap: 'round',
@@ -1056,19 +1056,19 @@ async function addRouteLine(
             simplifyHardCap: isHeavy ? 8000 : 12000
         }).addTo(map);
 
-        // Ya hay color en pantalla: muestra el outline y asegura orden
+        // Color is on screen now: show the outline and ensure ordering
         window.routeOutline.setStyle({
             opacity: 1
         });
         ensureOrder();
 
-        // ✅ Espera a que las capas (línea + outline) existan y se pinten al menos un frame
+        // Wait for the layers (line + outline) to exist and paint at least one frame
         await waitForMapLibrePaint([
                 window._routeColorLine?.__ml_id,
                 window.routeOutline?.__ml_id
             ]);
 
-        // Aplica gradiente en el SIGUIENTE frame (evita bloquear el primer pintado)
+        // Apply the gradient on the NEXT frame (avoids blocking the first paint)
         requestAnimationFrame(() => {
             try {
                 const gradient = ['interpolate', ['linear'], ['line-progress'], 0, c0, 1, c1];
@@ -1077,10 +1077,10 @@ async function addRouteLine(
                 });
                 ensureOrder();
             } catch (e) {
-                console.warn('lineGradient no disponible, se mantiene color sólido:', e);
+                console.warn('lineGradient unavailable, keeping solid color:', e);
             }
 
-            // Refinado (solo si es pesada)
+            // Refinement (only if heavy)
             if (isHeavy) {
                 requestAnimationFrame(() => {
                     try {
@@ -1092,11 +1092,11 @@ async function addRouteLine(
             }
         });
 
-        // Referencia común
+        // Common reference
         window.routeLineSegments = [window._routeColorLine];
 
     } else {
-        // === Fallback (Leaflet puro): segmentos por “buckets” ===
+        // === Fallback (pure Leaflet): segments by "buckets" ===
         const nPts = coords.length;
         if (nPts >= 2) {
             const BUCKETS = Math.min(200, Math.max(8, Math.floor(nPts / 50)));
@@ -1128,17 +1128,17 @@ async function addRouteLine(
             }
         }
 
-        // Ya hay color: muestra outline y asegura orden
+        // Color is present: show the outline and ensure ordering
         window.routeOutline.setStyle({
             opacity: 1
         });
         ensureOrder();
 
-        // Refinado en siguiente frame para rutas pesadas
+        // Refinement on the next frame for heavy routes
         if (isHeavy) {
             requestAnimationFrame(() => {
                 try {
-                    // Rehacer segmentos con más detalle
+                    // Rebuild segments with more detail
                     for (const seg of window.routeLineSegments) {
                         try {
                             map.removeLayer(seg);
@@ -1181,8 +1181,8 @@ async function addRouteLine(
     }
 }
 
-// Catmull-Rom centrípeta con reparto por SEGMENTO del presupuesto de salida.
-// Siempre asegura al menos 1 punto interior por segmento (curva visible).
+// Centripetal Catmull-Rom, distributing the output budget per SEGMENT.
+// Always ensures at least 1 interior point per segment (visible curve).
 function catmullRomSplineCapped(latlngs, subdivisions = 6, alpha = 0.5, maxOut = 6000) {
     const eps = 1e-6;
     const pts = latlngs
@@ -1192,15 +1192,15 @@ function catmullRomSplineCapped(latlngs, subdivisions = 6, alpha = 0.5, maxOut =
     if (n < 2)
         return pts;
 
-    // Reparto del presupuesto:
-    // Total de puntos si añadiésemos q interiores por segmento = n + q*(n-1).
+    // Budget distribution:
+    // Total points if we add q interiors per segment = n + q*(n-1).
     // Queremos n + q*(n-1) <= maxOut  =>  q <= (maxOut - n)/(n-1).
     const segs = n - 1;
     const maxInteriorGlobal = Math.max(0, maxOut - n);
-    let q = Math.floor(maxInteriorGlobal / segs); // interiores por segmento
+    let q = Math.floor(maxInteriorGlobal / segs); // interiors per segment
     q = Math.min(subdivisions, q);
     if (q < 2)
-        q = 2; // ¡Clave!: al menos 2 interior por segmento para que haya curva
+        q = 2; // Key: at least 2 interior points per segment so there is a curve
 
     const out = [];
     out.push(pts[0]);
@@ -1219,7 +1219,7 @@ function catmullRomSplineCapped(latlngs, subdivisions = 6, alpha = 0.5, maxOut =
         const t2 = t1 + td(p1, p2);
         const t3 = t2 + td(p2, p3);
 
-        // Emitimos q puntos interiores uniformemente entre p1..p2
+        // Emit q interior points evenly between p1..p2
         // (usamos q+1 divisiones => saltamos j=1..q).
         for (let j = 1; j <= q; j++) {
             const t = t1 + (j * (t2 - t1)) / (q + 1);
@@ -1235,7 +1235,7 @@ function catmullRomSplineCapped(latlngs, subdivisions = 6, alpha = 0.5, maxOut =
                 out.push(C);
         }
 
-        // Asegura pasar por p2 (nudo)
+        // Ensure it passes through p2 (knot)
         const last = out[out.length - 1];
         if (!last || Math.hypot(p2[0] - last[0], p2[1] - last[1]) > eps)
             out.push(p2);
@@ -1309,13 +1309,13 @@ async function updateSummaryZonesTable() {
 		  <td>${distText}</td>
 		`;
 
-        // Solo hacer clic y mostrar puntero si existe id de zona
+        // Only allow click and pointer cursor if a zone id exists
         const zoneData = zonePositions[zoneName];
         if (zoneData && zoneData.id != null) {
             row.style.cursor = 'pointer';
             row.addEventListener('click', () => showZone(zoneData.id));
         } else {
-            // sin id: sin puntero ni click
+            // no id: no pointer, no click
             row.style.cursor = ''; // o 'default'
         }
 
@@ -1406,7 +1406,7 @@ function ensureZoneTintCSS() {
     const style = document.createElement('style');
     style.id = 'zone-tint-css';
     style.textContent = `
-		/* Aplica tinte solo si la fila NO está seleccionada */
+		/* Apply the tint only if the row is NOT selected */
 		#filter-table-body tr.zone-tinted:not(.selected),
 		#summary-zones-table-body tr.zone-tinted:not(.selected) {
 		  background-color: var(--color-bg);
@@ -1435,19 +1435,19 @@ function applyRowZoneTint(el, zone, alpha = DEFAULT_ALPHA) {
 function getZoneBgCssFromZone(zone, alpha = DEFAULT_ALPHA) {
     if (!zone)
         return null;
-    // 1) color explícito de la zona
+    // 1) explicit zone color
     let hex = zone.color;
-    // 2) fallback: busca color precalculado en cache (si la fila solo trae el nombre)
+    // 2) fallback: look for a precomputed color in the cache (if the row only carries the name)
     if (!hex && zone.name && cachedZoneStats?.zonePositions?.[zone.name]?.color) {
         hex = cachedZoneStats.zonePositions[zone.name].color;
     }
-    // 3) sin color => SIN tinte en tablas
+    // 3) no color => NO tint in tables
     if (!hex)
         return null;
     return toRgba(hex, alpha);
 }
 
-// Formatear tiempo total en el formato "X días horas:minutos"
+// Format the total time as "X days hours:minutes"
 function formatTotalTime(totalTimeMs) {
     const totalSeconds = Math.floor(totalTimeMs / 1000);
     const days = Math.floor(totalSeconds / (24 * 3600));
@@ -1455,7 +1455,7 @@ function formatTotalTime(totalTimeMs) {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
-    // Condicional para incluir "día" o "días"
+    // Conditional to include "day" or "days"
     const daysText = days > 0 ? `${days} ${days === 1 ? t('day') : t('days')} ` : '';
 
     return `${daysText}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
@@ -1483,7 +1483,7 @@ function toUtcISOStringFromLocal(value, endOfDay = false) {
         hh = nums[3];
         mm = nums[4];
         ss = nums[5] ?? 0;
-    } else if (endOfDay) { // date (fin de día)
+    } else if (endOfDay) { // date (end of day)
         hh = 23;
         mm = 59;
         ss = 59;
@@ -1512,7 +1512,7 @@ function extractBatteryPercent(attrs) {
     if (!attrs || typeof attrs !== 'object')
         return null;
 
-    // candidatos por orden de probabilidad
+    // candidates in order of likelihood
     const candidates = [
         'battery', 'battery_level', 'battery_percent', 'battery_percentage',
         'battery_level_pct', 'batteryLevel'
@@ -1539,7 +1539,7 @@ function extractBatteryPercent(attrs) {
     if (!Number.isFinite(v))
         return null;
 
-    // fracción 0–1 -> %
+    // fraction 0-1 -> %
     if (v > 0 && v <= 1)
         return Math.round(v * 100);
     // 1–100 -> %
@@ -1567,7 +1567,7 @@ function readPositionsFromTable() {
         const isStop = row.dataset.isStop === '1';
         const entityId = row.dataset.entity || '';
 
-        // Zona: usa data-zone; si no existe por lo que sea, re-calcula
+        // Zone: use data-zone; if it is missing for any reason, recompute
         let zoneName = row.dataset.zone || '';
         if (!zoneName && typeof handleZonePosition === 'function') {
             try {
@@ -1576,7 +1576,7 @@ function readPositionsFromTable() {
             } catch {}
         }
 
-        // Dirección: usa data-address; si está vacía, prueba a leer la celda visible (si existe)
+        // Address: use data-address; if empty, try reading the visible cell (if present)
         let address = row.dataset.address || '';
         if (!address && isStop) {
             const addrRow = row.nextElementSibling;
@@ -1588,7 +1588,7 @@ function readPositionsFromTable() {
             }
         }
 
-        // Velocidad: de la UI (mph) a m/s
+        // Speed: from the UI (mph) to m/s
         const shownSpeed = Number(row.dataset.speed);
         let speedMps = null;
         if (Number.isFinite(shownSpeed)) {
@@ -1596,7 +1596,7 @@ function readPositionsFromTable() {
             speedMps = kmh / 3.6;
         }
 
-        //batería
+        // battery
         const battery = row.dataset.battery && Number.isFinite(Number(row.dataset.battery))
              ? Number(row.dataset.battery)
              : null;
@@ -1701,14 +1701,14 @@ function doExportCsv() {
         return;
     }
 
-    // mismo nombre “bonito” que usas en KML, pero .csv
+    // same "pretty" name as in KML, but .csv
     const filename = buildFilenameFromUI('csv');
 
     exportPositionsToCsv(positions, {
         filename,
-        formatLocal: (d) => formatDate(d), // misma fecha local que en la tabla
-        delimiter: ';', // recomendado para Excel ES; cambia a ',' si prefieres
-        usePicker: false, // pon true si quieres forzar File Picker
+        formatLocal: (d) => formatDate(d), // same local date as in the table
+        delimiter: ';', // recommended for Excel (ES locale); change to ',' if you prefer
+        usePicker: false, // set true to force the File Picker
     });
 }
 
@@ -1737,7 +1737,7 @@ async function doExportPdf() {
         return;
     }
 
-    // 1) RESUMEN (lee lo que ya tienes pintado)
+    // 1) SUMMARY (read what is already painted)
     const summaryRows = [{
             label: t('positions'),
             value: document.getElementById('positions-count')?.textContent || ''
@@ -1762,19 +1762,19 @@ async function doExportPdf() {
         },
     ];
 
-    // 2) ZONAS visitadas
+    // 2) visited ZONES
     const zonesRows = [];
     const zonePositions = cachedZoneStats?.zonePositions || {};
     if (cachedZoneStats) {
         const { zoneDurations, zoneVisits, zoneStops, zoneDistanceMeters } = cachedZoneStats;
 
-        // (Opcional) si quieres incluir “fuera de zona” aunque no tenga tiempo:
+        // (Optional) to include "outside any zone" even when it has no time:
         const zoneKeys = new Set([
                     ...Object.keys(zoneDurations || {}),
                     ...Object.keys(zoneDistanceMeters || {}),
                 ]);
 
-        const keys = [...zoneKeys].sort((a, b) => a.localeCompare(b)); // orden alfabético
+        const keys = [...zoneKeys].sort((a, b) => a.localeCompare(b)); // alphabetical order
         const unitShort = 'mi';
 
         for (const zoneName of keys) {
@@ -1791,7 +1791,7 @@ async function doExportPdf() {
                 time: formatTotalTime(durationMs),
                 visits,
                 stops,
-                distance, // ⬅️ string ya formateado para PDF
+                distance, // string already formatted for PDF
                 _unitShort: unitShort,
                 _fillColor: blendedFill(zoneName, zonePositions, {
                     alpha: DEFAULT_ALPHA,
@@ -1800,7 +1800,7 @@ async function doExportPdf() {
         }
     }
 
-    // 3) POSICIONES (reducidas) + color de fondo por zona
+    // 3) POSITIONS (reduced) + per-zone background color
     const reduced = reducePositionsForPdf(positions);
     const unit = t('mi_per_hour') || 'mph';
 
@@ -1819,7 +1819,7 @@ async function doExportPdf() {
         };
     });
 
-    // 4) TÍTULO (persona + fechas). Si UI no tiene fechas, PDF hace fallback.
+    // 4) TITLE (person + dates). If the UI has no dates, the PDF falls back.
     const sel = document.getElementById('person-select');
     const personName =
         (sel?.selectedOptions?.[0]?.text?.trim()) ||
@@ -1837,7 +1837,7 @@ async function doExportPdf() {
         endLocal
     };
 
-    // 5) Exporta
+    // 5) Export
     const filename = buildFilenameFromUI('pdf');
     await exportPositionsToPdf({
         filename,
@@ -1853,13 +1853,13 @@ async function doExportPdf() {
 //  Reverse geocode (frontend) - usando geocodeQueue
 // ============================
 
-// Observer perezoso para las filas de dirección de paradas
+// Lazy observer for the stop address rows
 let _filterAddrObserver = null;
 function ensureFilterAddrObserver() {
     if (_filterAddrObserver)
         return _filterAddrObserver;
 
-    // Si tienes un contenedor scroll específico para la tabla, ponlo aquí como root
+    // If you have a specific scroll container for the table, put it here as root
     const root = document.querySelector('#positions .table-wrapper') || null;
 
     _filterAddrObserver = new IntersectionObserver((entries) => {
@@ -1882,7 +1882,7 @@ function ensureFilterAddrObserver() {
                 td.textContent = '…';
 
             requestAddress(uniqueId, lat, lon, tsMs, (newAddress) => {
-                // reconsigue la celda (puede haberse repintado el DOM)
+                // re-fetch the cell (the DOM may have been repainted)
                 const again = document.querySelector(`tr.position-address-row[data-entity-id="${uniqueId}"] td.addr-cell`) || document.querySelector(`tr.position-address-row[data-entity-id="${uniqueId}"] td`);
                 if (again)
                     again.textContent = (newAddress || '');
