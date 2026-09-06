@@ -66,9 +66,36 @@
         } catch (e) { /* cross-origin race: ignore */ }
       }
 
+      // The panel/card also pushes the theme in via postMessage, for the
+      // setups where our window.parent is a bare wrapper we can't read.
+      function applyRelayed(data) {
+        try {
+          var vars = data && data.vars;
+          if (vars) {
+            for (var k in vars) {
+              if (vars[k]) root.style.setProperty(k, String(vars[k]).trim());
+            }
+          }
+          if (typeof data.dark === "boolean") {
+            root.setAttribute("data-ha-dark", data.dark ? "1" : "0");
+          }
+        } catch (e) { /* ignore */ }
+      }
+      window.addEventListener("message", function (ev) {
+        if (ev && ev.data && ev.data.type === "life180-theme") applyRelayed(ev.data);
+      });
+      function requestRelay() {
+        try {
+          if (window.self !== window.top) {
+            window.parent.postMessage({ type: "life180-request-theme" }, "*");
+          }
+        } catch (e) {}
+      }
+
       apply();
-      document.addEventListener("DOMContentLoaded", apply);
-      window.addEventListener("load", apply);
+      requestRelay();
+      document.addEventListener("DOMContentLoaded", function () { apply(); requestRelay(); });
+      window.addEventListener("load", function () { apply(); requestRelay(); });
       try {
         window.parent.addEventListener("ha-theme-changed", apply);
         var pdoc = parentDoc();
@@ -79,7 +106,7 @@
         }
       } catch (e) { /* ignore */ }
       // A few delayed passes for slow parent theme application
-      [150, 500, 1500].forEach(function (t) { setTimeout(apply, t); });
+      [150, 500, 1500].forEach(function (t) { setTimeout(function () { apply(); requestRelay(); }, t); });
     })();
   </script>
 

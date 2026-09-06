@@ -2,7 +2,7 @@
 
 import { loadCSSOnce, loadScriptOnce } from './loader.js';
 import {t} from './i18n.js';
-import { tileUrl, basemapSource, onThemeChange } from '../globals.js';
+import { tileUrl, isDarkTheme, onThemeChange } from '../globals.js';
 
 export let map;
 
@@ -40,14 +40,19 @@ export async function initMap() {
         // Initialize the map
         map = L.map('map', mapOptions);
 
-        // Base layer: OSM in light, CARTO dark in dark. No layer switcher.
-        const baseTiles = L.tileLayer(tileUrl(basemapSource()), {
+        // Base layer: OSM only, no switcher. In dark mode a CSS filter on the
+        // tile images (class below) darkens them; overlay panes are untouched.
+        L.tileLayer(tileUrl('osm'), {
             maxZoom: 19,
             minZoom: 1,
             crossOrigin: true,
-            attribution: '© OpenStreetMap contributors, © CARTO',
+            className: 'l180-base-tiles',
+            attribution: '© OpenStreetMap contributors',
         }).addTo(map);
-        onThemeChange(() => baseTiles.setUrl(tileUrl(basemapSource())));
+        const applyDark = () => document.getElementById('map')
+            ?.classList.toggle('l180-map-dark', isDarkTheme());
+        applyDark();
+        onThemeChange(applyDark);
 
 		map.attributionControl.setPosition('bottomleft');
 
