@@ -35,6 +35,7 @@
   "km_per_hour": "Km/h",  
   "mi_per_hour": "Mph",
   "disconnected": "Disconnesso dal server",
+  "tap_to_refresh": "Tocca per aggiornare",
   "running_filter": "Esecuzione del filtro",
   "no_positions": "Nessuna posizione valida trovata per il filtro selezionato",
   "filter_problem": "Si è verificato un errore durante il tentativo di ottenere le posizioni filtrate",

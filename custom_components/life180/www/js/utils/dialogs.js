@@ -84,6 +84,66 @@ export function hideWindowOverlay() {
 }
 
 
+/************************************************************************/
+/* Offline banner (pinned top; click / Enter to reload)                */
+/************************************************************************/
+
+let offlineBanner = null;
+
+function ensureOfflineBanner() {
+  if (offlineBanner) return;
+
+  const style = document.createElement('style');
+  style.id = 'life180-offline-banner-styles';
+  style.textContent = `
+    #life180-offline-banner{
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 2147483647; display: none;
+      padding: 10px 16px;
+      background: #c0392b; color: #fff;
+      font: 600 14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      text-align: center; cursor: pointer; user-select: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    }
+    #life180-offline-banner:hover{ background: #a93226; }
+    #life180-offline-banner .obh{ margin-left: 6px; font-weight: 400; opacity: .85; }
+  `;
+  document.head.appendChild(style);
+
+  offlineBanner = document.createElement('div');
+  offlineBanner.id = 'life180-offline-banner';
+  offlineBanner.setAttribute('role', 'button');
+  offlineBanner.tabIndex = 0;
+
+  const reload = () => window.location.reload();
+  offlineBanner.addEventListener('click', reload);
+  offlineBanner.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      reload();
+    }
+  });
+
+  document.body.appendChild(offlineBanner);
+}
+
+export function showOfflineBanner(message, hint) {
+  ensureOfflineBanner();
+  offlineBanner.textContent = message || 'Disconnected from server';
+  if (hint) {
+    const span = document.createElement('span');
+    span.className = 'obh';
+    span.textContent = hint;
+    offlineBanner.appendChild(span);
+  }
+  offlineBanner.style.display = 'block';
+}
+
+export function hideOfflineBanner() {
+  if (offlineBanner) offlineBanner.style.display = 'none';
+}
+
+
 
 export function uiConfirm(message, opts = {}) {
     if (_activeModal)

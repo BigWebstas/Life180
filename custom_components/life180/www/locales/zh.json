@@ -35,6 +35,7 @@
   "km_per_hour": "公里/小时",  
   "mi_per_hour": "英里/小时",
   "disconnected": "与服务器断开连接",
+  "tap_to_refresh": "点按以刷新",
   "running_filter": "正在应用筛选",
   "no_positions": "未找到符合筛选条件的有效位置",
   "filter_problem": "尝试获取筛选位置时发生错误",

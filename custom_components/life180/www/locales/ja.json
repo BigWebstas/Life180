@@ -35,6 +35,7 @@
   "km_per_hour": "km/h", 
   "mi_per_hour": "mph",  
   "disconnected": "サーバーとの接続が切れました",
+  "tap_to_refresh": "タップして更新",
   "running_filter": "フィルターを実行中",
   "no_positions": "選択されたフィルターに一致する有効な位置が見つかりません",
   "filter_problem": "フィルター位置を取得しようとした際にエラーが発生しました",

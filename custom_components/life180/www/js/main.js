@@ -10,7 +10,7 @@ import { updatePersons, fitMapToAllPersons } from './screens/persons.js';
 import { initZones, updateZones } from './screens/zones.js';
 import { initFilter } from './screens/filter.js';
 import { initializeI18n, t } from './utils/i18n.js';
-import { showWindowOverlay, hideWindowOverlay } from './utils/dialogs.js';
+import { showOfflineBanner, hideOfflineBanner } from './utils/dialogs.js';
 
 document.addEventListener("DOMContentLoaded", async() => {
     try {
@@ -83,9 +83,9 @@ async function update() {
             await updatePersons();
             await updateZones();
             await updateUI();
-            hideWindowOverlay();
+            hideOfflineBanner();
         } else {
-            showWindowOverlay(t('disconnected'), "rgba(255, 0, 0, 0.5)", "white", "rgba(200, 0, 0, 0.8)");
+            showOfflineBanner(t('disconnected'), t('tap_to_refresh'));
         }
     } catch (error) {
         console.error("Error during major update:", error);
