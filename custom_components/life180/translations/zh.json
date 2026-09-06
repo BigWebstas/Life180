@@ -30,18 +30,17 @@
           "update_interval": "更新间隔（秒）",
           "enable_debug": "启用调试",
           "geocode_time": "地理编码时间（秒）",
-          "geocode_distance": "触发地理编码的最小距离（米）",
+          "geocode_distance": "触发地理编码的最小距离（ft）",
           "only_admin": "仅管理员可用",
-          "use_imperial": "使用英制单位",
-          "stop_radius": "停留半径（米）",
+          "stop_radius": "停留半径（ft）",
           "stop_time": "停留时间（秒）",
           "reentry_gap": "重新进入间隔（秒）",
           "outside_gap": "区域外间隔（秒）",
-          "gps_accuracy": "GPS 精度（米）",
-          "max_speed": "最大速度（km/h）",
+          "gps_accuracy": "GPS 精度（ft）",
+          "max_speed": "最大速度（mph）",
           "anti_spike_factor_k": "K 系数",
           "anti_spike_detour_ratio": "绕行比",
-          "anti_spike_radius": "防跳点半径（米）",
+          "anti_spike_radius": "防跳点半径（ft）",
           "anti_spike_time": "防跳点时间（秒）"
         }
       }
@@ -49,13 +48,13 @@
     "error": {
       "min_update_interval": "更新间隔至少为 10 秒。",
       "min_geocode_time": "地理编码时间至少为 10 秒。",
-      "min_geocode_distance": "触发地理编码的最小距离至少为 20 米。",
+      "min_geocode_distance": "触发地理编码的最小距离至少为 66 ft。",
       "min_stop_radius": "停留半径不能为负数。",
       "min_stop_time": "停留时间不能为负数。",
       "min_reentry_gap": "重新进入间隔不能为负数。",
       "min_outside_gap": "区域外间隔不能为负数。",
-      "min_gps_accuracy": "GPS 精度至少为 10 米。",
-      "min_max_speed": "最大速度至少为 100 km/h。",
+      "min_gps_accuracy": "GPS 精度至少为 33 ft。",
+      "min_max_speed": "最大速度至少为 63 mph。",
       "min_anti_spike_factor_k": "K 系数至少为 1.5。",
       "min_anti_spike_detour_ratio": "绕行比至少为 1.1。",
       "min_anti_spike_radius": "防跳点半径不能为负数。",
@@ -79,8 +78,7 @@
             "data": {
               "update_interval": "更新间隔（秒）",
               "only_admin": "仅管理员可用",
-              "enable_debug": "启用调试",
-              "use_imperial": "使用英制单位"
+              "enable_debug": "启用调试"
             }
           },
           "geocoding": {
@@ -88,14 +86,14 @@
             "description": "反向地理编码参数。",
             "data": {
               "geocode_time": "地理编码时间（秒）",
-              "geocode_distance": "触发地理编码的最小距离（米）"
+              "geocode_distance": "触发地理编码的最小距离（ft）"
             }
           },
           "stops": {
             "name": "停留",
             "description": "停留检测阈值。",
             "data": {
-              "stop_radius": "停留半径（米）",
+              "stop_radius": "停留半径（ft）",
               "stop_time": "停留时间（秒）",
               "reentry_gap": "重新进入间隔（秒）",
               "outside_gap": "区域外间隔（秒）"
@@ -105,8 +103,8 @@
             "name": "精度",
             "description": "判定位置的相关参数。",
             "data": {
-              "gps_accuracy": "GPS 精度（米）",
-              "max_speed": "最大速度（km/h）"
+              "gps_accuracy": "GPS 精度（ft）",
+              "max_speed": "最大速度（mph）"
             }
           },
           "anti_spike": {
@@ -115,7 +113,7 @@
             "data": {
               "anti_spike_factor_k": "K 系数",
               "anti_spike_detour_ratio": "绕行比",
-              "anti_spike_radius": "防跳点半径（米）",
+              "anti_spike_radius": "防跳点半径（ft）",
               "anti_spike_time": "防跳点时间（秒）"
             }
           }
@@ -125,13 +123,13 @@
     "error": {
       "min_update_interval": "更新间隔至少为 10 秒。",
       "min_geocode_time": "地理编码时间至少为 10 秒。",
-      "min_geocode_distance": "触发地理编码的最小距离至少为 20 米。",
+      "min_geocode_distance": "触发地理编码的最小距离至少为 66 ft。",
       "min_stop_radius": "停留半径不能为负数。",
       "min_stop_time": "停留时间不能为负数。",
       "min_reentry_gap": "重新进入间隔不能为负数。",
       "min_outside_gap": "区域外间隔不能为负数。",
-      "min_gps_accuracy": "GPS 精度至少为 10 米。",
-      "min_max_speed": "最大速度至少为 100 km/h。",
+      "min_gps_accuracy": "GPS 精度至少为 33 ft。",
+      "min_max_speed": "最大速度至少为 63 mph。",
       "min_anti_spike_factor_k": "K 系数至少为 1.5。",
       "min_anti_spike_detour_ratio": "绕行比至少为 1.1。",
       "min_anti_spike_radius": "防跳点半径不能为负数。",

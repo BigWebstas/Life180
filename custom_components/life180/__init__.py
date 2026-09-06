@@ -29,6 +29,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from .api import register_api_views
 from .api.zones import register_zones, unregister_zones
 from .api.reverse_geocode import async_init_reverse_cache
+from .units import imperial_to_metric, metric_to_imperial
 
 
 # --------------------------------------------------------------------------- #
@@ -55,11 +56,35 @@ async def async_setup(_hass: HomeAssistant, _config) -> bool:
     return True
 
 
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migra entradas antiguas.
+
+    v1 guardaba distancias/velocidades en métrico y un flag `use_imperial`.
+    v2 las guarda en pies / mph y no tiene flag.
+    """
+    if entry.version > 2:
+        return False
+
+    if entry.version == 1:
+        data = metric_to_imperial(dict(entry.data))
+        data.pop("use_imperial", None)
+        options = metric_to_imperial(dict(entry.options or {}))
+        options.pop("use_imperial", None)
+        hass.config_entries.async_update_entry(
+            entry, data=data, options=options, version=2
+        )
+        _LOGGER.info("Life180 config entry migrated to version 2 (imperial units)")
+
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Configura Life180 desde una entrada de configuración."""
 
-    # Mezcla de datos y opciones
-    config: Dict[str, Any] = {**entry.data, **entry.options} if entry.options else entry.data
+    # Mezcla de datos y opciones. Los valores se guardan en imperial (pies / mph);
+    # el pipeline trabaja en métrico.
+    raw_config: Dict[str, Any] = {**entry.data, **entry.options} if entry.options else dict(entry.data)
+    config: Dict[str, Any] = imperial_to_metric(raw_config)
 
     domain_data: Dict[str, Any] = hass.data.setdefault(DOMAIN, {})
     domain_data["config"] = config

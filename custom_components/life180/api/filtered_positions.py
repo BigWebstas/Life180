@@ -16,6 +16,8 @@ from homeassistant.components.recorder import get_instance as get_recorder_insta
 from homeassistant.components.recorder.history import state_changes_during_period
 from homeassistant.util import dt as dt_util
 
+from ..units import imperial_to_metric
+
 DOMAIN = __package__.split(".")[-2]
 
 _LOGGER = logging.getLogger(__name__)
@@ -1187,8 +1189,11 @@ class FilteredPositionsEndpoint(HomeAssistantView):
             entry = entries[0]
             only_admin = entry.options.get("only_admin", entry.data.get("only_admin", False))
 
+            # Los valores se guardan en imperial (pies / mph); aquí se trabaja en métrico.
+            _cfg = imperial_to_metric({**entry.data, **entry.options})
+
             def _opt(key, default):
-                return entry.options.get(key, entry.data.get(key, default))
+                return _cfg.get(key, default)
 
             # Lee opciones, saneando
             try:
