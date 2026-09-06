@@ -24,6 +24,10 @@
           "anti_spike": {
             "name": "Anti-spike",
             "description": "Filters for sporadic position jumps."
+          },
+          "map_cache": {
+            "name": "Map cache",
+            "description": "Cache map tiles on the Home Assistant server for offline use and faster loads."
           }
         },
         "data": {
@@ -41,7 +45,9 @@
           "anti_spike_factor_k": "Factor K",
           "anti_spike_detour_ratio": "Detour Ratio",
           "anti_spike_radius": "Anti-spike radius (ft)",
-          "anti_spike_time": "Anti-spike time (seconds)"
+          "anti_spike_time": "Anti-spike time (seconds)",
+          "map_cache_enabled": "Cache map tiles locally",
+          "map_cache_max_mb": "Max cache size (MB)"
         }
       }
     },
@@ -58,7 +64,8 @@
       "min_anti_spike_factor_k": "Anti-spike Factor K must be at least 1.5",
       "min_anti_spike_detour_ratio": "Anti-spike Detour Ratio must be at least 1.1",
       "min_anti_spike_radius": "Anti-spike radius cannot be negative.",
-      "min_anti_spike_time": "Anti-spike time cannot be negative."
+      "min_anti_spike_time": "Anti-spike time cannot be negative.",
+      "min_map_cache_max_mb": "Max cache size must be at least 50 MB."
     },
     "abort": {
       "config_entry_not_found": "Configuration entry not found.",
@@ -116,6 +123,14 @@
               "anti_spike_radius": "Anti-spike radius (ft)",
               "anti_spike_time": "Anti-spike time (seconds)"
             }
+          },
+          "map_cache": {
+            "name": "Map cache",
+            "description": "Cache map tiles on the Home Assistant server for offline use and faster loads.",
+            "data": {
+              "map_cache_enabled": "Cache map tiles locally",
+              "map_cache_max_mb": "Max cache size (MB)"
+            }
           }
         }
       }
@@ -133,7 +148,8 @@
       "min_anti_spike_factor_k": "Anti-spike Factor K must be at least 1.5",
       "min_anti_spike_detour_ratio": "Anti-spike Detour Ratio must be at least 1.1",
       "min_anti_spike_radius": "Anti-spike radius cannot be negative.",
-      "min_anti_spike_time": "Anti-spike time cannot be negative."
+      "min_anti_spike_time": "Anti-spike time cannot be negative.",
+      "min_map_cache_max_mb": "Max cache size must be at least 50 MB."
     }
   }
 }

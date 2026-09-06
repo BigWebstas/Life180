@@ -6,6 +6,7 @@ from .is_admin import IsAdminEndpoint
 from .persons import PersonsEndpoint
 from .zones import ZonesAPI
 from .reverse_geocode import ReverseGeocodeEndpoint
+from .tiles import TileEndpoint
 
 _VIEWS_REGISTERED = False
 
@@ -22,4 +23,5 @@ def register_api_views(hass):
     hass.http.register_view(IsAdminEndpoint())
     hass.http.register_view(ZonesAPI())
     hass.http.register_view(ReverseGeocodeEndpoint())
+    hass.http.register_view(TileEndpoint())
     _VIEWS_REGISTERED = True
