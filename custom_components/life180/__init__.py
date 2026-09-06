@@ -13,7 +13,9 @@ from typing import Any, Dict
 from urllib.parse import urlsplit, urlunsplit
 from pathlib import Path
 
-from homeassistant.components.http import StaticPathConfig
+from aiohttp import web
+
+from homeassistant.components.http import HomeAssistantView, StaticPathConfig
 from homeassistant.components.frontend import async_remove_panel
 from homeassistant.components.lovelace.resources import (
     ResourceStorageCollection,  # type: ignore
@@ -47,6 +49,26 @@ STATIC_DIR = (Path(__file__).parent / "www").resolve()
 
 PANEL_URL = "/life180/assets/life180-panel.js"
 CARD_URL  = "/life180/assets/life180-card.js"
+
+_ROOT_REDIRECT_REGISTERED = False
+
+
+class _Life180RootRedirect(HomeAssistantView):
+    """Send a bare ``/life180`` hit to the app.
+
+    ``/life180`` is both the sidebar panel route and the base of the static
+    file mount. A direct browser load of ``/life180`` (or ``/life180/``) hits
+    the static resource, which has no directory index and answers 403. This
+    view is registered first so it wins that match and redirects to the app.
+    """
+
+    url = "/life180"
+    extra_urls = ["/life180/"]
+    name = "life180:root"
+    requires_auth = False
+
+    async def get(self, request):
+        return web.HTTPFound("/life180/index.html")
 
 
 # --------------------------------------------------------------------------- #
@@ -103,6 +125,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # ------------------------------------------------------------------ #
     #  2. Register static paths                                          #
     # ------------------------------------------------------------------ #
+    # The redirect view must be registered BEFORE the static mount so it wins
+    # route resolution for the bare "/life180" path (see the class docstring).
+    global _ROOT_REDIRECT_REGISTERED
+    if not _ROOT_REDIRECT_REGISTERED:
+        hass.http.register_view(_Life180RootRedirect())
+        _ROOT_REDIRECT_REGISTERED = True
+
     await hass.http.async_register_static_paths([
         StaticPathConfig(url_path="/life180", path=str(STATIC_DIR), cache_headers=True),
     ])
