@@ -35,6 +35,7 @@
   "km_per_hour": "Km/h", 
   "mi_per_hour": "Mph",
   "disconnected": "Disconnected from server",
+  "tap_to_refresh": "Tap to refresh",
   "running_filter": "Running the Filter",
   "no_positions": "No valid positions found for the selected filter",
   "filter_problem": "An error occurred while trying to get the filtered positions",
