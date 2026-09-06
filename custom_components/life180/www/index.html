@@ -8,14 +8,14 @@
   
   <link rel="icon" href="favicon.png" type="image/png">
   
-  <!-- Evitar caché -->
+  <!-- Prevent caching -->
   <meta http-equiv="Expires" content="0">
   <meta http-equiv="Last-Modified" content="0">
   <meta http-equiv="Cache-Control" content="no-cache, mustrevalidate">
   <meta http-equiv="Pragma" content="no-cache">
   
   
-  <!-- Estilos -->
+  <!-- Styles -->
 
   
 </head>
@@ -31,7 +31,7 @@
 			<option value="filter" data-i18n="filter" data-icon="filter">Filter</option>
 		  </select>
 		</div>
-      <div id="persons-container" style="display: block;"> <!-- Visible por defecto -->
+      <div id="persons-container" style="display: block;"> <!-- visible by default -->
         <div id="persons-table" class="table-container">
           <table class="fixed-table">
             <thead>
@@ -44,12 +44,12 @@
               </tr>				  
             </thead>
             <tbody id="persons-table-body">
-              <!-- Filas generadas dinámicamente -->
+              <!-- rows generated dynamically -->
             </tbody>
           </table>
         </div>
       </div> 	
-      <div id="zones-container" style="display: none;"> <!-- Oculto por defecto -->
+      <div id="zones-container" style="display: none;"> <!-- hidden by default -->
         <div class="zone-actions" id="zone-actions" style="display: none;">
           <button id="add-zone-button" class="action-button btn-add" data-i18n="add">Add</button>
           <button id="edit-zone-button" class="action-button btn-edit" data-i18n="edit">Edit</button>		  
@@ -66,12 +66,12 @@
               </tr>
             </thead>
             <tbody id="zones-table-body">
-              <!-- Filas generadas dinámicamente -->
+              <!-- rows generated dynamically -->
             </tbody>
           </table>
         </div>
       </div> 	  
-      <div id="filter-container" style="display: none;"> <!-- Oculto por defecto -->
+      <div id="filter-container" style="display: none;"> <!-- hidden by default -->
         <div class="group">
           <select id="person-select"></select>
         </div>
@@ -108,7 +108,7 @@
                     </tr>
                   </thead>
                   <tbody id="filter-table-body">
-                    <!-- Filas generadas dinámicamente -->
+                    <!-- rows generated dynamically -->
                   </tbody>
                 </table>
               </div>
@@ -162,7 +162,7 @@
                     </tr>
                   </thead>
                   <tbody id="summary-zones-table-body">
-                    <!-- Filas generadas dinámicamente -->
+                    <!-- rows generated dynamically -->
                   </tbody>
                 </table>         
               </div>
@@ -180,12 +180,12 @@
     <button class="hamburger-button" id="hamburger-button">☰</button>
   </div>
 
-  <!-- Carga de scripts -->
+  <!-- Script loading -->
   
-  <!-- Carga CSS y JS de Life180 -->
+  <!-- Load Life180 CSS and JS -->
   <script type="module">
     const urlParams = new URLSearchParams(window.location.search);
-    const v = urlParams.get("v") ?? Date.now(); // fallback como "cache buster" si no viene v
+    const v = urlParams.get("v") ?? Date.now(); // fallback "cache buster" when no v is present
     const debugParam = urlParams.get("debug");
     const isDebug = debugParam !== null && debugParam !== "0" && String(debugParam).toLowerCase() !== "false";
 
@@ -202,18 +202,18 @@
 
     (async () => {
       try {
-        // 1) Carga CSS de la app (evita FOUC)
+        // 1) Load the app CSS (avoids FOUC)
         await loadCSS('css/styles.css');
 
-        // 2) Deja asentar el layout
+        // 2) Let the layout settle
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-        // 3) Importa el bundle según el modo
+        // 3) Import the bundle according to the mode
         const entry = isDebug ? './js/main.js' : './dist/life180.js';
         const url = new URL(`${entry}${entry.includes('?') ? '&' : '?'}v=${v}`, import.meta.url).href;
         await import(url);
 
-        // 4) Muestra el body y dispara eventos si procede
+        // 4) Show the body and dispatch events if applicable
         document.body.removeAttribute('hidden');
         const domReady = document.readyState !== 'loading';
         const winLoaded = document.readyState === 'complete';
@@ -221,7 +221,7 @@
         if (winLoaded) window.dispatchEvent(new Event('load'));
       } catch (e) {
         console.error('[loader] error', e);
-        // Fallback: no quedarse en blanco si falla el CSS o el import
+        // Fallback: do not stay blank if the CSS or the import fails
         document.body.removeAttribute('hidden');
         document.body.style.visibility = 'visible';
         document.body.style.opacity = '1';

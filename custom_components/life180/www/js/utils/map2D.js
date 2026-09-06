@@ -28,7 +28,7 @@ export async function initMap() {
     try {
 		await ensureLeafletLoaded();
 
-        // Configuración predeterminada del mapa
+        // Default map configuration
         const mapOptions = {
             center: [40.4168, -3.7038], // Madrid
             zoom: 6,
@@ -36,10 +36,10 @@ export async function initMap() {
 			preferCanvas: true,   
         };
 
-        // Inicializar el mapa
+        // Initialize the map
         map = L.map('map', mapOptions);
 
-        // Capas base
+        // Base layers
         const tileLayerOptions = {
             maxZoom: 19,
             minZoom: 1,
@@ -50,7 +50,7 @@ export async function initMap() {
                 ...tileLayerOptions,
                 attribution: '© OpenStreetMap contributors',
             }),
-            "Esri Satélite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            "Esri Satellite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 ...tileLayerOptions,
                 attribution: '© Esri, Maxar, Earthstar Geographics',
             }),
@@ -59,18 +59,18 @@ export async function initMap() {
 		
 		map.attributionControl.setPosition('bottomleft');
 		
-        // Control de capas
+        // Layer control
         const layersControl = L.control.layers(baseLayers, null, {
             position: 'topleft'
         });
         layersControl.addTo(map);
 
-        // Escala en bottom-left para no chocar con el geocoder
+        // Scale in the bottom-left so it does not collide with the geocoder
         const scaleCtl = L.control.scale({
             position: 'bottomleft'
         }).addTo(map);
 
-        // Ajuste opcional de la posición del selector de capas con CSS/JS
+        // Optional adjustment of the layer selector position via CSS/JS
         const layersControlElement = document.querySelector('.leaflet-control-layers');
         const zoomControlElement = document.querySelector('.leaflet-control-zoom');
         if (layersControlElement && zoomControlElement) {
@@ -79,7 +79,7 @@ export async function initMap() {
             layersControlElement.style.left = `${zoomControlRect.right}px`;
         }
 
-        // ---- Invalidations para tamaño/visibilidad ----
+        // ---- Invalidations for size/visibility ----
         const invalidate = () => map && map.invalidateSize(true);
 
         document.body.addEventListener(
@@ -120,7 +120,7 @@ export async function initMap() {
                 geocodingQueryParams: {
                     'accept-language': acceptLang,
                     limit: 5
-                    // email: 'tu_correo@ejemplo.com'
+                    // email: 'your_email@example.com'
                 }
             })
         })
@@ -132,11 +132,11 @@ export async function initMap() {
                     map.setView(center, 16);
 
                 L.popup({
-                    // opciones útiles:
-                    autoClose: true, // cierra otros popups
-                    closeOnClick: true, // se cierra al clicar el mapa
-                    keepInView: true // intenta mantenerlo en vista al mover/zoom
-                    // className: 'mi-popup' // para estilos personalizados
+                    // useful options:
+                    autoClose: true, // closes other popups
+                    closeOnClick: true, // closes when clicking the map
+                    keepInView: true // tries to keep it in view on pan/zoom
+                    // className: 'my-popup' // for custom styles
                 })
                 .setLatLng(center)
                 .setContent(name)
@@ -144,12 +144,12 @@ export async function initMap() {
             })
             .addTo(map);
 
-        // Sesgo por vista actual (si quieres búsqueda local; quita bounded para global)
+        // Bias by current view (for local search; remove bounded for global)
         function updateSearchBias() {
             const b = map.getBounds();
             geocoder.options.geocoder.options.geocodingQueryParams.viewbox =
                 [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].join(',');
-            geocoder.options.geocoder.options.geocodingQueryParams.bounded = 1; // quita esta línea para global
+            geocoder.options.geocoder.options.geocodingQueryParams.bounded = 1; // remove this line for global
         }
         map.on('moveend', updateSearchBias);
         updateSearchBias();
@@ -166,7 +166,7 @@ export function isValidCoordinates(lat, lng) {
 }
 
 export function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
-    const R = 6371000; // Radio de la Tierra en metros
+    const R = 6371000; // Earth radius in meters
     const dLat = degToRad(lat2 - lat1);
     const dLon = degToRad(lon2 - lon1);
     const a =
@@ -174,7 +174,7 @@ export function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
         Math.cos(degToRad(lat1)) * Math.cos(degToRad(lat2)) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Devuelve la distancia en metros
+    return R * c; // returns the distance in meters
 }
 
 function degToRad(deg) {

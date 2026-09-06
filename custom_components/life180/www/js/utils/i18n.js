@@ -3,7 +3,7 @@
 //
 
 
-export let currentLang = 'en'; // Idioma predeterminado
+export let currentLang = 'en'; // default language
 
 let translations = {};
 
@@ -14,22 +14,22 @@ export async function loadTranslations(lang) {
             throw new Error(`Translation not found for ${lang}`);
         translations = await response.json();
         currentLang = lang;
-        updateTexts(); // Actualizar textos en la página solo si se cargan traducciones
+        updateTexts(); // update the page texts only when translations load
     } catch (error) {
         console.error(`Error loading translations for ${lang}.`, error);
 
         if (lang === 'en') {
             console.error("The English translation file could not be loaded. No changes will be made to the texts.");
-            return; // No hacer nada si no se encuentra inglés
+            return; // do nothing if English is not found
         } else {
             console.error("Trying to load english as fallback.");
-            await loadTranslations('en'); // Intentar cargar inglés como fallback
+            await loadTranslations('en'); // try English as a fallback
         }
     }
 }
 
 export function t(key) {
-    return translations[key] || key; // Devuelve la traducción o la clave original si no existe
+    return translations[key] || key; // return the translation, or the original key if missing
 }
 
 export function tWithVars(key, vars = {}) {
@@ -54,11 +54,11 @@ function updateTexts() {
 }
 
 export async function initializeI18n() {
-    const userLang = navigator.language.slice(0, 2); // Idioma del navegador
+    const userLang = navigator.language.slice(0, 2); // browser language
 
-    // Cambiar el atributo `lang` en el documento HTML
+    // Set the `lang` attribute on the HTML document
     document.documentElement.setAttribute('lang', userLang);
 
-    // Intentar cargar el idioma del navegador
+    // Try to load the browser language
     await loadTranslations(userLang);
 }

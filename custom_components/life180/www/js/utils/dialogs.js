@@ -122,7 +122,7 @@ export function uiPrompt(message, defaultValue = '', opts = {}) {
             colorValue: opts.defaultColor ?? DEFAULT_COLOR,
             colorLabel: opts.colorLabel,
             withVisibility: opts.withVisibility === true,
-            visibilityValue: opts.visibilityValue !== false, // por defecto true
+            visibilityValue: opts.visibilityValue !== false, // true by default
             visibilityLabel: opts.visibilityLabel || 'Mostrar en el mapa',			
             okLabel: opts.okLabel ?? t('save'),
             cancelLabel: opts.cancelLabel ?? t('cancel'),
@@ -150,7 +150,7 @@ export function uiAlert(message, opts = {}) {
             okLabel: opts.okLabel ?? t('accept'),
             cancelLabel: t('close'),
         });
-        // Para alert, oculta el botón Cancel si se pide
+        // For alert, hide the Cancel button if requested
         if (opts.hideCancel ?? true)
             modal.modal.querySelector('.btn-secondary')?.remove();
         wireModalResolve(modal, {
@@ -236,7 +236,7 @@ function toRgb(hex) {
 }
 
 function ensureUiRoots() {
-    // Crea contenedores si no existen
+    // Create containers if they do not exist
     let modalRoot = document.getElementById('ui-modal-root');
     if (!modalRoot) {
         modalRoot = document.createElement('div');
@@ -335,14 +335,14 @@ function buildModal({
         body.appendChild(inputEl);
     }
 
-	// Checkbox de visibilidad: justo después del texto del label
+	// Visibility checkbox: right after the label text
 	let visibleEl = null;
 	if (withVisibility) {
 	  const row = document.createElement('div');
-	  row.className = 'modal-message'; // mismo look que el label del color
+	  row.className = 'modal-message'; // same look as the color label
 
 	  const lbl = document.createElement('label');
-	  // Texto + espacio no separable para que no quede pegado al check
+	  // Text + non-breaking space so it is not stuck to the checkbox
 	  lbl.append(document.createTextNode(visibilityLabel + ' '));
 
 	  const chk = document.createElement('input');
@@ -350,7 +350,7 @@ function buildModal({
 	  chk.checked = !!visibilityValue;
 	  chk.autocomplete = 'off';
 
-	  // check dentro del label ⇒ queda justo tras el texto
+	  // checkbox inside the label => sits right after the text
 	  lbl.append(chk);
 	  row.append(lbl);
 
@@ -374,7 +374,7 @@ function buildModal({
             allowAlpha,
             showNative,
         });
-        colorEl = picker.hiddenInput; // integra con wireModalResolve sin tocarlo
+        colorEl = picker.hiddenInput; // integrates with wireModalResolve without touching it
         body.appendChild(picker.root);
     }
 
@@ -484,7 +484,7 @@ function wireModalResolve(modalObj, {
             onCancel();
     });
 
-    // Ahora escuchamos teclas SOLO dentro del modal
+    // Now we listen for keys ONLY inside the modal
     modal.addEventListener('keydown', onKey);
 }
 
@@ -494,11 +494,11 @@ function createColorPickerUI({
     allowAlpha = false,
     showNative = false,
 } = {}) {
-    // Raíz
+    // Root
     const wrap = document.createElement('div');
     wrap.className = 'modal-color';
 
-    // Contenedor principal
+    // Main container
     const cp = document.createElement('div');
     cp.className = 'cp';
     const left = document.createElement('div');
@@ -506,7 +506,7 @@ function createColorPickerUI({
     const right = document.createElement('div');
     right.className = 'cp-right';
 
-    // Área SV (saturación/valor)
+    // SV area (saturation/value)
     const sv = document.createElement('div');
     sv.className = 'cp-sv';
     sv.tabIndex = 0;
@@ -604,7 +604,7 @@ function createColorPickerUI({
     cp.append(left, right);
     wrap.appendChild(cp);
 
-    // Input oculto (para devolver el valor al modal)
+    // Hidden input (to return the value to the modal)
     const hidden = document.createElement('input');
     hidden.type = 'text';
     hidden.className = 'modal-input-color';
@@ -616,9 +616,9 @@ function createColorPickerUI({
     S = 1,
     V = 0.5,
     A = 1;
-    let typingHex = false; // <<-- declarar ANTES de enganchar listeners
+    let typingHex = false; // <<-- declare BEFORE attaching listeners
 
-    // === Listeners de HEX (respetan escritura y evitan cerrar el modal con Enter) ===
+    // === HEX listeners (respect typing and avoid closing the modal with Enter) ===
     inpHex.addEventListener('focus', () => {
         typingHex = true;
     });
@@ -629,7 +629,7 @@ function createColorPickerUI({
     inpHex.addEventListener('keydown', (e) => {
         if (e.key === 'Enter')
             e.preventDefault();
-        e.stopPropagation(); // no dejar que el modal lo capture
+        e.stopPropagation(); // do not let the modal capture it
     });
 
     function setHueBg() {
@@ -657,7 +657,7 @@ function createColorPickerUI({
         previewFill.style.background = `rgba(${r},${g},${b},${A})`;
 
         if (!typingHex)
-            inpHex.value = hex; // no pisar mientras tecleas
+            inpHex.value = hex; // do not overwrite while typing
         hidden.value = allowAlpha ? `rgba(${r}, ${g}, ${b}, ${A})` : hex;
 
         setHueBg();
@@ -677,7 +677,7 @@ function createColorPickerUI({
         updateUI();
     }
 
-    // Interacciones SV/Hue/Alpha
+    // SV/Hue/Alpha interactions
     function clamp(n, min, max) {
         return Math.min(max, Math.max(min, n));
     }
@@ -727,7 +727,7 @@ function createColorPickerUI({
         updateUI();
     });
 
-    // Teclado accesible
+    // Accessible keyboard
     function stepKey(el, fn) {
         el.addEventListener('keydown', (e) => {
             const k = e.key.toLowerCase();
@@ -756,7 +756,7 @@ function createColorPickerUI({
         updateUI();
     });
 
-    // Evita que Enter en SV/Hue/Alpha burbujee al modal
+    // Prevent Enter in SV/Hue/Alpha from bubbling to the modal
     [sv, hue, alpha].forEach(el => {
         el.addEventListener('keydown', (e) => {
             if (e.key === 'Enter')
@@ -764,7 +764,7 @@ function createColorPickerUI({
         });
     });
 
-    // Campo HEX + Alpha manual
+    // HEX field + manual Alpha
     inpHex.addEventListener('input', () => {
         const rgb = parseAnyColor(inpHex.value);
         if (rgb) {
@@ -786,14 +786,14 @@ function createColorPickerUI({
     // Inicial
     setFromHex(initial || DEFAULT_COLOR);
 
-    // Auto-resize (ajusta tamaños y apila si no cabe)
+    // Auto-resize (adjusts sizes and stacks if it does not fit)
     function setupResponsiveSizing() {
-        const MIN_SV = 110; // antes 150
-        const MAX_SV = 210; // antes 380
-        const RIGHT_MIN = 180; // antes 210
-        const RAIL_W = 14; // antes 18
-        const GAP = 10; // antes 12
-        const RATIO = 0.62; // antes 0.72
+        const MIN_SV = 110; // was 150
+        const MAX_SV = 210; // was 380
+        const RIGHT_MIN = 180; // was 210
+        const RAIL_W = 14; // was 18
+        const GAP = 10; // was 12
+        const RATIO = 0.62; // was 0.72
 
         cp.style.minWidth = left.style.minWidth = right.style.minWidth = fields.style.minWidth = '0';
 
@@ -831,7 +831,7 @@ function createColorPickerUI({
     }
     setupResponsiveSizing();
 
-    // API pública
+    // Public API
     return {
         root: wrap,
         hiddenInput: hidden,

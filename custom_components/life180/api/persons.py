@@ -1,4 +1,4 @@
-"""Devuelve las personas de Home Assistant"""
+"""Returns the Home Assistant persons."""
 
 import logging
 
@@ -10,21 +10,21 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class PersonsEndpoint(HomeAssistantView):
-    """Punto de acceso a la API para obtener las persons"""
+    """API endpoint that returns the persons."""
 
     url = "/api/life180/persons"
     name = "api:life180/persons"
     requires_auth = True
 
     async def get(self, request):
-        """Devuelve las personas de Home Assistant (filtra por dominio 'person')"""
+        """Return the Home Assistant persons (filtered by the 'person' domain)."""
 
         hass = request.app["hass"]
 
-        # Devuelve solo si es administrador o only_admin es false
+        # Only return data if the user is an admin or only_admin is false
         only_admin = False
         entries = hass.config_entries.async_entries(DOMAIN)
-        if entries:  # Normalmente solo habrá una entrada
+        if entries:  # There is normally only one entry
             entry = entries[0]
             only_admin = entry.options.get(
                 "only_admin",
@@ -42,7 +42,7 @@ class PersonsEndpoint(HomeAssistantView):
                 continue            
             attrs = dict(person.attributes)
 
-            # Campo derivado útil (si existen lat/lon)
+            # Useful derived field (when lat/lon are present)
             lat = attrs.get("latitude")
             lon = attrs.get("longitude")
             has_location = False
@@ -50,9 +50,9 @@ class PersonsEndpoint(HomeAssistantView):
                 if lat is not None and lon is not None:
                     _lat = float(lat)
                     _lon = float(lon)
-                    # Rango válido
+                    # Valid range
                     if -90.0 <= _lat <= 90.0 and -180.0 <= _lon <= 180.0:
-                        # Excluye solo (0,0) como caso nulo
+                        # Treat only (0,0) as the null case
                         has_location = not (_lat == 0.0 and _lon == 0.0)
             except (TypeError, ValueError):
                 has_location = False

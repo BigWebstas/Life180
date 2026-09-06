@@ -11,21 +11,21 @@ function _getImpl() {
     return _implPromise;
 }
 
-export let map; // <- se asigna tras initMap()
+export let map; // <- assigned after initMap()
 
 export async function initMap(...args) {
     const m = await _getImpl();
     const result = await m.initMap?.(...args);
-    // OJO: aquí actualizamos el export para que deje de ser undefined
+    // NOTE: update the export here so it stops being undefined
     map = m.map;
     return result ?? map;
 }
 
-// Si prefieres, un helper para obtener el mapa asegurado:
+// A helper to get the map guaranteed to be ready:
 export async function getMap() {
     const m = await _getImpl();
     if (!m.map) {
-        // si aún no se llamó a initMap, la llamamos sin args
+        // if initMap has not been called yet, call it with no args
         await m.initMap?.();
     }
     map = m.map;
@@ -33,7 +33,7 @@ export async function getMap() {
 }
 
 // =====================
-// Utilidades síncronas
+// Synchronous utilities
 // =====================
 export function isValidCoordinates(lat, lng) {
     return Number.isFinite(lat) && Number.isFinite(lng);
@@ -48,17 +48,17 @@ export function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
 }
 
 // =====================
-// Hueco a la derecha (solo desktop)
+// Right-side gap (desktop only)
 // =====================
 
-// Breakpoint consistente con tu CSS (<=600px es “móvil”)
+// Breakpoint consistent with the CSS (<=600px is "mobile")
 export function isSmallScreen() {
     return window.matchMedia?.('(max-width: 600px)').matches ?? false;
 }
 
 /**
- * Lee el ancho del panel (si está visible) y devuelve el padding “seguro” a la derecha.
- * Por defecto, en móvil no añade margen (desktopOnly: true).
+ * Reads the panel width (when visible) and returns the "safe" right-side padding.
+ * By default, on mobile it adds no margin (desktopOnly: true).
  */
 export function getRightSafePadding(extra = 16, {
     desktopOnly = true
@@ -80,8 +80,8 @@ export function getRightSafePadding(extra = 16, {
             isMobile: small
         };
 
-    // En desktop: visible si NO tiene .hidden
-    // En móvil: visible solo si TIENE .visible (según tu CSS)
+    // On desktop: visible if it does NOT have .hidden
+    // On mobile: visible only if it HAS .visible (per the CSS)
     const hiddenDesktop = panelEl.classList?.contains('hidden');
     const hiddenMobile = small && !panelEl.classList?.contains('visible');
     const isHidden = hiddenDesktop || hiddenMobile;
@@ -95,10 +95,10 @@ export function getRightSafePadding(extra = 16, {
 }
 
 // =====================
-// Helpers de bounds y viewport
+// Bounds and viewport helpers
 // =====================
 
-// Leaflet LatLngBounds / MapLibre LngLatBounds → bordes
+// Leaflet LatLngBounds / MapLibre LngLatBounds -> edges
 function _getBoundsEdges(b) {
     const get = (fn, fallback) => (typeof b?.[fn] === 'function' ? b[fn]() : fallback);
     let west = get('getWest', b?._sw?.lng ?? b?._southWest?.lng ?? -180);
@@ -115,7 +115,7 @@ function _getBoundsEdges(b) {
 function _lngSpan(west, east) {
     let span = east - west;
     if (span < 0)
-        span += 360; // cruzando antimeridiano
+        span += 360; // crossing the antimeridian
     return span;
 }
 function _mapSizePx() {
@@ -132,7 +132,7 @@ function _mapSizePx() {
     };
 }
 
-// Viewport width/height (MapLibre o Leaflet)
+// Viewport width/height (MapLibre or Leaflet)
 function _getViewportWH() {
     if (map?._ml?.getContainer) {
         const c = map._ml.getContainer();
@@ -148,7 +148,7 @@ function _getViewportWH() {
     };
 }
 
-// Clampa el padding derecho (que nunca “coma” todo el mapa)
+// Clamp the right padding (so it never "eats" the whole map)
 function _safeRight(extraRight, {
     desktopOnly = true
 } = {}) {
@@ -158,11 +158,11 @@ function _safeRight(extraRight, {
     });
     if (desktopOnly && isMobile)
         return 0;
-    // deja siempre al menos 48px de área visible
+    // always leave at least 48px of visible area
     return Math.max(0, Math.min(right, Math.max(0, w - 48)));
 }
 
-// Target (x,y) del “centro visible” considerando panel y top/bottom fijos
+// Target (x,y) of the "visible center", accounting for the panel and fixed top/bottom
 function _visibleTargetXY({
     extraRight = 16,
     desktopOnly = true,
@@ -185,9 +185,9 @@ function _visibleTargetXY({
 }
 
 /**
- * Desplaza el centro “pxRight” píxeles a la DERECHA (equivalente a panBy([pxRight,0])).
- * Si existe Leaflet panBy, lo usa. Si no, aproxima con un cambio de long. en función de bounds y ancho.
- * (Queda como fallback/utility por si lo necesitas en otras partes.)
+ * Shifts the center "pxRight" pixels to the RIGHT (equivalent to panBy([pxRight,0])).
+ * Uses Leaflet panBy if available. Otherwise approximates with a longitude change based on bounds and width.
+ * (Kept as a fallback/utility in case it is needed elsewhere.)
  */
 function _shiftCenterByPixels(pxRight, {
     animate = false
@@ -195,7 +195,7 @@ function _shiftCenterByPixels(pxRight, {
     if (!map || !pxRight)
         return;
 
-    // Leaflet: usa panBy si existe
+    // Leaflet: use panBy if available
     if (typeof map.panBy === 'function') {
         try {
             map.panBy([pxRight, 0], {
@@ -205,7 +205,7 @@ function _shiftCenterByPixels(pxRight, {
         return;
     }
 
-    // Fallback (p.ej. shim 3D): cambiamos el centro en long. equivalente a esos píxeles
+    // Fallback (e.g. 3D shim): shift the center in longitude equivalent to those pixels
     try {
         const bounds = map.getBounds?.();
         const center = map.getCenter?.();
@@ -231,20 +231,20 @@ function _shiftCenterByPixels(pxRight, {
 }
 
 // =====================
-// Focus de punto con hueco a la derecha (desktop)
+// Point focus with a right-side gap (desktop)
 // =====================
 
 /**
- * Centra un punto dejando hueco a la derecha SOLO en desktop.
- * En móvil se comporta como “siempre”: sin margen extra.
+ * Centers a point, leaving a right-side gap on desktop ONLY.
+ * On mobile it behaves as "always": no extra margin.
  */
 export function focusPoint(point, {
     zoom = null,
     animate = false,
     extraRight = 16,
     desktopOnly = true,
-    baseTop = 0, // si tienes barra superior fija, pon su alto aquí
-    baseBottom = 0 // idem para un footer fijo
+    baseTop = 0, // if you have a fixed top bar, put its height here
+    baseBottom = 0 // same for a fixed footer
 } = {}) {
     if (!map)
         return;
@@ -255,7 +255,7 @@ export function focusPoint(point, {
     }
      : point;
 
-    // Calcula el nuevo centro exacto en ambos motores
+    // Compute the exact new center for both engines
     function computeNewCenter() {
         const { targetX, targetY } = _visibleTargetXY({
             extraRight,
@@ -307,7 +307,7 @@ export function focusPoint(point, {
         };
     }
 
-    // Aplica el centro (según plataforma)
+    // Apply the center (per platform)
     function applyCenter(center, z, anim) {
         if (map._ml) {
             map._ml.easeTo({
@@ -316,7 +316,7 @@ export function focusPoint(point, {
                 duration: anim ? 300 : 0
             });
         } else {
-            // Leaflet espera [lat, lng]
+            // Leaflet expects [lat, lng]
             map.setView?.({
                 lat: center[1],
                 lng: center[0]
@@ -326,13 +326,13 @@ export function focusPoint(point, {
         }
     }
 
-    // 1) primer pase
+    // 1) first pass
     const pass1 = computeNewCenter();
     applyCenter(pass1.center, pass1.zoom, animate);
 
-    // 2) reajustes post-layout (por si cambia el ancho del panel)
+    // 2) post-layout re-adjustments (in case the panel width changes)
     let attempts = 2;
-    const EPS = 1; // píxeles
+    const EPS = 1; // pixels
     const reAdjust = () => {
         if (attempts-- <= 0)
             return;
@@ -349,15 +349,15 @@ export function focusPoint(point, {
 }
 
 // =====================
-// fitBounds con padding asimétrico seguro
+// fitBounds with safe asymmetric padding
 // =====================
 
-// Extractor robusto de SW/NE (no cae a defaults del mundo)
+// Robust SW/NE extractor (does not fall back to world defaults)
 function _extractSWNE(b) {
     if (!b)
         return null;
 
-    // 1) APIs típicas
+    // 1) typical APIs
     if (typeof b.getSouthWest === 'function' && typeof b.getNorthEast === 'function') {
         const sw = b.getSouthWest(),
         ne = b.getNorthEast();
@@ -444,22 +444,22 @@ function _extractSWNE(b) {
         }
     }
 
-    return null; // <- mejor no hacer nada que “saltar” al mundo
+    return null; // <- better to do nothing than to "jump" to the whole world
 }
 
 /**
- * Ajusta bounds dejando margen a la derecha SOLO en desktop.
- * En móvil usa el padding simétrico normal (right se clampa automáticamente).
+ * Fits bounds, leaving a right-side margin on desktop ONLY.
+ * On mobile it uses normal symmetric padding (right is clamped automatically).
  */
 export function fitBoundsSafe(
     bounds, {
     animate = false,
-    base = 24, // margen estándar (px) donde no hay panel
-    extraRight = 16, // aire extra a sumar al ancho del panel
+    base = 24, // standard margin (px) where there is no panel
+    extraRight = 16, // extra room to add to the panel width
     desktopOnly = true,
-    baseTop = 0, // si tienes header fijo
-    baseBottom = 0, // si tienes footer fijo
-    refitAttempts = 2, // reintentos post-layout
+    baseTop = 0, // if you have a fixed header
+    baseBottom = 0, // if you have a fixed footer
+    refitAttempts = 2, // post-layout retries
 } = {}) {
     if (!map)
         return;
@@ -472,7 +472,7 @@ export function fitBoundsSafe(
             baseBottom
         });
         void targetX;
-        void targetY; // (solo informativo; pads usan right/top/bottom)
+        void targetY; // (informational only; pads use right/top/bottom)
 
         const leftPad = base;
         const rightPad = base + right;
@@ -498,7 +498,7 @@ export function fitBoundsSafe(
                 const bearing = ml.getBearing?.() ?? 0;
                 const pitch = ml.getPitch?.() ?? 0;
 
-                // 1) Calcular encuadre sin perspectiva (pitch 0) para un zoom/centro "conservador"
+                // 1) Compute framing without perspective (pitch 0) for a "conservative" zoom/center
                 if (typeof ml.cameraForBounds === 'function') {
                     const cam = ml.cameraForBounds(bb, {
                         padding,
@@ -509,7 +509,7 @@ export function fitBoundsSafe(
                         center: cam.center,
                         zoom: cam.zoom,
                         bearing,
-                        pitch, // restauramos el pitch real
+                        pitch, // restore the real pitch
                         duration: animate ? 300 : 0
                     });
                 } else {
@@ -519,18 +519,18 @@ export function fitBoundsSafe(
                     });
                 }
 
-                // 2) Post-ajuste por píxeles: asegurar que extremos caben con paddings reales
+                // 2) Pixel post-adjustment: ensure the edges fit with the real paddings
                 const fixEdges = (tries = 3) => {
                     const c = ml.getContainer?.();
                     const w = c?.clientWidth || 0;
                     if (!w)
                         return true;
 
-                    const guard = 12; // pequeño margen extra para icono (~48px)
+                    const guard = 12; // small extra margin for the icon (~48px)
                     const leftLimit = leftPad + guard;
                     const rightLimit = w - (rightPad + guard);
 
-                    // usa las 4 esquinas del bounds (cubre 2 puntos a izq/der)
+                    // use the 4 corners of the bounds (covers 2 points left/right)
                     const pts = [
                         [swne.sw.lng, swne.sw.lat],
                         [swne.ne.lng, swne.ne.lat],
@@ -551,26 +551,26 @@ export function fitBoundsSafe(
                     if (!isFinite(minX) || !isFinite(maxX))
                         return true;
 
-                    // Errores (positivos = fuera)
-                    const leftErr = Math.max(0, leftLimit - minX); // demasiado a la IZQUIERDA
-                    const rightErr = Math.max(0, maxX - rightLimit); // demasiado a la DERECHA
+                    // Errors (positive = outside)
+                    const leftErr = Math.max(0, leftLimit - minX); // too far LEFT
+                    const rightErr = Math.max(0, maxX - rightLimit); // too far RIGHT
 
                     if (leftErr === 0 && rightErr === 0)
                         return true;
 
                     if (leftErr > 0 && rightErr > 0) {
-                        // ambos fuera -> un pelín de zoom out y reintento
+                        // both outside -> a touch of zoom-out and retry
                         ml.easeTo({
                             zoom: ml.getZoom() - 0.22,
                             duration: animate ? 180 : 0
                         });
                     } else if (leftErr > 0) {
-                        // mover contenido a la DERECHA en pantalla => panear a la IZQUIERDA (dx negativo)
+                        // move content RIGHT on screen => pan LEFT (negative dx)
                         ml.panBy([-leftErr, 0], {
                             duration: animate ? 160 : 0
                         });
                     } else if (rightErr > 0) {
-                        // mover contenido a la IZQUIERDA en pantalla => panear a la DERECHA (dx positivo)
+                        // move content LEFT on screen => pan RIGHT (positive dx)
                         ml.panBy([rightErr, 0], {
                             duration: animate ? 160 : 0
                         });
@@ -613,7 +613,7 @@ export function fitBoundsSafe(
     if (!ok)
         return;
 
-    // Refit en 1–2 frames por si el panel cambia de ancho tras abrirse
+    // Refit in 1-2 frames in case the panel width changes after opening
     let attempts = refitAttempts;
     const raf = () => {
         if (attempts-- <= 0)

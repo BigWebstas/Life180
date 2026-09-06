@@ -71,9 +71,9 @@ export function buildKmlPositionsOnly(positions, options = {}) {
     const { stopIconHref, includeRoute = true,
     routeColor = 'ff0000ff',
     routeWidth = 6,
-    describeStop, nameStop, // ⬇️ añade estos dos con defaults
+    describeStop, nameStop, // add these two with defaults
     unitLabel = 'mph',
-    formatLocal, // si no se pasa, se usará ISO
+    formatLocal, // if not passed, ISO is used
     batteryLabel = 'Battery',
      } = options;
 
@@ -127,7 +127,7 @@ export function buildKmlPositionsOnly(positions, options = {}) {
         const name = nameStop ? nameStop(p) : defaultName;
         const batteryPct = Number.isFinite(p?.battery) ? Math.round(p.battery) : null;
 
-        // Lo que se ve en la columna izquierda (hasta 4 líneas)
+        // What is shown in the left column (up to 4 lines)
         const bullet = '•';
         const zone = (p?.zone || '').trim();
         const address = (p?.address || '').trim();
@@ -135,7 +135,7 @@ export function buildKmlPositionsOnly(positions, options = {}) {
         const battLn = (batteryPct != null) ? `${batteryLabel}: ${batteryPct}%` : '';
 
 		const items = [zone, speedLn, battLn, address].filter(Boolean);
-		const snipText = items.map(s => `${bullet} ${s}`).join('\n').trim(); // sin fecha
+		const snipText = items.map(s => `${bullet} ${s}`).join('\n').trim(); // no date
 
         const descHtml = describeStop
              ? describeStop(p)

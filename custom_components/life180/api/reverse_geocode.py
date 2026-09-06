@@ -2,50 +2,51 @@
 """
 Reverse Geocoding endpoint (Nominatim) with:
 - Persistent cache (HA Store) + optional compaction
-- Grid index + bounding-box prefilter + haversine (prefiltro barato y exacto)
-- Entry cap + TTL prune (con "hot map" para mantener vivas entradas REVISITADAS sin reescribir el JSON grande)
-- Hysteresis cap (cuando supera 10k, baja hasta 8k de una vez)
-- Global rate limit (con pequeño jitter)
-- Coalesced saves (async_delay_save) para reducir I/O
-- Concurrency de-dup por celda
-- Rounding de coordenadas para mejorar hit-rate
-- Nominatim 429 y 5xx (Retry-After) + email opcional
-- Force-flush intervals (cache + hot_map) para no aplazar indefinidamente con tráfico continuo
-- Flush on Home Assistant stop (con try/except)
-- (Extras) Métricas rápidas ?metrics=1, robustez en tareas periódicas y Accept-Language fijo del servidor
-- Backpressure: límite de misses simultáneos + modo nowait
+- Grid index + bounding-box prefilter + haversine (cheap and exact prefilter)
+- Entry cap + TTL prune (with a "hot map" that keeps REVISITED entries alive without rewriting the large JSON)
+- Hysteresis cap (when it exceeds 10k, drop down to 8k at once)
+- Global rate limit (with a small jitter)
+- Coalesced saves (async_delay_save) to reduce I/O
+- Per-cell concurrency de-dup
+- Coordinate rounding to improve the hit rate
+- Nominatim 429 and 5xx (Retry-After) + optional email
+- Force-flush intervals (cache + hot_map) so writes are not deferred forever under continuous traffic
+- Flush on Home Assistant stop (with try/except)
+- (Extras) Quick metrics ?metrics=1, robust periodic tasks, and a fixed server Accept-Language
+- Backpressure: cap on concurrent misses + nowait mode
 
-Mejoras conservadoras y robustez:
-- Parser de float tolerante a coma decimal
-- _build_accept_lang(): construcción segura de Accept-Language
-- Guardas ante Content-Type no JSON, JSON inválido y payloads enormes
-- Métrica rl_age y backoff_remaining
-- Rechazo explícito de NaN/Inf en lat/lon
-- Header Accept: application/json
-- Lock de datos para mutaciones atómicas (cache/index/hot_map/neg_cache/inflight)
-- Negative-cache con expiración absoluta respetando Retry-After
-- Cache vinculada al idioma del servidor (se guarda `lang` y el lookup filtra por idioma)
-- Respuesta incluye query_lat/query_lon
-- Backoff global cuando hay 429 y 5xx
-- `?force=1` (omite caché) y `?zoom=` (10..18) para la consulta
-- Helpers para ETA de cola, manejo de negative cache y rate-limit sin bloquear E/S
+Conservative improvements and robustness:
+- Float parser tolerant of a decimal comma
+- _build_accept_lang(): safe Accept-Language construction
+- Guards against non-JSON Content-Type, invalid JSON, and huge payloads
+- rl_age and backoff_remaining metrics
+- Explicit rejection of NaN/Inf in lat/lon
+- Accept: application/json header
+- Data lock for atomic mutations (cache/index/hot_map/neg_cache/inflight)
+- Negative cache with absolute expiry, honoring Retry-After
+- Cache bound to the server language (`lang` is stored and the lookup filters by language)
+- Response includes query_lat/query_lon
+- Global backoff on 429 and 5xx
+- `?force=1` (bypass cache) and `?zoom=` (10..18) for the query
+- Helpers for queue ETA, negative-cache handling, and rate limiting without blocking I/O
 
-Simplificaciones/ajustes aplicados:
-- Rejilla fija por DECIMALS para el índice + caja de prefiltrado basada en radio (evita falsos negativos).
-- Fallback opcional de idioma (desactivable con ?lang_strict=1) y override por ?lang=.
-- Capacidad de sobreescribir parámetros vía opciones del config entry (RL, per-cell, backlog, email).
-- Mapeo de 5xx de upstream a 503 (temporarily_unavailable) más semántico + propagación de Retry-After.
-- Fallback inteligente: prioriza el idioma primario (p. ej. `es`) antes de aceptar cualquier idioma.
+Simplifications/adjustments applied:
+- Fixed DECIMALS grid for the index + radius-based prefilter box (avoids false negatives).
+- Optional language fallback (disable with ?lang_strict=1) and override via ?lang=.
+- Ability to override parameters via config entry options (RL, per-cell, backlog, email).
+- Map upstream 5xx to a more semantic 503 (temporarily_unavailable) + propagate Retry-After.
+- Smart fallback: prefer the primary language (e.g. `es`) before accepting any language.
 
 
-Añadidos en esta versión:
-- (Nuevo) Reset de estado/cachés: `?reset=cache|hot|neg|backoff|metrics|all` (sólo admin).
-- (Nuevo) Coalescing por posición: de-dup de concurrencia **por celda** (ignora idioma) para que si llega una
-  dirección de Nominatim y hay peticiones esperando la misma posición, **todas reciban esa respuesta** sin
-  lanzar nuevas peticiones.
-- (Nuevo) AUTO-NOWAIT: si hay backlog y la ETA estimada supera un umbral (p. ej. 2s), respondemos 202 automáticamente
-  con `retry_after`/`X-Queue-ETA`/`X-Pending-Misses` arrancando la tarea en background antes de devolver 202.
-- (Nuevo) Backpressure duro: si la cola supera el máximo configurado, respondemos `503 busy` con `retry_after`.
+Added in this version:
+- (New) State/cache reset: `?reset=cache|hot|neg|backoff|metrics|all` (admin only).
+- (New) Per-position coalescing: **per-cell** concurrency de-dup (ignores language) so that when a
+  Nominatim address arrives and requests are waiting on the same position, **all of them get that
+  response** without firing new requests.
+- (New) AUTO-NOWAIT: if there is a backlog and the estimated ETA exceeds a threshold (e.g. 2s), respond
+  202 automatically with `retry_after`/`X-Queue-ETA`/`X-Pending-Misses`, starting the task in the
+  background before returning 202.
+- (New) Hard backpressure: if the queue exceeds the configured maximum, respond `503 busy` with `retry_after`.
 """
 from __future__ import annotations
 
@@ -76,9 +77,9 @@ DOMAIN = __package__.split(".")[-2]
 
 # --- Logger / timeouts ---
 _LOGGER = logging.getLogger(__name__)
-NOMINATIM_TIMEOUT = 15  # seg
+NOMINATIM_TIMEOUT = 15  # sec
 NOMINATIM_MAX_BYTES = 2_000_000  # ~2MB
-LOG_SAMPLE_RATE = 0.1  # 10% logs no críticos
+LOG_SAMPLE_RATE = 0.1  # 10% of non-critical logs
 
 # --- Config (defaults) ---
 CACHE_KEY = "reverse_geocode_cache"
@@ -122,7 +123,7 @@ COMPACT_ADDRESS = True
 
 INFLIGHT_KEY = "reverse_geocode_inflight"
 
-# Métricas simples
+# Simple metrics
 MET_HITS = "rg_hits"
 MET_MISS = "rg_miss"
 MET_HIT_DIST_SUM = "rg_hit_dist_sum"
@@ -151,7 +152,7 @@ CFG_PER_CELL_MAX = "reverse_geocode_cfg_per_cell_max"
 CFG_MAX_PENDING_MISSES = "reverse_geocode_cfg_max_pending_misses"
 CFG_NOM_EMAIL = "reverse_geocode_cfg_nom_email"
 
-# --- Geometría / celdas ---
+# --- Geometry / cells ---
 SCALE = 10 ** DECIMALS
 CELL_DEG = 1.0 / SCALE
 M_PER_DEG_LAT = 111_320.0
@@ -180,7 +181,7 @@ def _utcnow() -> datetime:
 
 
 def _quantize(x: float) -> float:
-    """Cuantiza con formato decimal estable para evitar FP edge-cases."""
+    """Quantize with a stable decimal format to avoid FP edge cases."""
     return float(f"{x:.{DECIMALS}f}")
 
 
@@ -381,7 +382,7 @@ def _rebuild_index(cache: List[Dict[str, Any]]) -> DefaultDict[Tuple[int, int], 
     return idx
 
 
-# --- Negative cache, ETA, flags y errores ---
+# --- Negative cache, ETA, flags and errors ---
 def _neg_retry_after(neg_cache: Dict[Tuple[int, int], datetime], cell_key: Tuple[int, int]) -> int:
     exp = neg_cache.get(cell_key)
     if isinstance(exp, datetime):
@@ -396,7 +397,7 @@ def _neg_set_for(neg_cache: Dict[Tuple[int, int], datetime], cell_key: Tuple[int
 def _queue_eta(inflight: Dict[Any, asyncio.Task], last_mono: float, interval: float) -> Tuple[float, int]:
     backlog_n = sum(1 for t in inflight.values() if not t.done())
     elapsed = max(0.0, time.monotonic() - float(last_mono or 0.0))
-    eta = max(0.0, backlog_n * interval - elapsed)  # segundos (float)
+    eta = max(0.0, backlog_n * interval - elapsed)  # seconds (float)
     return eta, backlog_n
 
 
@@ -425,12 +426,12 @@ def _json_error(
         payload["retry_after"] = int(retry_after)
     if extra:
         payload.update(extra)
-    # Respuesta simple, sin cabeceras añadidas 
+    # Simple response, no extra headers
     return view.json(payload, status_code=status)
 
 
 def _json_ok(view: HomeAssistantView, payload: Dict[str, Any], status_code: int = 200):
-    # Respuesta simple, sin cabeceras añadidas 
+    # Simple response, no extra headers
     return view.json(payload, status_code=status_code)
 
 
@@ -727,13 +728,13 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
         Query params:
           - lat (float)
           - lon (float)
-          - nowait=1 (opcional) -> no encola misses; responde 202 con retry_after (arranca tarea)
-          - force=1 (solo admin)
-          - zoom=10..18 (opcional)
-          - lang_strict=1 (opcional)
-          - lang=xx-YY (opcional)
-          - metrics=1 (solo admin)
-          - reset=cache|hot|neg|backoff|metrics|all (solo admin)
+          - nowait=1 (optional) -> does not queue misses; responds 202 with retry_after (starts a task)
+          - force=1 (admin only)
+          - zoom=10..18 (optional)
+          - lang_strict=1 (optional)
+          - lang=xx-YY (optional)
+          - metrics=1 (admin only)
+          - reset=cache|hot|neg|backoff|metrics|all (admin only)
         """
         hass = request.app["hass"]
         await _ensure_structs(hass)
@@ -819,7 +820,7 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
 
             return _json_ok(self, out)
 
-        # Métricas
+        # Metrics
         if qs.get("metrics") == "1":
             if user is None or not user.is_admin:
                 return _json_error(self, 403, "forbidden", lang=accept_lang_param)
@@ -944,23 +945,23 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
                 payload["lang_cached"] = hit["lang"]
             return _json_ok(self, payload)
 
-        # 1.5) MISS → aplicar backoff/negative-cache DESPUÉS de intentar caché
+        # 1.5) MISS -> apply backoff/negative-cache AFTER trying the cache
         neg_cache: Dict[Tuple[int, int], datetime] = dd[NEG_CACHE_KEY]
         cell_key = _cell_of(lat, lon)
 
-        # Backoff global activo
+        # Global backoff active
         backoff_until = dd.get(BACKOFF_UNTIL_KEY)
         if isinstance(backoff_until, datetime) and _utcnow() < backoff_until:
             retry_after = max(1, int((backoff_until - _utcnow()).total_seconds()))
             return _json_error(self, 503, "temporarily_unavailable", retry_after, lang=accept_lang_param)
 
-        # Negative cache por celda
+        # Per-cell negative cache
         retry = _neg_retry_after(neg_cache, cell_key)
         if retry > 0:
             return _json_error(self, 503, "temporarily_unavailable", retry, lang=accept_lang_param)
 
 
-        # 2) MISS → mantenimiento básico
+        # 2) MISS -> basic maintenance
         nowait = qs.get("nowait") == "1"
         inflight: Dict[Any, asyncio.Task] = dd.setdefault(INFLIGHT_KEY, {})
         inflight_key = cell_key
@@ -982,7 +983,7 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
                 dd[HOT_DIRTY_KEY] = True
                 hot_store.async_delay_save(lambda: hot_map, HOT_SAVE_INTERVAL)
 
-        # 3) fetch/cache (definida aquí para cerrar sobre variables)
+        # 3) fetch/cache (defined here to close over local variables)
         async def _do_fetch_and_cache() -> Dict[str, Any]:
             await _rate_limit_wait(dd)
             dd[RL_LAST_TS_KEY] = _utcnow()
@@ -1166,7 +1167,7 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
                 "source_lang": accept_lang_param,
             }
 
-        # 4) Decisiones AUTO-NOWAIT / NOWAIT + backpressure duro
+        # 4) AUTO-NOWAIT / NOWAIT decisions + hard backpressure
         eta, backlog_n = _queue_eta(
             inflight,
             dd.get(RL_LAST_MONO_KEY, 0.0),
@@ -1177,7 +1178,7 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
         if backlog_n >= cfg_max:
             return _json_error(self, 503, "busy", 1, eta=int(eta), pending=backlog_n, lang=accept_lang_param)
 
-        # ¿Ya hay una tarea para esta celda?
+        # Is there already a task for this cell?
         async with data_lock:
             existing = inflight.get(inflight_key)
 
@@ -1198,7 +1199,7 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
             except Exception:
                 pass
             else:
-                # Limpia la entrada inflight si sigue apuntando a esta task
+                # Clear the inflight entry if it still points to this task
                 async with data_lock:
                     if inflight.get(inflight_key) is existing:
                         inflight.pop(inflight_key, None)
@@ -1212,14 +1213,14 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
                     )
                 return _json_ok(self, result)
 
-        # No hay tarea aún → arrancar
+        # No task yet -> start one
         if nowait or eta >= AUTO_NOWAIT_ETA_S:
             async with data_lock:
                 task_name = f"rg_fetch_{cell_key[0]}_{cell_key[1]}_any"
                 task = _create_task(hass, _do_fetch_and_cache(), task_name)
                 inflight[inflight_key] = task
 
-                # cleanup automático
+                # automatic cleanup
                 def _cleanup(_t, k=inflight_key, tsk=task):
                     async def _rm():
                         async with data_lock:
@@ -1231,13 +1232,13 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
             dd[MET_BP_202] = dd.get(MET_BP_202, 0) + 1
             return _json_error(self, 202, "queued", max(1, int(eta)), eta=int(eta), pending=backlog_n, lang=accept_lang_param)
 
-        # Camino síncrono: arrancar y esperar
+        # Synchronous path: start and wait
         async with data_lock:
             task_name = f"rg_fetch_{cell_key[0]}_{cell_key[1]}_any"
             task = _create_task(hass, _do_fetch_and_cache(), task_name)
             inflight[inflight_key] = task
 
-            # cleanup automático por si alguien no alcanza el finally
+            # automatic cleanup in case something misses the finally
             def _cleanup(_t, k=inflight_key, tsk=task):
                 async def _rm():
                     async with data_lock:
@@ -1266,5 +1267,5 @@ class ReverseGeocodeEndpoint(HomeAssistantView):
 
 
 async def async_init_reverse_cache(hass) -> None:
-    """Carga la caché persistida y prepara rate-limit/estructuras al iniciar la integración."""
+    """Load the persisted cache and set up rate limiting/structures when the integration starts."""
     await _ensure_structs(hass)

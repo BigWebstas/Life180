@@ -1,16 +1,16 @@
 //
 // geocode.js
-// Reverse-geocoding con caché LRU, cola (concurrencia limitada) y backoff.
-// Reintenta también cuando 200 viene sin dirección utilizable.
-// Úsalo para convertir (lat,lon,ts) -> address.
+// Reverse-geocoding with an LRU cache, a queue (limited concurrency) and backoff.
+// Also retries when a 200 comes back without a usable address.
+// Use it to convert (lat,lon,ts) -> address.
 //
 
 import { fetchReverseGeocode } from '../ha/fetch.js';
 
 // ---------- Config ----------
-let POS_CACHE_MAX = 400; // caché LRU por uniqueId
-let RG_MAX = 4; // concurrencia máxima
-let MAX_EMPTY_RETRIES = 2; // reintentos extra cuando 200 llega sin address
+let POS_CACHE_MAX = 400; // LRU cache keyed by uniqueId
+let RG_MAX = 4; // max concurrency
+let MAX_EMPTY_RETRIES = 2; // extra retries when a 200 arrives with no address
 
 export function setGeocodeCacheSize(n) {
     POS_CACHE_MAX = Math.max(50, Number(n) || POS_CACHE_MAX);
@@ -23,16 +23,16 @@ export function setGeocodeEmptyRetries(n) {
 }
 
 // ---------- Key helpers ----------
-const DECIMALS = 4; // igual que el backend
+const DECIMALS = 4; // same as the backend
 const posKey = (lat, lon, tsMs) => `${Number(lat).toFixed(DECIMALS)},${Number(lon).toFixed(DECIMALS)},${Number(tsMs)}`;
 const coordKey = (lat, lon) => `${Number(lat).toFixed(DECIMALS)},${Number(lon).toFixed(DECIMALS)}`;
 
 // ---------- Caches ----------
 const posCache = new Map(); // uniqueId -> { key, address }
-const coordAddrCache = new Map(); // "lat,lon" -> address (solo NO vacíos)
+const coordAddrCache = new Map(); // "lat,lon" -> address (non-empty only)
 const coordInFlight = new Map(); // "lat,lon" -> Promise<any>
 
-// ---------- Estado por uniqueId ----------
+// ---------- State per uniqueId ----------
 const wanted = new Map(); // uniqueId -> key
 const inFlight = new Map(); // uniqueId -> key
 const retryCount = new Map(); // uniqueId -> n
@@ -57,7 +57,7 @@ function scheduleRetry(id, baseMs, cb) {
     setTimeout(cb, delay);
 }
 
-// ---------- Mini pool de concurrencia ----------
+// ---------- Mini concurrency pool ----------
 let active = 0, q = [];
 function run(task) {
     return new Promise((res, rej) => {
@@ -82,10 +82,10 @@ function pump() {
 
 // ---------- API ----------
 /**
- * Resuelve dirección para (lat,lon,tsMs) y la entrega a onAddress(address:string).
- * uniqueId: único por “fila lógica”; incluye el timestamp (p.ej. `${rowId}_${tsMs}`).
+ * Resolves the address for (lat,lon,tsMs) and delivers it to onAddress(address:string).
+ * uniqueId: unique per "logical row"; includes the timestamp (e.g. `${rowId}_${tsMs}`).
  */
-// Helper: guarda la dirección en los data- del DOM (si existen esas filas)
+// Helper: store the address in the DOM data- attributes (when those rows exist)
 function persistAddressToDom(uniqueId, addr) {
     try {
         const main = document.querySelector(`tr.pos-main-row[data-entity-id="${uniqueId}"]`);
@@ -96,7 +96,7 @@ function persistAddressToDom(uniqueId, addr) {
         if (addrRow)
             addrRow.dataset.address = addr || '';
     } catch (e) {
-        // ignora errores de DOM
+        // ignore DOM errors
     }
 }
 
@@ -107,7 +107,7 @@ export async function requestAddress(uniqueId, lat, lon, tsMs, onAddress) {
     const key = posKey(lat, lon, tsMs);
     wanted.set(uniqueId, key);
 
-    // caché por uniqueId (válida solo si la key coincide)
+    // cache keyed by uniqueId (valid only when the key matches)
     const hit = posCache.get(uniqueId);
     if (hit?.key === key) {
         const addr = hit.address || '';
@@ -118,7 +118,7 @@ export async function requestAddress(uniqueId, lat, lon, tsMs, onAddress) {
         return;
     }
 
-    // evita duplicados exactos por uniqueId
+    // avoid exact duplicates per uniqueId
     if (inFlight.get(uniqueId) === key)
         return;
     inFlight.set(uniqueId, key);
@@ -135,7 +135,7 @@ export async function requestAddress(uniqueId, lat, lon, tsMs, onAddress) {
     const cKey = coordKey(lat, lon);
 
     try {
-        // Reutiliza dirección por coordenada si ya existe (solo guardamos NO vacíos)
+        // Reuse the per-coordinate address if it already exists (we only store non-empty ones)
         if (coordAddrCache.has(cKey)) {
             const addr = coordAddrCache.get(cKey) || '';
             lruPut(uniqueId, {
@@ -151,13 +151,13 @@ export async function requestAddress(uniqueId, lat, lon, tsMs, onAddress) {
             return;
         }
 
-        // Si hay una petición en marcha para esa coordenada, únete a ella
+        // If there is a request in flight for that coordinate, join it
         if (coordInFlight.has(cKey)) {
             const data = await coordInFlight.get(cKey);
             if (wanted.get(uniqueId) !== key)
                 return;
 
-            // Estados transitorios con Retry-After
+            // Transient states with Retry-After
             if (data?.error === 'queued' && Number.isFinite(data?.retry_after)) {
                 scheduleRetryIfWanted(data.retry_after * 1000);
                 return;
@@ -170,13 +170,13 @@ export async function requestAddress(uniqueId, lat, lon, tsMs, onAddress) {
 
             const addr = (data?.address?.display_name || '').trim();
             if (!addr) {
-                // 200 “vacío”: reintentos controlados por uniqueId
+                // "empty" 200: retries controlled per uniqueId
                 const n = retryCount.get(uniqueId) || 0;
                 if (n < MAX_EMPTY_RETRIES) {
                     scheduleRetryIfWanted(600);
                     return;
                 }
-                // agotados reintentos: entrega vacío sin cachear
+                // retries exhausted: deliver empty without caching
                 onAddress?.('');
                 persistAddressToDom(uniqueId, '');
                 wanted.delete(uniqueId);
@@ -184,7 +184,7 @@ export async function requestAddress(uniqueId, lat, lon, tsMs, onAddress) {
                 return;
             }
 
-            // addr válido
+            // valid addr
             lruPut(uniqueId, {
                 key,
                 address: addr
@@ -196,16 +196,16 @@ export async function requestAddress(uniqueId, lat, lon, tsMs, onAddress) {
             return;
         }
 
-        // Dispara petición con cola de concurrencia y comparte el OBJETO entero
+        // Fire the request through the concurrency queue and share the WHOLE object
         const p = run(() => fetchReverseGeocode(lat, lon));
         coordInFlight.set(cKey, p);
         const data = await p;
 
-        // Puede haber cambiado el deseo mientras tanto
+        // The wanted key may have changed in the meantime
         if (wanted.get(uniqueId) !== key)
             return;
 
-        // Estados transitorios con Retry-After
+        // Transient states with Retry-After
         if (data?.error === 'queued' && Number.isFinite(data?.retry_after)) {
             scheduleRetryIfWanted(data.retry_after * 1000);
             return;
@@ -216,17 +216,17 @@ export async function requestAddress(uniqueId, lat, lon, tsMs, onAddress) {
             return;
         }
 
-        // 200 OK “normal”
+        // "normal" 200 OK
         const addr = (data?.address?.display_name || '').trim();
 
         if (!addr) {
-            // NO cachear vacío y reintentar hasta MAX_EMPTY_RETRIES
+            // do NOT cache empty; retry up to MAX_EMPTY_RETRIES
             const n = retryCount.get(uniqueId) || 0;
             if (n < MAX_EMPTY_RETRIES) {
                 scheduleRetryIfWanted(600);
                 return;
             }
-            // agotados reintentos: entrega vacío sin cachear
+            // retries exhausted: deliver empty without caching
             onAddress?.('');
             persistAddressToDom(uniqueId, '');
             wanted.delete(uniqueId);
@@ -234,7 +234,7 @@ export async function requestAddress(uniqueId, lat, lon, tsMs, onAddress) {
             return;
         }
 
-        // Dirección válida: cachea por coordenada y por uniqueId
+        // Valid address: cache per coordinate and per uniqueId
         coordAddrCache.set(cKey, addr);
         lruPut(uniqueId, {
             key,
@@ -246,7 +246,7 @@ export async function requestAddress(uniqueId, lat, lon, tsMs, onAddress) {
         resetRetry(uniqueId);
 
     } catch (err) {
-        // error de red / HTTP no-2xx: respeta retry_after y códigos transitorios
+        // network / non-2xx HTTP error: honor retry_after and transient codes
         if (wanted.get(uniqueId) === key) {
             const transitory =
                 err?.code === 'temporarily_unavailable' ||

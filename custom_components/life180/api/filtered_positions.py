@@ -25,26 +25,26 @@ _LOGGER = logging.getLogger(__name__)
 MAX_DAYS_FOR_FILTER = 31
 
 # ----------------------------
-# UMBRALES DE FILTRO (ajustables)
+# FILTER THRESHOLDS (adjustable)
 # ----------------------------
-MAX_GPS_ACCURACY_M_FALLBACK = 15.0  # descartar puntos con precisión peor que esto (m)
-MAX_SPEED_KMH_FALLBACK = 150.0      # descartar puntos con salto mayores a este valor
+MAX_GPS_ACCURACY_M_FALLBACK = 15.0  # drop points with accuracy worse than this (m)
+MAX_SPEED_KMH_FALLBACK = 150.0      # drop points whose jump exceeds this value
 
-MIN_DISTANCE = 0.0                  # distancia mínima entre puntos aceptados (m) 0.0 => desactivado
-MIN_TIME = 0                        # tiempo mínimo entre puntos aceptados (segundos) 0 => desactivado
+MIN_DISTANCE = 0.0                  # minimum distance between accepted points (m); 0.0 => disabled
+MIN_TIME = 0                        # minimum time between accepted points (seconds); 0 => disabled
 
 # ----------------------------
-# PARADAS/JITTER por radio + “gap” al primer punto fuera
-# (Estos valores sirven como *fallback*. En runtime se leen de la config:
-#  stop_radius (m) y stop_time (s). Si stop_radius=0 no se agrupa; si stop_time=0 no se marcan paradas.)
+# STOPS/JITTER by radius + "gap" to the first point outside
+# (These values are *fallbacks*. At runtime they are read from the config:
+#  stop_radius (m) and stop_time (s). stop_radius=0 disables grouping; stop_time=0 disables stop marking.)
 # ----------------------------
-REQUIRE_GOOD_ACC = True             # si True, exige precisión <= MAX_GPS_ACCURACY_M dentro del grupo
+REQUIRE_GOOD_ACC = True             # if True, require accuracy <= MAX_GPS_ACCURACY_M within the group
 STOP_RADIUS_M_FALLBACK = 25.0       # m (float)
 STOP_TIME_S_FALLBACK = 300          # s (int)
-REENTRY_GAP_S_FALLBACK = 60         # s (int) si se sale un momento y se regresa al mismo sitio enseguida cuenta como la misma parada
-OUTSIDE_GAP_S_FALLBACK = 300        # s (int) no se cierra la parada por una salida inferior a este tiempo
+REENTRY_GAP_S_FALLBACK = 60         # s (int) leaving briefly and returning to the same spot counts as the same stop
+OUTSIDE_GAP_S_FALLBACK = 300        # s (int) the stop is not closed for an exit shorter than this
 
-# fallbacks para el Anti-spike de 5 puntos por velocidad relativa (A→B, B→C→D, D→E)
+# fallbacks for the 5-point anti-spike by relative speed (A->B, B->C->D, D->E)
 ANTI_SPIKE_FACTOR_K = 3.0
 ANTI_SPIKE_DETOUR_RATIO = 1.7
 ANTI_SPIKE_RADIUS_FALLBACK = 30.0   # m (float)
@@ -54,7 +54,7 @@ ANTI_SPIKE_TIME_S_FALLBACK = 600    # s (int)
 # Haversine
 # ----------------------------
 def haversine(lat1, lon1, lat2, lon2) -> float:
-    """Calcula la distancia en metros entre dos puntos geográficos."""
+    """Compute the distance in meters between two geographic points."""
     earth_radius_m = 6371000.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
@@ -63,12 +63,12 @@ def haversine(lat1, lon1, lat2, lon2) -> float:
         math.sin(dphi / 2.0) ** 2
         + math.cos(phi1) * math.cos(phi2) * math.sin(dlmb / 2.0) ** 2
     )
-    # clamp por estabilidad numérica
+    # clamp for numerical stability
     a = min(1.0, max(0.0, a))
     return earth_radius_m * (2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a)))
 
 # ----------------------------
-# Helpers para posiciones ya serializadas (dict)
+# Helpers for already-serialized positions (dict)
 # ----------------------------
 def _latlon_from_pos(pos) -> Optional[Tuple[float, float]]:
     try:
@@ -109,7 +109,7 @@ def _as_dt(v):
         return None
 
 # ----------------------------
-# Validaciones de query/persona/fechas
+# Query / person / date validation
 # ----------------------------
 def validate_query_params(query):
     person_id = query.get("person_id")
@@ -134,7 +134,7 @@ def validate_person(hass, person_id):
     ):
         return None, {"error": f"Not valid device_tracker for person {person_id}", "status_code": 400}
 
-    # Verifica que el device_tracker exista realmente
+    # Check that the device_tracker actually exists
     dev_state = hass.states.get(source_device_id)
     if not dev_state:
         return None, {"error": f"Device tracker {source_device_id} not found", "status_code": 404}
@@ -170,27 +170,27 @@ def validate_dates(start_date, end_date):
     return start_utc, end_utc, None
 
 # ----------------------------
-# Filtro base (precisión, velocidad, distancia/tiempo)
+# Base filter (accuracy, speed, distance/time)
 # ----------------------------
 def filter_positions(
     history,
     max_gps_accuracy_m: float,
     max_speed_kmh: float,
     min_distance=MIN_DISTANCE,
-    min_time_s=MIN_TIME,   
+    min_time_s=MIN_TIME,
 ):
     """
-    Filtra estados de device_tracker aplicando:
-      1) Precisión GPS máxima
-      2) Tope de velocidad respecto al último punto aceptado
-      3) Distancia mínima entre puntos aceptados
-      4) Tiempo mínimo entre puntos aceptados (+ deduplicación por segundo)
+    Filter device_tracker states by applying:
+      1) Maximum GPS accuracy
+      2) Speed cap relative to the last accepted point
+      3) Minimum distance between accepted points
+      4) Minimum time between accepted points (+ per-second dedup)
     """
     positions = []
     last_lat, last_lon = None, None
-    last_seen_dt_rounded = None  # último aceptado, redondeado a segundo
-    last_seen_dt_real = None     # último aceptado, datetime real
-    last_position = None         # último candidato, para 'asegurar última posición'
+    last_seen_dt_rounded = None  # last accepted, rounded to the second
+    last_seen_dt_real = None     # last accepted, real datetime
+    last_position = None         # last candidate, for "ensure last position"
 
     for state in history:
         latitude = state.attributes.get("latitude")
@@ -204,7 +204,7 @@ def filter_positions(
         except (TypeError, ValueError):
             continue
 
-        # Construye solo los atributos necesarios (evita copiar todo el dict)
+        # Build only the needed attributes (avoid copying the whole dict)
         attrs = {
             "latitude": latitude,
             "longitude": longitude,
@@ -220,19 +220,19 @@ def filter_positions(
         except Exception:
             pass
 
-        # Precisión si existe (normalizamos a gps_accuracy)
+        # Accuracy if present (normalized to gps_accuracy)
         acc_val = state.attributes.get("gps_accuracy", state.attributes.get("accuracy"))
         if acc_val is not None:
             attrs["gps_accuracy"] = acc_val
 
-        # Batería si existe (primera coincidencia)
+        # Battery if present (first match)
         for _bk in ("battery","battery_level","battery_percent","battery_percentage",
                     "battery_level_pct","batteryLevel"):
             if _bk in state.attributes:
                 attrs[_bk] = state.attributes[_bk]
                 break
 
-       # Normaliza speed: si es numérica y < 0 -> 0.0
+       # Normalize speed: if numeric and < 0 -> 0.0
         try:
             spd = float(attrs.get("speed"))
             if math.isfinite(spd) and spd < 0:
@@ -243,7 +243,7 @@ def filter_positions(
         current_datetime = dt_util.as_utc(state.last_updated)
         current_datetime_rounded = current_datetime.replace(microsecond=0)
 
-        # Precisión GPS
+        # GPS accuracy
         accuracy_raw = attrs.get("gps_accuracy", attrs.get("accuracy"))
         try:
             accuracy_m = float(accuracy_raw) if accuracy_raw is not None else None
@@ -260,11 +260,11 @@ def filter_positions(
         }
         last_position = candidate
 
-        # 1) Precisión
+        # 1) Accuracy
         if accuracy_m is not None and accuracy_m > max_gps_accuracy_m:
             continue
 
-        # 2) Velocidad respecto al último aceptado
+        # 2) Speed relative to the last accepted point
         if last_lat is not None and last_lon is not None and last_seen_dt_real is not None:
             dt_real_s = (current_datetime - last_seen_dt_real).total_seconds()
             if dt_real_s > 0:
@@ -273,7 +273,7 @@ def filter_positions(
                 if speed_kmh > max_speed_kmh:
                     continue
 
-        # 3) Distancia mínima entre aceptados
+        # 3) Minimum distance between accepted points
         if last_lat is not None and last_lon is not None:
             dist_m_for_min = haversine(last_lat, last_lon, latitude, longitude)
         else:
@@ -285,7 +285,7 @@ def filter_positions(
             or (dist_m_for_min is not None and dist_m_for_min > min_distance)
         )
 
-        # 4) Tiempo mínimo + deduplicación por segundo
+        # 4) Minimum time + per-second dedup
         if last_seen_dt_real is not None:
             dt_since_last = (current_datetime - last_seen_dt_real).total_seconds()
         else:
@@ -294,9 +294,9 @@ def filter_positions(
         is_time_ok = (
             last_seen_dt_real is None
             or (
-                # respeta el umbral de tiempo mínimo si está activo
+                # honor the minimum-time threshold when active
                 (min_time_s <= 0 or (dt_since_last is not None and dt_since_last >= float(min_time_s)))
-                # y evita duplicados exactamente en el mismo segundo
+                # and avoid duplicates in the exact same second
                 and (current_datetime_rounded != last_seen_dt_rounded)
             )
         )
@@ -307,7 +307,7 @@ def filter_positions(
             last_seen_dt_rounded = current_datetime_rounded
             last_seen_dt_real = current_datetime
 
-    # Asegurar última posición (respetando filtros y datos mínimos)
+    # Ensure the last position (respecting filters and minimum data)
     if last_position and (not positions or positions[-1]["last_updated"] != last_position["last_updated"]):
         attrs_last = last_position.get("attributes", {})
         accuracy_raw = attrs_last.get("gps_accuracy", attrs_last.get("accuracy"))
@@ -316,7 +316,7 @@ def filter_positions(
         except Exception:
             accuracy_m = None
 
-        # Requiere lat/lon válidos
+        # Requires valid lat/lon
         try:
             lat2 = float(attrs_last.get("latitude"))
             lon2 = float(attrs_last.get("longitude"))
@@ -329,20 +329,20 @@ def filter_positions(
 
         if last_seen_dt_real is not None:
             try:
-                # Usa el datetime guardado; si no estuviera, cae al parseo
+                # Use the stored datetime; fall back to parsing if absent
                 t2 = last_position.get("_last_updated_dt") or dt_util.as_utc(isoparse(last_position["last_updated"]))
 
                 dt_s = (t2 - last_seen_dt_real).total_seconds()
 
-                # tiempo mínimo entre aceptados
+                # minimum time between accepted points
                 if min_time_s > 0 and dt_s is not None and dt_s < float(min_time_s):
                     ok_by_time = False
 
-                # deduplicación exacta por segundo
+                # exact per-second dedup
                 if ok_by_time and t2.replace(microsecond=0) == last_seen_dt_rounded:
                     ok_by_time = False
 
-                # velocidad respecto al último aceptado
+                # speed relative to the last accepted point
                 if dt_s > 0 and latlon_ok and last_lat is not None and last_lon is not None:
                     dist_m = haversine(last_lat, last_lon, lat2, lon2)
                     speed_kmh = (dist_m / dt_s) * 3.6
@@ -364,21 +364,21 @@ def filter_positions(
 
 
 #------------------------------
-# Anti-spike 5 puntos por velocidad relativa (A→B, B→C→D, D→E)
+# 5-point anti-spike by relative speed (A->B, B->C->D, D->E)
 #------------------------------
 def drop_c_spikes_relative_5pt(
     positions: List[dict],
     max_gps_accuracy_m: float = MAX_GPS_ACCURACY_M_FALLBACK,
-    factor_k: float = 3.0,          # v_detour debe superar k·v1 y k·v2
-    min_detour_ratio: float = 1.7,   # (dBC + dCD) / dBD > R => hay ida-vuelta clara
-    max_bd_dt_s: int = 180,          # B→D debe suceder “rápido”
-    min_leg_m: float = 15.0,         # cada pierna (BC y CD) al menos X m
-    require_good_acc: bool = REQUIRE_GOOD_ACC,    
+    factor_k: float = 3.0,          # v_detour must exceed k*v1 and k*v2
+    min_detour_ratio: float = 1.7,   # (dBC + dCD) / dBD > R => clear there-and-back
+    max_bd_dt_s: int = 180,          # B->D must happen "fast"
+    min_leg_m: float = 15.0,         # each leg (BC and CD) at least X m
+    require_good_acc: bool = REQUIRE_GOOD_ACC,
 ) -> List[dict]:
     """
-    Elimina el punto central C cuando el tramo B→C→D es anormalmente rápido
-    frente a las velocidades de contexto A→B y D→E, y además forma un desvío
-    (ida-vuelta) claro en un tiempo corto.
+    Drop the middle point C when the B->C->D leg is abnormally fast compared to
+    the context speeds A->B and D->E, and also forms a clear detour
+    (there-and-back) within a short time.
     """
     n = len(positions)
     if n < 5:
@@ -394,7 +394,7 @@ def drop_c_spikes_relative_5pt(
     for i in range(2, n - 2):
         A, B, C, D, E = positions[i-2], positions[i-1], positions[i], positions[i+1], positions[i+2]
 
-        # Precisión opcional (al menos en C; puedes ampliar a B y D si quieres)
+        # Optional accuracy check (at least on C; extend to B and D if desired)
         if require_good_acc:
             accC = _acc_from_pos(C)
             if accC is not None and accC > max_gps_accuracy_m:
@@ -417,7 +417,7 @@ def drop_c_spikes_relative_5pt(
         dDE = haversine(llD[0], llD[1], llE[0], llE[1])
         dBD = haversine(llB[0], llB[1], llD[0], llD[1])
 
-        # Evitar borrar microvariaciones por debajo de la precisión/ruido
+        # Avoid dropping micro-variations below the accuracy/noise floor
         if dBC < min_leg_m or dCD < min_leg_m:
             continue
 
@@ -427,10 +427,10 @@ def drop_c_spikes_relative_5pt(
 
         detour_ratio = (dBC + dCD) / max(dBD, eps_d)
 
-        # Condición principal: v_detour mucho mayor que velocidades “de contexto”
-        # y además desvío geométrico claro.
+        # Main condition: v_detour much larger than the "context" speeds
+        # plus a clear geometric detour.
         if (v_detour > factor_k * max(v1, v2, eps_v)) and (detour_ratio > min_detour_ratio):
-            # Marca C para borrado
+            # Mark C for removal
             # _LOGGER.debug("drop_c_spikes_relative_5pt: drop C idx=%d v_detour=%.2f v1=%.2f v2=%.2f ratio=%.2f", i, v_detour, v1, v2, detour_ratio)
             drop_idx.add(i)
 
@@ -441,7 +441,7 @@ def drop_c_spikes_relative_5pt(
     return out
 
 # ----------------------------
-# Stops + colapso de jitter (unificado)
+# Stops + jitter collapse (unified)
 # ----------------------------
 def keep_first_stop_in_same_radius(
     positions: List[dict],
@@ -468,25 +468,25 @@ def keep_first_stop_in_same_radius(
                     gap_s = (t_start_cur - t_leave_prev).total_seconds() if (t_leave_prev and t_start_cur) else None
 
                     if gap_s is None or gap_s < float(reentry_gap_s):
-                        # --- FUSIÓN: extender la parada anterior con los tiempos de la actual ---
-                        # stop_end: máximo de ambos
+                        # --- MERGE: extend the previous stop with the current one's times ---
+                        # stop_end: max of both
                         t_end_prev = _as_dt(prev_stop.get("stop_end") or prev_stop.get("last_updated"))
                         t_end_cur  = _as_dt(pos.get("stop_end") or pos.get("last_updated"))
                         if t_end_prev and t_end_cur and t_end_cur > t_end_prev:
                             prev_stop["stop_end"] = t_end_cur.isoformat()
 
-                        # stop_leave: máximo de ambos
+                        # stop_leave: max of both
                         t_leave_cur = _as_dt(pos.get("stop_leave") or pos.get("stop_end") or pos.get("last_updated"))
                         if t_leave_prev and t_leave_cur and t_leave_cur > t_leave_prev:
                             prev_stop["stop_leave"] = t_leave_cur.isoformat()
 
-                        # Recalcular duración desde su stop_start original
+                        # Recompute duration from its original stop_start
                         t_start_prev = _as_dt(prev_stop.get("stop_start") or prev_stop.get("last_updated"))
                         t_leave_new  = _as_dt(prev_stop.get("stop_leave") or prev_stop.get("stop_end") or prev_stop.get("last_updated"))
                         if t_start_prev and t_leave_new and t_leave_new >= t_start_prev:
                             prev_stop["stop_duration_s"] = int((t_leave_new - t_start_prev).total_seconds())
 
-                        keep = False  # descartamos 'pos' porque ya fue fusionada
+                        keep = False  # drop 'pos' since it was merged
 
         if keep:
             out.append(pos)
@@ -515,9 +515,9 @@ def annotate_stops_and_collapse(
     require_good_acc: bool = REQUIRE_GOOD_ACC,    
 ) -> List[dict]:
     """
-    Detección de paradas por radio + cálculo del dwell hasta el primer punto FUERA.
-    Si no es parada (dwell < stop_time_s), NO se colapsa el grupo.
-    Sin 'fallback' de gap: el dwell usa directamente t_next (si existe).
+    Radius-based stop detection + dwell computed up to the first point OUTSIDE.
+    If it is not a stop (dwell < stop_time_s), the group is NOT collapsed.
+    No gap fallback: the dwell uses t_next directly (when it exists).
     """
     n = len(positions)
     if n == 0 or stop_radius_m <= 0:
@@ -526,7 +526,7 @@ def annotate_stops_and_collapse(
     if stop_time_s <= 0:
         return positions
 
-    # limpiar marcas previas
+    # clear previous marks
     for p in positions:
         p["stop"] = False
         p.pop("stop_start", None)
@@ -565,7 +565,7 @@ def annotate_stops_and_collapse(
             i += 1
             continue
 
-        # Grupo por radio con centroide incremental
+        # Group by radius with an incremental centroid
         c_lat, c_lon = anchor
         count = 1
         t_start = t(i)
@@ -574,9 +574,9 @@ def annotate_stops_and_collapse(
 
         def close_group(t_next):
             """
-            Cierra el grupo actual calculando el dwell desde t_start hasta:
-              - t_next, si existe y es el primer punto fuera del radio
-              - t_last_in, si no hay siguiente (fin de lista)
+            Close the current group, computing the dwell from t_start to:
+              - t_next, if it exists and is the first point outside the radius
+              - t_last_in, if there is no next point (end of list)
             """
             t_last_in = t(last_in) or t_start
             leave_dt = t_next if t_next else t_last_in
@@ -585,7 +585,7 @@ def annotate_stops_and_collapse(
             if dwell_s >= stop_time_s:
                 rep = positions[i].copy()
                 attrs_src = positions[i].get("attributes", {})
-                rep["attributes"] = dict(attrs_src)  # <- copia del dict para no mutar el original
+                rep["attributes"] = dict(attrs_src)  # <- copy the dict so the original is not mutated
                 rep["stop"] = True
                 rep["stop_start"] = t_start.isoformat() if t_start else None
                 rep["stop_end"] = t_last_in.isoformat() if t_last_in else None
@@ -593,38 +593,38 @@ def annotate_stops_and_collapse(
                 rep["stop_duration_s"] = dwell_s
                 rep["stop_center_lat"] = c_lat
                 rep["stop_center_lon"] = c_lon
-                # coords visibles al centroide
+                # visible coords set to the centroid
                 rep["attributes"]["latitude"] = c_lat
-                rep["attributes"]["longitude"] = c_lon   
+                rep["attributes"]["longitude"] = c_lon
                 rep["attributes"]["speed"] = 0.0
-                
+
                 out.append(rep)
             else:
-                # NO colapsar: conservar puntos originales "dentro"
+                # do NOT collapse: keep the original "inside" points
                 out.extend(positions[i:last_in + 1])
 
         while j + 1 < n:
             t_next = t(j + 1)
             nxt_ll = latlon(j + 1)
 
-            # Siguiente inválido o mala precisión -> ignorar y seguir
+            # Next point invalid or poor accuracy -> ignore and continue
             if (nxt_ll is None) or (not acc_ok(j + 1)):
                 j += 1
                 continue
 
-            # Distancia al centroide
+            # Distance to the centroid
             dist_to_center = haversine(c_lat, c_lon, nxt_ll[0], nxt_ll[1])
 
             if dist_to_center <= stop_radius_m:
                 j += 1
                 count += 1
                 last_in = j
-                # actualizar centroide incremental
+                # update incremental centroid
                 c_lat = (c_lat * (count - 1) + nxt_ll[0]) / count
                 c_lon = (c_lon * (count - 1) + nxt_ll[1]) / count
                 continue
 
-            # Siguiente está FUERA del radio -> comprobar si la salida persiste al menos outside_gap_s
+            # Next point is OUTSIDE the radius -> check whether the exit persists at least outside_gap_s
             persist_until = t_next + timedelta(seconds=int(outside_gap_s))
             k = j + 1
             returned_inside = False
@@ -643,34 +643,34 @@ def annotate_stops_and_collapse(
                 k += 1
 
             if returned_inside:
-                # Ignorar la mini-excursión: continúa el grupo desde el retorno
+                # Ignore the mini-excursion: the group continues from the return
                 j = k
                 count += 1
                 last_in = j
-                # (opcional) actualiza centroide con el punto de retorno
+                # (optional) update the centroid with the return point
                 if ret_ll:
                     c_lat = (c_lat * (count - 1) + ret_ll[0]) / count
                     c_lon = (c_lon * (count - 1) + ret_ll[1]) / count
                 continue
 
-            # Si no volvió dentro del margen, sí cerramos
+            # If it did not return within the margin, close the group
             close_group(t_next)
             i = j + 1
             break
 
         else:
-            # Fin de lista -> cerrar sin t_next (leave_dt = t_last_in)
+            # End of list -> close without t_next (leave_dt = t_last_in)
             close_group(None)
             i = last_in + 1
 
     return keep_first_stop_in_same_radius(out, same_radius_m=stop_radius_m, reentry_gap_s=reentry_gap_s)
 
 # --------------------------------------------
-# ESTADISTICAS
+# STATISTICS
 # --------------------------------------------
-STEPS = 32  # muestreo base por tramo para refinar zonas
+STEPS = 32  # base per-segment sampling for zone refinement
 
-# --- utilidades de conversión aprox. m -> grados ---
+# --- approximate m -> degrees conversion helpers ---
 def _deg_lat(m: float) -> float:
     return m / 111_320.0
 
@@ -680,9 +680,9 @@ def _deg_lon(m: float, lat: float) -> float:
         return m / 111_320.0
     return m / denom
 
-# --- utilidades zonas ---
+# --- zone helpers ---
 def _all_zones(hass):
-    """Lee zonas HA. (Colores ignorados intencionadamente en backend)."""
+    """Read HA zones. (Colors are intentionally ignored in the backend.)"""
 
     zones = []
     for st in hass.states.async_all("zone"):
@@ -715,7 +715,7 @@ def _all_zones(hass):
 
 
 def _zone_of(lat, lon, zones):
-    """Devuelve el nombre de la zona que contiene el punto, o '' si ninguna. Usa bbox previa para minimizar Haversine."""
+    """Return the name of the zone containing the point, or '' if none. Uses a prior bbox check to minimize Haversine calls."""
     if not zones:
         return ''
     best = None
@@ -751,8 +751,8 @@ def _refine_boundary(lat1, lon1, lat2, lon2, t0, t1, zoneA, zones, max_iter=25, 
     return (lo + hi) / 2.0
 
 def _split_segment_by_zones(lat1, lon1, lat2, lon2, steps, zones):
-    """Divide el segmento en subtramos homogéneos por zona. Ajusta steps de forma adaptativa."""
-    # steps adaptativos (~cada 10 m, cap 4..64)
+    """Split the segment into zone-homogeneous sub-segments. Adapts steps adaptively."""
+    # adaptive steps (~every 10 m, capped 4..64)
     seg_len_m = haversine(lat1, lon1, lat2, lon2)
     steps_local = max(4, min(64, int(max(1.0, seg_len_m / 10.0))))
     steps = max(steps, steps_local)
@@ -774,12 +774,12 @@ def _split_segment_by_zones(lat1, lon1, lat2, lon2, steps, zones):
         segs.append({"zone": prev_zone, "t0": prev_t, "t1": 1.0})
     return segs
 
-# --- resumen global ---
+# --- global summary ---
 def _calc_summary(positions):
     """
-    Resumen robusto:
-      - t0 = mínimo entre last_updated y stop_start (si hubiese).
-      - tn = máximo entre last_updated y stop_end.
+    Robust summary:
+      - t0 = min of last_updated and stop_start (when present).
+      - tn = max of last_updated and stop_end.
     """
     def _collect_times_for_start(ps):
         times = []
@@ -818,7 +818,7 @@ def _calc_summary(positions):
     end_candidates   = _collect_times_for_end(positions)
 
     if not start_candidates or not end_candidates:
-        # Fallback coherente si algo raro pasó con fechas
+        # Consistent fallback if something odd happened with the dates
         return {
             "positions_count": len(positions),
             "start_utc": None,
@@ -836,7 +836,7 @@ def _calc_summary(positions):
 
     total_time_s = max(0, int(round((tn - t0).total_seconds())))
 
-    # Distancia (sin cambios)
+    # Distance (unchanged)
     distance_m = 0.0
     for i in range(1, len(positions)):
         a, b = positions[i-1], positions[i]
@@ -852,11 +852,11 @@ def _calc_summary(positions):
         except Exception:
             pass
 
-    # Velocidad máxima desde atributos (m/s)
+    # Max speed from attributes (m/s)
     speeds = []
     for p in positions:
         a = p.get("attributes", {}) or {}
-        v = a.get("speed", a.get("speedMps"))  # fallback a speedMps
+        v = a.get("speed", a.get("speedMps"))  # fall back to speedMps
         try:
             v = float(v)
             if math.isfinite(v) and v >= 0:
@@ -865,9 +865,9 @@ def _calc_summary(positions):
             pass
     max_speed_mps = max(speeds) if speeds else 0.0
 
-    # Velocidad media ponderada por tiempo (solo en movimiento y sin stops)
+    # Time-weighted average speed (only while moving, excluding stops)
     def _eff_seg_times(A, B):
-        """Devuelve (tA, tB) excluyendo tiempo parado en los extremos."""
+        """Return (tA, tB) excluding stopped time at the endpoints."""
         tA = _as_dt(A.get("last_updated"))
         tB = _as_dt(B.get("last_updated"))
         if A.get("stop"):
@@ -882,11 +882,11 @@ def _calc_summary(positions):
         A = positions[i - 1]
         B = positions[i]
 
-        # Omitir segmentos cuyo punto A es una parada
+        # Skip segments whose point A is a stop
         if A.get("stop"):
             continue
 
-        # velocidad en A (si existe y es válida)
+        # speed at A (if present and valid)
         try:
             vA = float(A.get("attributes", {}).get("speed"))
             if not math.isfinite(vA) or vA < 0:
@@ -902,7 +902,7 @@ def _calc_summary(positions):
                 time_total += dt
     average_speed_mps = (time_weighted_sum / time_total) if time_total > 0 else 0.0
 
-    # Paradas (sumar siempre stop_leave - stop_start si existen)
+    # Stops (always sum stop_leave - stop_start when present)
     stops = [p for p in positions if p.get("stop")]
     stopped_time_s = 0
 
@@ -912,13 +912,13 @@ def _calc_summary(positions):
         if t_start and t_leave and t_leave >= t_start:
             stopped_time_s += int((t_leave - t_start).total_seconds())
         elif "stop_duration_s" in p:
-            # Fallback por si faltan marcas explícitas
+            # Fallback in case explicit marks are missing
             try:
                 stopped_time_s += int(round(float(p["stop_duration_s"] or 0)))
             except Exception:
                 pass
 
-    # Fallback adicional si no se sumó nada (p.ej. sin campos de parada)
+    # Extra fallback if nothing was summed (e.g. no stop fields)
     if stopped_time_s == 0:
         for i, p in enumerate(positions[:-1]):
             if p.get("stop"):
@@ -945,9 +945,9 @@ def _calc_summary(positions):
 
 def _count_zone_visits_by_runs(positions, zones):
     """
-    Cuenta 1 visita cada vez que entramos en una zona desde fuera (o desde otra).
-    Varias posiciones seguidas en la misma zona => 1 sola visita.
-    Salgo y reentro => otra visita.
+    Count 1 visit each time we enter a zone from outside (or from another zone).
+    Several consecutive positions in the same zone => a single visit.
+    Leaving and re-entering => another visit.
     """
     visits = {}
     prev_zone = ''
@@ -961,20 +961,20 @@ def _count_zone_visits_by_runs(positions, zones):
         prev_zone = z
     return visits
 
-# --- estadísticas por zona ---
+# --- per-zone statistics ---
 def _calc_zone_stats(positions, zones, expected_total_s=None):
     out = {}
-    
-    # Índice rápido de zonas por nombre para resolver el id
+
+    # Fast index of zones by name to resolve the id
     zones_by_name = {str(z.get("name")): z for z in (zones or [])}
-    
+
     def _ensure(name):
         if name not in out:
             zinfo = zones_by_name.get(name) or {}
             out[name] = {
                 "zone": name,
                 "id": zinfo.get("id"),
-                "time_s": 0.0,     # parado + movimiento
+                "time_s": 0.0,     # stopped + moving
                 "visits": 0,
                 "stops": 0,
                 "distance_m": 0.0
@@ -982,7 +982,7 @@ def _calc_zone_stats(positions, zones, expected_total_s=None):
         return out[name]
 
     def _eff_seg_times(A, B):
-        """Devuelve (tA_eff, tB_eff) excluyendo tiempo parado en los extremos."""
+        """Return (tA_eff, tB_eff) excluding stopped time at the endpoints."""
         tA = _as_dt(A.get("last_updated"))
         tB = _as_dt(B.get("last_updated"))
         if A.get("stop"):
@@ -994,7 +994,7 @@ def _calc_zone_stats(positions, zones, expected_total_s=None):
     if not positions:
         return []
 
-    # 1) Paradas: sumar SOLO aquí el tiempo parado a su zona
+    # 1) Stops: add stopped time to its zone ONLY here
     for p in positions:
         if not p.get("stop"):
             continue
@@ -1012,7 +1012,7 @@ def _calc_zone_stats(positions, zones, expected_total_s=None):
             dur = 0.0
         row["time_s"] += dur
 
-    # 2) Movimiento: repartir SOLO el tiempo en movimiento por zonas
+    # 2) Movement: distribute ONLY the moving time across zones
     for i in range(1, len(positions)):
         A, B = positions[i - 1], positions[i]
         tA, tB = _eff_seg_times(A, B)
@@ -1030,7 +1030,7 @@ def _calc_zone_stats(positions, zones, expected_total_s=None):
         seg_len = haversine(lat1, lon1, lat2, lon2)
 
         if seg_len < 0.5:
-            # Siempre asigna distancia; asigna tiempo solo si dt > 0
+            # Always assign distance; assign time only when dt > 0
             zn = _zone_of(lat1, lon1, zones) or (_zone_of(lat2, lon2, zones) or '')
             row = _ensure(zn)
             if dt > 0:
@@ -1058,7 +1058,7 @@ def _calc_zone_stats(positions, zones, expected_total_s=None):
 
             total_assigned_len += sub_len
 
-        # Residuo de tiempo solo si hay tiempo efectivo
+        # Time residual only when there is effective time
         if dt > 0:
             resid_dt = dt - total_assigned_dt
             if abs(resid_dt) > 1e-6:
@@ -1071,12 +1071,12 @@ def _calc_zone_stats(positions, zones, expected_total_s=None):
             _ensure(zn_last)["distance_m"] += resid_len            
 
 
-    # 3) Visitas por “runs”
+    # 3) Visits by "runs"
     visits_map = _count_zone_visits_by_runs(positions, zones)
     for name, cnt in visits_map.items():
         _ensure(name)["visits"] = int(cnt)
 
-    # 4) Cierre y ajuste global (cuadratura con summary)
+    # 4) Finalize and global adjustment (reconcile with the summary)
     rows = []
     for name, agg in out.items():
         rows.append({
@@ -1092,7 +1092,7 @@ def _calc_zone_stats(positions, zones, expected_total_s=None):
         sum_s = sum(r["time_s"] for r in rows)
         delta = int(expected_total_s) - int(sum_s)
         if delta != 0:
-            # preferimos ajustar a la zona '' (fuera de zonas); si no existe, a la última
+            # prefer to adjust the '' zone (outside any zone); otherwise the last one
             idx = next((i for i, r in enumerate(rows) if r["zone"] == ''), len(rows) - 1)
             rows[idx]["time_s"] = max(0, rows[idx]["time_s"] + delta)
             if abs(delta) > 2:
@@ -1102,15 +1102,15 @@ def _calc_zone_stats(positions, zones, expected_total_s=None):
     return rows
 
 
-# --- payload vacío coherente ---
+# --- consistent empty payload ---
 def _empty_payload():
     return { "positions": [], "summary": _calc_summary([]), "zones": [] }
 
-# --- pipeline pesado fuera del event loop (executor) ---
+# --- heavy pipeline off the event loop (executor) ---
 def _build_payload_offthread(states, *, cfg, zones):
     """
-    Ejecuta todo el pipeline (filtro -> antispike -> paradas -> summary/zonas)
-    en un hilo del executor para no bloquear el event loop.
+    Run the whole pipeline (filter -> anti-spike -> stops -> summary/zones)
+    on an executor thread so the event loop is not blocked.
     """
     positions = filter_positions(
         states,
@@ -1119,7 +1119,7 @@ def _build_payload_offthread(states, *, cfg, zones):
         min_distance=MIN_DISTANCE,
     )
 
-    # Anti-spike relativo 5 puntos (si está activado)
+    # 5-point relative anti-spike (when enabled)
     if cfg["anti_spike_radius"] > 0 and cfg["anti_spike_time"] > 0:
         positions = drop_c_spikes_relative_5pt(
             positions,
@@ -1130,7 +1130,7 @@ def _build_payload_offthread(states, *, cfg, zones):
             max_gps_accuracy_m=cfg["max_gps_accuracy_m"],
         )
 
-    # Paradas (si procede)
+    # Stops (when applicable)
     if cfg["stop_radius_m"] > 0 and cfg["stop_time_s"] > 0:
         positions = annotate_stops_and_collapse(
             positions,
@@ -1145,7 +1145,7 @@ def _build_payload_offthread(states, *, cfg, zones):
     summary = _calc_summary(positions)
     zones_rows = _calc_zone_stats(positions, zones, expected_total_s=summary["total_time_s"])
 
-    # Limpia el campo interno no serializable/innecesario
+    # Drop the internal non-serializable/unneeded field
     try:
         for p in positions:
             p.pop("_last_updated_dt", None)
@@ -1158,21 +1158,20 @@ def _build_payload_offthread(states, *, cfg, zones):
 # Endpoint
 # ----------------------------
 class FilteredPositionsEndpoint(HomeAssistantView):
-    """Obtener posiciones filtradas de un usuario entre fechas (optimizado)"""
+    """Get a user's filtered positions between two dates (optimized)."""
 
     url = "/api/life180/filtered_positions"
     name = "api:life180/filtered_positions"
     requires_auth = True
 
     async def get(self, request):
-        """Devuelve posiciones filtradas de un usuario entre fechas"""
+        """Return a user's filtered positions between two dates."""
 
         hass = request.app["hass"]
 
-        # Por si tu integración lo usa
         only_admin = False
 
-        # valores por defecto (radios float, tiempos int)
+        # default values (radii as float, times as int)
         stop_radius_m: float = float(STOP_RADIUS_M_FALLBACK)
         stop_time_s: int = int(STOP_TIME_S_FALLBACK)
         anti_spike_factor_k: float = float(ANTI_SPIKE_FACTOR_K)
@@ -1189,13 +1188,13 @@ class FilteredPositionsEndpoint(HomeAssistantView):
             entry = entries[0]
             only_admin = entry.options.get("only_admin", entry.data.get("only_admin", False))
 
-            # Los valores se guardan en imperial (pies / mph); aquí se trabaja en métrico.
+            # Values are stored in imperial (feet / mph); this works in metric.
             _cfg = imperial_to_metric({**entry.data, **entry.options})
 
             def _opt(key, default):
                 return _cfg.get(key, default)
 
-            # Lee opciones, saneando
+            # Read options, sanitizing
             try:
                 stop_radius_m = max(0.0, float(_opt("stop_radius", stop_radius_m)))
             except Exception:
@@ -1243,7 +1242,7 @@ class FilteredPositionsEndpoint(HomeAssistantView):
 
         query = request.query
 
-        # Params obligatorios
+        # Required params
         person_id, start_date, end_date, error = validate_query_params(query)
         if error:
             return self.json(error, status_code=error["status_code"])
@@ -1256,7 +1255,7 @@ class FilteredPositionsEndpoint(HomeAssistantView):
         if error:
             return self.json(error, status_code=error["status_code"])
 
-        # --- Lee historial (más directo) ---
+        # --- Read history (more direct) ---
         try:
             rec = get_recorder_instance(hass)
             history = await rec.async_add_executor_job(
@@ -1278,10 +1277,10 @@ class FilteredPositionsEndpoint(HomeAssistantView):
 
         states = history[source_device_id] or []
 
-        # Zonas (leer en el hilo principal)
+        # Zones (read on the main thread)
         zones = _all_zones(hass)
 
-        # Config para el pipeline off-thread
+        # Config for the off-thread pipeline
         cfg = {
             "stop_radius_m": float(stop_radius_m),
             "stop_time_s": int(stop_time_s),
@@ -1295,16 +1294,16 @@ class FilteredPositionsEndpoint(HomeAssistantView):
             "max_speed_kmh": float(max_speed_kmh),
         }
 
-        # Ejecuta todo el pipeline en executor
+        # Run the whole pipeline on an executor
         payload = await hass.async_add_executor_job(
             partial(_build_payload_offthread, states, cfg=cfg, zones=zones)
         )
 
-        #SIN COMPRESION
+        # NO COMPRESSION
         # return self.json(payload)
 
-        #CON COMPRESION
-        # --- Respuesta JSON con compresión gzip (si el cliente lo acepta) ---
+        # WITH COMPRESSION
+        # --- JSON response with gzip compression (when the client accepts it) ---
         raw = json.dumps(payload, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
         accept = (request.headers.get('Accept-Encoding') or '').lower()
 

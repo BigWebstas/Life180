@@ -41,12 +41,12 @@ const lastGeocodeRequests = {}; // { [personId]: {lat, lon, timestamp, address} 
     document.head.appendChild(style);
 })();
 
-// Observer perezoso para las filas de dirección de personas
+// Lazy observer for the person address rows
 let _personsAddrObserver = null;
 function ensurePersonsAddrObserver() {
     if (_personsAddrObserver)
         return _personsAddrObserver;
-    const root = document.querySelector('#users .table-wrapper') || null; // si no existe, usa viewport
+    const root = document.querySelector('#users .table-wrapper') || null; // if absent, use the viewport
     _personsAddrObserver = new IntersectionObserver((entries) => {
         for (const e of entries) {
             if (!e.isIntersecting)
@@ -64,7 +64,7 @@ function ensurePersonsAddrObserver() {
             if (!Number.isFinite(lat) || !Number.isFinite(lon) || !cell)
                 continue;
 
-            // dispara resolución (usa cachés/cola/backoff del módulo común)
+            // trigger resolution (uses the shared module's caches/queue/backoff)
             requestAddress(uniqueId, lat, lon, tsMs, (newAddress) => {
                 lastGeocodeRequests[personId] = {
                     lat,
@@ -170,7 +170,7 @@ export function updatePersonsFilter() {
     fragment.appendChild(defaultOption);
 
     persons
-    .filter(p => Boolean(personsDevicesMap[p.entity_id])) // solo personas con device válido
+    .filter(p => Boolean(personsDevicesMap[p.entity_id])) // only persons with a valid device
     .forEach(person => {
         const option = document.createElement('option');
         option.value = person.entity_id;
@@ -179,7 +179,7 @@ export function updatePersonsFilter() {
         fragment.appendChild(option);
     });
 
-    // Reemplaza todas las opciones de golpe
+    // Replace all options at once
     select.innerHTML = '';
     select.appendChild(fragment);
 
@@ -187,12 +187,12 @@ export function updatePersonsFilter() {
     const prevStillValid = !!(prevSelected && personsDevicesMap[prevSelected]);
 
     if (hasPersons && prevStillValid) {
-        // Mantén la selección previa si sigue siendo válida
+        // Keep the previous selection if it is still valid
         select.value = prevSelected;
     } else {
-        // No hay personas o la selección ha dejado de existir -> fuerza la lógica de "sin usuario"
+        // No persons, or the selection no longer exists -> force the "no user" logic
         select.value = '';
-        // dispara el change para que se ejecute tu listener de personSelect (oculta calendario y export)
+        // fire the change so the personSelect listener runs (hides the calendar and export)
         select.dispatchEvent(new Event('change', {
                 bubbles: true
             }));
@@ -229,7 +229,7 @@ async function updatePersonsDevicesMap() {
         const trackers = person.attributes?.device_trackers;
         let trackerEntityId = null;
 
-        // El primer device_tracker del array
+        // The first device_tracker in the array
         if (Array.isArray(trackers) && typeof trackers[0] === 'string' && trackers[0].trim() !== '') {
             trackerEntityId = trackers[0].trim();
         }
@@ -239,7 +239,7 @@ async function updatePersonsDevicesMap() {
             continue;
         }
 
-        // Asegura lat/lon numéricos y válidos (no rechaza 0,0)
+        // Ensure numeric, valid lat/lon (does not reject 0,0)
         const lat = Number(device.attributes?.latitude);
         const lon = Number(device.attributes?.longitude);
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
@@ -255,14 +255,14 @@ async function updatePersonsDevicesMap() {
 
 export function resolveWithHaUrl(pathLike) {
   if (!pathLike) return "";
-  // Asegura una barra final en la base para que respete el pathname de haUrl
+  // Ensure a trailing slash on the base so it honors the haUrl pathname
   return new URL(pathLike, haUrl + "/").href;
 }
 
 async function updatePersonsMarkers() {
     if (!map.getPane('personsMarkers')) {
         const pane = map.createPane('personsMarkers');
-        pane.style.zIndex = 600; // por encima de circlePane (400)
+        pane.style.zIndex = 600; // above circlePane (400)
         pane.style.pointerEvents = 'none';
     }
 
@@ -344,7 +344,7 @@ async function updatePersonsMarkers() {
 }
 
 export async function handlePersonRowSelection(personId) {
-    // 1) Cambiar a la pestaña "users" antes de tocar el DOM
+    // 1) Switch to the "users" tab before touching the DOM
     const comboSelect = document.getElementById('combo-select');
     const switched = comboSelect && comboSelect.value !== 'users';
     if (switched) {
@@ -352,11 +352,11 @@ export async function handlePersonRowSelection(personId) {
         comboSelect.dispatchEvent(new Event('change', {
                 bubbles: true
             }));
-        // Espera un frame para que el DOM de la tabla se renderice
+        // Wait a frame so the table DOM renders
         await new Promise(r => requestAnimationFrame(r));
     }
 
-    // 2) Asegurar que el tbody existe (intenta dos veces por si aún se monta)
+    // 2) Ensure the tbody exists (try twice in case it is still mounting)
     let personTableBody = document.getElementById('persons-table-body');
     if (!personTableBody) {
         await new Promise(r => requestAnimationFrame(r));
@@ -367,11 +367,11 @@ export async function handlePersonRowSelection(personId) {
         return;
     }
 
-    // 3) Buscar la fila de forma robusta (CSS.escape por si acaso)
+    // 3) Find the row robustly (CSS.escape just in case)
     const safeId = (window.CSS && CSS.escape) ? CSS.escape(personId) : personId.replace(/"/g, '\\"');
     let row = personTableBody.querySelector(`tr[data-person-id="${safeId}"]`);
     if (!row) {
-        // Fallback: búsqueda por dataset (por si hay renders intermedios)
+        // Fallback: search by dataset (in case of intermediate renders)
         row = Array.from(personTableBody.querySelectorAll('tr')).find(r => r.dataset.personId === personId);
     }
     if (!row)
@@ -380,13 +380,13 @@ export async function handlePersonRowSelection(personId) {
     const addressRow = row.nextElementSibling && row.nextElementSibling.classList.contains('person-address-row')
          ? row.nextElementSibling : null;
 
-    // 4) Restaurar tintes de la selección previa y aplicar la nueva selección
+    // 4) Restore the previous selection's tints and apply the new selection
     personTableBody.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
     row.classList.add('selected');
     if (addressRow)
         addressRow.classList.add('selected');
 
-    // 5) Scroll a la vista
+    // 5) Scroll into view
     row.scrollIntoView({
         behavior: 'smooth',
         block: 'center'
@@ -440,7 +440,7 @@ export function updatePersonsTableHeaders() {
 
         const arrow = (sortColumn === columnName) ? (sortAscending ? "▲" : "▼") : "";
 
-        // Etiqueta que se mostrará en el TH
+        // Label to be shown in the TH
         const label =
             columnKey === "speed"
              ? t("mi_per_hour")
@@ -593,12 +593,12 @@ export async function updatePersonsTable() {
             if (row.innerHTML !== newContent)
                 row.innerHTML = newContent;
 
-            // Tinte como en zonas usando clase + CSS var (helper global)
+            // Tint like zones using a class + CSS var (global helper)
             const tint = zoneTintRgba(zone, DEFAULT_ALPHA);
             applyTint(row, tint);
             applyTint(addressRow, tint);
 
-            // Sustituye todo el bloque de "Datos para el observer..."
+            // Replaces the whole "Data for the observer..." block
             if (addressRow) {
                 const td = addressRow.querySelector("td");
                 addressRow.dataset.latitude = Number.isFinite(lat) ? String(lat) : '';
@@ -632,13 +632,13 @@ export async function updatePersonsTable() {
             if (addressRow)
                 addressRow.onclick = selectPerson;
 
-            // Mantener orden (2 filas por persona)
+            // Keep the order (2 rows per person)
             if (tableBody.children[index * 2] !== row) {
                 tableBody.insertBefore(row, tableBody.children[index * 2]);
                 tableBody.insertBefore(addressRow, row.nextSibling);
             }
 
-            // Mantener selección
+            // Keep the selection
             if (personId === selectedPersonId) {
                 row.classList.add("selected");
                 if (addressRow)
@@ -646,7 +646,7 @@ export async function updatePersonsTable() {
             }
         });
 
-        // limpiar filas huérfanas
+        // clean up orphan rows
         Array.from(tableBody.querySelectorAll("tr")).forEach(r => {
             const id = r.dataset.personId;
             if (!sortedPersons.some(p => p.entity_id === id)) {
@@ -668,12 +668,12 @@ export async function updatePersonsTable() {
 }
 
 //
-// Helper para el color de fondo según zona
+// Helper for the background color based on the zone
 //
 
 export function zoneTintRgba(zone, alpha = DEFAULT_ALPHA) {
     if (!zone || !zone.color)
-        return null; // sin color => sin tinte
+        return null; // no color => no tint
     const a = Math.min(1, Math.max(0, Number(alpha) || 0));
     return toRgba(zone.color, a) || zone.color;
 }

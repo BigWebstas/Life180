@@ -1,58 +1,58 @@
-// utils/map3D.js — MapLibre GL (3D) con shim Leaflet COMPLETO (edición de zonas)
-// Claves:
-//  - Compat Leaflet: map.addLayer / map.hasLayer / map.removeLayer
-//  - L.marker: options + flags __ml_type/__marker/__added + cursor:pointer + stopPropagation + togglePopup en click
-//  - L.polyline: options + __ml_id + _ensureAdded() + AUTO-ADD + throttle setData (rAF) + simplificación RDP por zoom
-//                + listeners SIEMPRE + compuerta de click + popup único compartido + autocierre al remove
-//  - L.circle:  options + edición + __ml_id + _ensureAdded() + AUTO-ADD + throttle setData (rAF) + menos vértices según zoom/radio
-//                + selección por menor radio (cola por clic) + popup único compartido + autocierre al remove
-//  - Panes: stub que NO bloquea eventos
-//  - OSM por defecto; Esri como fallback si OSM falla por CORS.
-//  - OpenFreeMap (vector style) incluído como tercera base; reinsertamos overlays tras setStyle().
+// utils/map3D.js - MapLibre GL (3D) with a FULL Leaflet shim (zone editing)
+// Key points:
+//  - Leaflet compat: map.addLayer / map.hasLayer / map.removeLayer
+//  - L.marker: options + flags __ml_type/__marker/__added + cursor:pointer + stopPropagation + togglePopup on click
+//  - L.polyline: options + __ml_id + _ensureAdded() + AUTO-ADD + throttle setData (rAF) + RDP simplification by zoom
+//                + listeners ALWAYS + click gate + single shared popup + auto-close on remove
+//  - L.circle:  options + editing + __ml_id + _ensureAdded() + AUTO-ADD + throttle setData (rAF) + fewer vertices by zoom/radius
+//                + selection by smallest radius (per-click queue) + single shared popup + auto-close on remove
+//  - Panes: stub that does NOT block events
+//  - OSM by default; Esri as a fallback if OSM fails due to CORS.
+//  - OpenFreeMap (vector style) included as a third base; overlays are reinserted after setStyle().
 
 import { loadCSSOnce, loadScriptOnce } from './loader.js';
 import { t } from './i18n.js';
 
 export let map;
 let _ml, _popup, _views = {};
-// NEW: registro global de todos los popups (marcadores y overlays)
+// NEW: global registry of all popups (markers and overlays)
 const _allPopups = new Set();
 let _cooperativeGestures = false;
-// NEW: suprimir efectos secundarios del on('close') del popup cuando lo cerramos programáticamente (p.ej. durante drag)
+// NEW: suppress side effects of the popup's on('close') when we close it programmatically (e.g. during drag)
 let _suppressPopupCloseSideEffects = false;
 
-// Geocoder (control oficial) para mostrar/ocultar e inyectar junto al botón
+// Geocoder (official control) to show/hide and inject next to the button
 let _geocoderCtrl = null, _geocoderEl = null, _searchCtlRef = null;
-// AbortController para evitar carreras al teclear
+// AbortController to avoid races while typing
 let _geocodeAbort = null;
 
-// Escala del mapa (siempre imperial)
+// Map scale (always imperial)
 let _scaleCtrl = null, _lastImperial = null, _unitsPollId = null;
 
-// Listeners globales para poder limpiar
+// Global listeners so we can clean up
 let _onResize = null, _onVis = null;
-// NEW: listener para pausar/reanudar el poll de unidades
+// NEW: listener to pause/resume the units poll
 let _onUnitsVis = null;
 
-// >>> rastreo de origen UI (tabla de zonas) para decidir dónde anclar el popup
+// >>> UI-origin tracking (zones table) to decide where to anchor the popup
 let _onUiPointer = null, _onUiClick = null;
 let _lastUITrigger = {
     src: '',
     ts: 0
 };
 
-// === Límites de zoom (ajusta a tu gusto) ===
+// === Zoom limits (tune to taste) ===
 const ZOOM_LIMITS = {
     MIN: 2,
     MAX: 18
-}; // p.ej. 18
-const OSM_TILE_MAX_Z = 19; // OSM no sirve >19 (400)
+}; // e.g. 18
+const OSM_TILE_MAX_Z = 19; // OSM does not serve >19 (400)
 const clampZoom = (z) => Math.min(Math.max(z ?? 0, ZOOM_LIMITS.MIN), ZOOM_LIMITS.MAX);
 
 function _isInsideZonesTable(node) {
     let el = node;
     while (el && el !== document) {
-        // admite tanto tabla completa como filas del tbody
+        // accepts both the full table and tbody rows
         if (el.id === 'zones-table' || el.id === 'zones-table-body')
             return true;
         if (el.dataset && ('zoneId' in el.dataset))
@@ -82,10 +82,10 @@ const CDN = {
     geocJS: ['./vendor/maplibre-gl-geocoder/maplibre-gl-geocoder.min.js?v=' + v]
 };
 
-// OpenFreeMap (estilo vectorial)
+// OpenFreeMap (vector style)
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
-// Registro de overlays vectoriales (polylines/circles) para reinsertarlos tras setStyle()
+// Registry of vector overlays (polylines/circles) to reinsert them after setStyle()
 const _vectorOverlays = new Set();
 function _readdVectorOverlays() {
     _vectorOverlays.forEach(o => {
@@ -138,7 +138,7 @@ function injectMinimalGeocoderCSS() {
     document.head.appendChild(s);
 }
 
-// Overrides SIEMPRE activos para agrandar botones nativos y personalizados
+// Overrides ALWAYS active to enlarge native and custom buttons
 function injectUIOverridesCSS() {
     const css = `
   /* === Controles SIEMPRE por encima, sin tocar su posicionamiento absoluto === */
@@ -146,7 +146,7 @@ function injectUIOverridesCSS() {
   #map .maplibregl-ctrl-top-right,
   #map .maplibregl-ctrl-bottom-left,
   #map .maplibregl-ctrl-bottom-right{
-    /* NO cambiar position aquí (MapLibre ya usa absolute) */
+    /* Do NOT change position here (MapLibre already uses absolute) */
     z-index: 2147483647 !important;
   }
 
@@ -160,7 +160,7 @@ function injectUIOverridesCSS() {
     z-index: 0;
   }
 
-  /* === Botones del mapa más grandes (scope: #map) === */
+  /* === Larger map buttons (scope: #map) === */
   #map .maplibregl-ctrl-group > button{
     width:40px !important;
     height:40px !important;
@@ -170,7 +170,7 @@ function injectUIOverridesCSS() {
     place-items:center !important;
     font-size:18px;
   }
-  /* Zoom (+/-) y compás usan background en el propio botón */
+  /* Zoom (+/-) and compass use a background on the button itself */
   #map .maplibregl-ctrl-zoom-in,
   #map .maplibregl-ctrl-zoom-out,
   #map .maplibregl-ctrl-compass{
@@ -178,7 +178,7 @@ function injectUIOverridesCSS() {
     background-repeat:no-repeat !important;
     background-size:30px 30px !important;
   }
-  /* Si existe nodo interno .maplibregl-ctrl-icon, escálalo y céntralo */
+  /* If an inner .maplibregl-ctrl-icon node exists, scale and center it */
   #map .maplibregl-ctrl-group > button .maplibregl-ctrl-icon{
     width:30px !important;
     height:30px !important;
@@ -186,7 +186,7 @@ function injectUIOverridesCSS() {
     background-size:30px 30px !important;
     background-position:center center !important;
   }
-  /* Flecha interna del compás */
+  /* Compass inner arrow */
   #map .maplibregl-ctrl-compass .maplibregl-ctrl-compass-arrow,
   #map .maplibregl-ctrl-compass svg{
     width:30px !important;
@@ -197,7 +197,7 @@ function injectUIOverridesCSS() {
   }
   /* OCULTAR EL MARCADOR EN LOS RESULTADOS */
   #map .maplibregl-ctrl-geocoder .maplibregl-ctrl-geocoder--result-icon{ display:none !important; }
-  /* === Geocoder: fuente más pequeña (input + lista de resultados) === */
+  /* === Geocoder: smaller font (input + results list) === */
   #map .maplibregl-ctrl-geocoder{
     font-size:12px !important;
     line-height:1.25 !important;
@@ -208,7 +208,7 @@ function injectUIOverridesCSS() {
   #map .maplibregl-ctrl-geocoder .suggestions, #map .maplibregl-ctrl-geocoder .suggestions *{
     font-size:inherit !important; line-height:1.25 !important;
   }  
-  /* === Handles de edición: borde sólido + relleno opaco más claro === */
+  /* === Edit handles: solid border + lighter opaque fill === */
   #map .ml-handle{
     width:22px; height:22px; border-radius:50%;
     box-sizing:border-box;
@@ -217,13 +217,13 @@ function injectUIOverridesCSS() {
   }
   /* Centro: azul */
   #map .ml-handle--move{
-    border:3px solid #1677ff;       /* borde sólido */
+    border:3px solid #1677ff;       /* solid border */
     background:#aac4ff;             /* azul claro opaco */
     cursor: move;
   }
   /* Radio: rojo */
   #map .ml-handle--radius{
-    border:3px solid #ff3b30;       /* borde sólido */
+    border:3px solid #ff3b30;       /* solid border */
     background:#ffb5b0;             /* rojo claro opaco */
     cursor: ew-resize;
   }
@@ -242,7 +242,7 @@ function injectUIOverridesCSS() {
     document.head.appendChild(s);
 }
 
-// --- Traducir títulos/aria-label de los botones nativos de navegación ---
+// --- Translate the titles/aria-labels of the native navigation buttons ---
 function _localizeNavTitles() {
     const root = _ml?.getContainer?.();
     if (!root)
@@ -268,15 +268,15 @@ async function ensureMapLibreLoaded() {
     const geocJsOK = await tryLoadJS(CDN.geocJS, () => !!window.MaplibreGeocoder);
     if (!geocCssOK)
         injectMinimalGeocoderCSS();
-    // Inyecta SIEMPRE los overrides de UI tras cargar el CSS base
+    // ALWAYS inject the UI overrides after loading the base CSS
     injectUIOverridesCSS();
-    // Considera el geocoder disponible si el JS está cargado (aunque el CSS falte)
+    // Consider the geocoder available if the JS is loaded (even if the CSS is missing)
     return {
         geocoderOk: !!geocJsOK
     };
 }
 
-// ==== cola hasta que el estilo esté listo ====
+// ==== queue until the style is ready ====
 const _readyQueue = [];
 function whenStyleReady(fn) {
     if (_ml?.isStyleLoaded?.())
@@ -286,7 +286,7 @@ function whenStyleReady(fn) {
 }
 function _flushReadyQueue() {
     if (!_ml?.isStyleLoaded?.())
-        return; // no ejecutar antes de tiempo
+        return; // do not run too early
     while (_readyQueue.length) {
         try {
             _readyQueue.shift()();
@@ -296,7 +296,7 @@ function _flushReadyQueue() {
     }
 }
 
-// === util UI ====
+// === UI util ====
 function addRasterBasesIfMissing() {
     if (!_ml.getSource('osm') && !_ml.getSource('esri')) {
         _ml.addSource('osm', {
@@ -336,9 +336,9 @@ function switchBase(name) {
     if (!id)
         return;
 
-    // Caso especial: OpenFreeMap (vector style)
+    // Special case: OpenFreeMap (vector style)
     if (id === 'ofm') {
-        // Diagnóstico + guard + fallback
+        // Diagnostics + guard + fallback
         let done = false;
         const finish = () => {
             if (done)
@@ -361,10 +361,10 @@ function switchBase(name) {
         _ml.once('styledata', finish);
         _ml.once('idle', finish);
 
-        // Fallback si no se completó en un tiempo razonable
+        // Fallback if it did not complete within a reasonable time
         setTimeout(() => {
             if (!done) {
-                console.warn('[OFM] No se completó la carga del estilo. Volviendo a raster base.');
+                console.warn('[OFM] Style load did not complete. Falling back to base raster.');
                 try {
                     _ml.off('error', onErr);
                 } catch {}
@@ -382,7 +382,7 @@ function switchBase(name) {
         return;
     }
 
-    // Asegura que estamos en el estilo "raster básico" (no el de OFM)
+    // Ensure we are on the "basic raster" style (not the OFM one)
     if (!_ml.getSource('osm') && !_ml.getSource('esri')) {
         _ml.setStyle({
             version: 8,
@@ -396,7 +396,7 @@ function switchBase(name) {
         return;
     }
 
-    // OSM no sirve z>19 → clamp para evitar 400
+    // OSM does not serve z>19 -> clamp to avoid 400
     if (name === 'OpenStreetMap') {
         const osmMax = Math.min(ZOOM_LIMITS.MAX, OSM_TILE_MAX_Z);
         if (_ml.getZoom() > osmMax) {
@@ -406,7 +406,7 @@ function switchBase(name) {
         }
     }
 
-    // Cambia la visibilidad entre OSM/Esri
+    // Toggle visibility between OSM/Esri
     for (const [label, layerId] of Object.entries(_views)) {
         if (layerId === 'ofm')
             continue;
@@ -416,7 +416,7 @@ function switchBase(name) {
     }
 }
 
-// === util: detectar click fuera de un nodo para cerrarlo ===
+// === util: detect a click outside a node to close it ===
 function _wireOutsideClose(container, onClose) {
     function cleanup() {
         document.removeEventListener('pointerdown', down, true);
@@ -438,7 +438,7 @@ function _wireOutsideClose(container, onClose) {
     document.addEventListener('keydown', key, true);
 }
 
-// Helper común para (des)suscribir eventos de layer (click/enter/leave)
+// Shared helper to (un)subscribe layer events (click/enter/leave)
 function bindLayerEvents(id, handlers) {
     const { click, enter, leave } = handlers || {};
     if (click)
@@ -463,7 +463,7 @@ function bindLayerEvents(id, handlers) {
     };
 }
 
-// === Mostrar/Ocultar geocoder + foco ===
+// === Show/Hide geocoder + focus ===
 function _getGeocoderInput() {
     if (!_geocoderEl)
         return null;
@@ -473,20 +473,20 @@ function showGeocoder() {
     if (!_geocoderEl)
         return;
     _geocoderEl.style.display = '';
-    // habilitar clicks en el slot cuando está visible
+    // enable clicks on the slot when visible
     try {
         _geocoderEl.parentElement.style.pointerEvents = 'auto';
     } catch {}
     const inp = _getGeocoderInput();
     _wireOutsideClose(_geocoderEl, hideGeocoder);
-    // Autofocus para mejor UX
+    // Autofocus for better UX
     requestAnimationFrame(() => inp?.focus());
 }
 function hideGeocoder() {
     if (!_geocoderEl)
         return;
     _geocoderEl.style.display = 'none';
-    // volver a no bloquear cuando esté oculto
+    // stop blocking again when hidden
     try {
         _geocoderEl.parentElement.style.pointerEvents = 'none';
     } catch {}
@@ -498,7 +498,7 @@ function toggleGeocoder() {
     vis ? hideGeocoder() : showGeocoder();
 }
 
-// ===== Control botón Buscar (muestra/oculta el geocoder) con SLOT a la derecha =====
+// ===== Search button control (shows/hides the geocoder) with a SLOT on the right =====
 class SearchToggleControl {
     constructor() {
         this._slot = null;
@@ -506,7 +506,7 @@ class SearchToggleControl {
     }
     onAdd(map) {
         this._map = map;
-        // contenedor horizontal: botón (grupo estándar) + slot geocoder
+        // horizontal container: button (standard group) + geocoder slot
         const c = document.createElement('div');
         c.className = 'maplibregl-ctrl';
         c.style.display = 'flex';
@@ -525,14 +525,14 @@ class SearchToggleControl {
         c.appendChild(grp);
         this._btn = btn;
 
-        // Slot para geocoder (alineado a la derecha del botón)
+        // Slot for the geocoder (aligned to the right of the button)
         const slot = document.createElement('div');
         slot.className = 'ml-search-inline-slot';
         slot.style.display = 'flex';
         slot.style.alignItems = 'stretch';
-        // Que no bloquee clics cuando está vacío/oculto:
+        // So it does not block clicks when empty/hidden:
         slot.style.pointerEvents = 'none';
-        // Que no reserve ancho si no es necesario:
+        // So it does not reserve width if not needed:
         slot.style.minWidth = '280px';
         slot.style.maxWidth = '280px';
         c.appendChild(slot);
@@ -547,18 +547,18 @@ class SearchToggleControl {
     attach(el) {
         if (!el || !this._slot)
             return;
-        // reset de estilos absolutos por si venía en modo independiente
+        // reset absolute styles in case it came in standalone mode
         el.style.position = '';
         el.style.left = '';
         el.style.bottom = '';
         el.style.display = 'none';
         el.style.margin = '0';
         el.style.boxShadow = '0 2px 8px rgba(0,0,0,.15)';
-        // el contenedor interno del geocoder debe ser flexible
+        // the geocoder's inner container must be flexible
         el.style.flex = '1 1 280px';
         el.style.alignSelf = 'stretch';
 
-        // forzar altura del input = altura del botón
+        // force the input height = the button height
         const btnH = this._btn ? (parseFloat(getComputedStyle(this._btn).height) || 40) : 40;
         const inp = el.querySelector('input[type="text"]');
         if (inp) {
@@ -571,7 +571,7 @@ class SearchToggleControl {
     }
 }
 
-// ===== Control Capas (botón que abre un menú a la DERECHA) =====
+// ===== Layers control (button that opens a menu on the RIGHT) =====
 class LayerControl {
     onAdd(map) {
         this._map = map;
@@ -631,7 +631,7 @@ class LayerControl {
     }
 }
 
-// ==== Escala (siempre imperial) ====
+// ==== Scale (always imperial) ====
 function _applyScaleUnit() {
     if (_scaleCtrl) {
         try {
@@ -649,7 +649,7 @@ function _syncScaleFromGlobals() {
         _applyScaleUnit();
 }
 
-// ==== API pública ====
+// ==== Public API ====
 export function setInteraction({
     cooperativeGestures = null,
     dragRotate = null
@@ -669,7 +669,7 @@ export function setInteraction({
             _ml.dragRotate.disable();
     }
 }
-// Helper público para cambiar base desde fuera
+// Public helper to change the base from outside
 export function setBaseLayer(name) {
     switchBase(name);
 }
@@ -686,7 +686,7 @@ export async function initMap() {
         maxZoom: ZOOM_LIMITS.MAX,
         pitch: 45,
         bearing: -17,
-        // OPT: baja coste de render
+        // OPT: lowers render cost
         antialias: false,
         preserveDrawingBuffer: true,
         style: {
@@ -699,14 +699,14 @@ export async function initMap() {
         validate: false
     });
 
-    // Evitar warnings de iconos faltantes (añadimos un 1x1 transparente)
+    // Avoid missing-icon warnings (add a transparent 1x1)
     _ml.on('styleimagemissing', (e) => {
         const id = e?.id;
         if (!id)
             return;
         try {
             if (!_ml.hasImage(id)) {
-                const data = new Uint8Array([0, 0, 0, 0]); // 1x1 transparente RGBA
+                const data = new Uint8Array([0, 0, 0, 0]); // 1x1 transparent RGBA
                 _ml.addImage(id, {
                     width: 1,
                     height: 1,
@@ -716,27 +716,27 @@ export async function initMap() {
         } catch (_) {}
     });
 
-    // Controles a la izquierda
+    // Controls on the left
     _ml.addControl(new maplibregl.NavigationControl({
             visualizePitch: true
         }), 'top-left');
     _localizeNavTitles();
 
-    // Botón BUSCAR (slot inline a la derecha). El control como tal se crea ya.
+    // SEARCH button (inline slot on the right). The control itself is created now.
     _searchCtlRef = new SearchToggleControl();
     _ml.addControl(_searchCtlRef, 'top-left');
 
-    // Botón CAPAS (menú se abre a la derecha)
+    // LAYERS button (menu opens on the right)
     _ml.addControl(new LayerControl(), 'top-left');
 
-    // >>> escuchar interacciones globales para detectar si la apertura viene desde la tabla
+    // >>> listen to global interactions to detect whether the open came from the table
     _onUiPointer = (ev) => _markUiSource(ev);
     document.addEventListener('pointerdown', _onUiPointer, true);
     _onUiClick = (ev) => _markUiSource(ev);
     document.addEventListener('click', _onUiClick, true);
 
-    // === Proveedor de geocodificación definido AQUÍ dentro ===
-    // Usa Nominatim como backend; puedes cambiar el endpoint si prefieres un proxy.
+    // === Geocoding provider defined HERE inside ===
+    // Uses Nominatim as the backend; you can change the endpoint if you prefer a proxy.
     const geocoderApi = {
         forwardGeocode: async(config) => {
             const q = (config?.query || '').trim();
@@ -748,7 +748,7 @@ export async function initMap() {
                 const lang = (navigator.languages && navigator.languages[0]) || navigator.language || 'es';
                 const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=${encodeURIComponent(lang)}&q=${encodeURIComponent(q)}`;
 
-                // Cancelar petición anterior si existe
+                // Cancel the previous request if any
                 _geocodeAbort?.abort();
                 _geocodeAbort = new AbortController();
 
@@ -806,7 +806,7 @@ export async function initMap() {
         }
     };
 
-    // Monta el geocoder oficial y lo acopla al slot del botón 🔍
+    // Mount the official geocoder and attach it to the search button's slot
     if (geocoderOk && window.MaplibreGeocoder) {
         try {
             _geocoderCtrl = new window.MaplibreGeocoder(geocoderApi, {
@@ -853,10 +853,10 @@ export async function initMap() {
                     console.warn('result handler error:', err);
                 } finally {
                     requestAnimationFrame(() => {
-                        // Vaciar caja + sugerencias (según versión)
+                        // Clear the box + suggestions (depends on the version)
                         try {
                             if (typeof _geocoderCtrl?.clear === 'function') {
-                                _geocoderCtrl.clear(); // limpia input y resultados
+                                _geocoderCtrl.clear(); // clears the input and results
                             } else {
                                 _geocoderCtrl?.setInput('');
                                 const inp = _getGeocoderInput?.();
@@ -879,13 +879,13 @@ export async function initMap() {
             console.error('Error montando MaplibreGeocoder:', err);
         }
     } else {
-        console.info('[map] Plugin geocoder no disponible; el botón 🔍 no mostrará input.');
+        console.info('[map] Geocoder plugin unavailable; the search button will not show an input.');
     }
 
-    // Escala del mapa (siempre imperial)
+    // Map scale (always imperial)
     _syncScaleFromGlobals();
 
-    // Atribución abajo a la izquierda (compacta)
+    // Attribution at the bottom-left (compact)
     _ml.addControl(new maplibregl.AttributionControl({
             compact: true
         }), 'bottom-left');
@@ -897,7 +897,7 @@ export async function initMap() {
     }
     _unitsPollId = setInterval(_syncScaleFromGlobals, 1000);
 
-    // NEW: pausar/reanudar el poll cuando la pestaña se oculta
+    // NEW: pause/resume the poll when the tab is hidden
     _onUnitsVis = () => {
         if (document.hidden) {
             try {
@@ -915,7 +915,7 @@ export async function initMap() {
     _ml.dragRotate.enable();
     _ml.touchZoomRotate.enableRotation();
 
-    // Vaciar cola SOLO cuando el estilo esté listo
+    // Flush the queue ONLY when the style is ready
     const tryFlush = () => {
         try {
             if (_ml?.isStyleLoaded?.())
@@ -926,7 +926,7 @@ export async function initMap() {
     };
 
     _ml.on('load', () => {
-        // OSM visible por defecto (Esri oculto, fallback)
+        // OSM visible by default (Esri hidden, fallback)
         if (!_ml.getSource('osm')) {
             _ml.addSource('osm', {
                 type: 'raster',
@@ -960,16 +960,16 @@ export async function initMap() {
                 }
             });
         }
-        // Bases para el menú de capas
+        // Bases for the layers menu
         _views = {
             "OpenStreetMap": "osm",
-            "Esri Satélite": "esri",
+            "Esri Satellite": "esri",
             "OpenFreeMap": "ofm"
         };
         tryFlush();
     });
 
-    // Flushear cola y reinsertar overlays cuando el mapa queda inactivo (estilo cargado)
+    // Flush the queue and reinsert overlays when the map goes idle (style loaded)
     _ml.on('idle', () => {
         tryFlush();
         if (_ml?.isStyleLoaded?.())
@@ -982,7 +982,7 @@ export async function initMap() {
             const msg = (e?.error?.message || '').toLowerCase();
             const looksCors = msg.includes('cors') || msg.includes('cross-origin');
 
-            // Caso típico: OSM sólo llega hasta z=19 → 400 si pedimos z=20
+            // Typical case: OSM only goes up to z=19 -> 400 if we request z=20
             if (status === 400) {
                 const osmMax = Math.min(ZOOM_LIMITS.MAX, OSM_TILE_MAX_Z);
                 if (_ml.getZoom() > osmMax)
@@ -1003,7 +1003,7 @@ export async function initMap() {
                 console.warn('OSM rate-limited (429). Mostrando Esri.');
                 return;
             }
-            // Fallback sólo para errores reales de CORS/permisos
+            // Fallback only for real CORS/permission errors
             if (status === 0 || status === 401 || status === 403 || looksCors) {
                 try {
                     _ml.setLayoutProperty('osm', 'visibility', 'none');
@@ -1016,18 +1016,18 @@ export async function initMap() {
         }
     });
 
-    // ===== Comp. de click: sólo el primer handler por clic actúa (para capas no-agrupadas) =====
+    // ===== Click gate: only the first handler per click acts (for non-grouped layers) =====
     function _gateLayerClick(e) {
         const oe = e && e.originalEvent;
         if (!oe)
-            return false; // sin originalEvent, no gateamos
+            return false; // no originalEvent, we do not gate
         if (oe.__mlHandled)
-            return true; // ya gestionado por otra capa
-        oe.__mlHandled = true; // marcamos como gestionado
+            return true; // already handled by another layer
+        oe.__mlHandled = true; // mark as handled
         return false;
     }
 
-    // ===== Cola de selección para CÍRCULOS (elige el de menor radio en el mismo clic) =====
+    // ===== Selection queue for CIRCLES (picks the smallest radius in the same click) =====
     const _circleClickQueue = new WeakMap();
     function _queueCircleClick(e, openFn, radius) {
         const oe = e?.originalEvent || e;
@@ -1039,13 +1039,13 @@ export async function initMap() {
         if (!list) {
             list = [];
             _circleClickQueue.set(oe, list);
-            // Resolvemos en el próximo macrotick: elegimos el menor radio y abrimos sólo ese
+            // Resolve on the next macrotask: pick the smallest radius and open only that one
             setTimeout(() => {
                 try {
                     if (!list.length)
                         return;
                     list.sort((a, b) => a.radius - b.radius);
-                    // Cierra cualquier popup de overlays que se haya abierto antes en este mismo clic (ej. polylines)
+                    // Close any overlay popup opened earlier in this same click (e.g. polylines)
                     try {
                         _popup?.remove();
                     } catch {}
@@ -1061,7 +1061,7 @@ export async function initMap() {
         });
     }
 
-    // Listeners globales (nombrados) y primer resize
+    // Global listeners (named) and the first resize
     _onResize = () => _ml && _ml.resize();
     window.addEventListener('resize', _onResize);
     _onVis = () => {
@@ -1073,10 +1073,10 @@ export async function initMap() {
         _onResize && _onResize();
     }, 350);
 
-    // Popup único reutilizable para overlays (rutas/zonas) + selección activa de edición
+    // Single reusable popup for overlays (routes/zones) + active editing selection
     let _activeOverlayPopupOwner = null;
 
-    // === NUEVO: sólo mostrar handles en el círculo activo (zona seleccionada)
+    // === NEW: only show handles on the active circle (selected zone)
     let _activeEditCircle = null;
     function _setActiveEditableCircle(c) {
         _activeEditCircle = c || null;
@@ -1098,16 +1098,16 @@ export async function initMap() {
     try {
         _popup.on('close', () => {
             _activeOverlayPopupOwner = null;
-            // Si estamos cerrando el popup de forma programática (p.ej. durante drag), no desactivar edición
+            // If we are closing the popup programmatically (e.g. during drag), do not disable editing
             if (_suppressPopupCloseSideEffects) {
                 _suppressPopupCloseSideEffects = false;
                 return;
             }
-            _setActiveEditableCircle(null); // al cerrar el popup manualmente, ocultar handles
+            _setActiveEditableCircle(null); // when closing the popup manually, hide the handles
         });
     } catch {}
 
-    // Objeto map “tipo Leaflet”
+    // "Leaflet-like" map object
     map = {
         getZoom: () => _ml.getZoom(),
         setView: (pos, zoom = null, opts = {}) => {
@@ -1128,9 +1128,9 @@ export async function initMap() {
             if (zoom != null)
                 o.zoom = clampZoom(zoom);
             if (opts?.animate === false) {
-                _ml.jumpTo(o); // sin animación
+                _ml.jumpTo(o); // no animation
             } else {
-                _ml.easeTo(o); // animado como antes
+                _ml.easeTo(o); // animated as before
             }
         },
         fitBounds: (bbox, opts = {}) => {
@@ -1165,7 +1165,7 @@ export async function initMap() {
         },
         invalidateSize: () => _ml.resize(),
         closePopup: () => {
-            // Cierra el popup compartido de overlays y limpia el owner
+            // Close the shared overlay popup and clear the owner
             try {
                 _popup?.remove();
             } finally {
@@ -1173,7 +1173,7 @@ export async function initMap() {
                     _activeOverlayPopupOwner = null;
                 } catch {}
             }
-            // Cierra los popups registrados que estén abiertos (no los borres del Set)
+            // Close registered popups that are open (do not delete them from the Set)
             try {
                 for (const p of _allPopups) {
                     try {
@@ -1182,12 +1182,12 @@ export async function initMap() {
                     } catch {}
                 }
             } catch {}
-            return map; // opcional, por encadenamiento
+            return map; // optional, for chaining
         },
         on: (ev, fn) => _ml.on(ev, fn),
         off: (ev, fn) => _ml.off(ev, fn),
 
-        // --- Compat Leaflet ---
+        // --- Leaflet compat ---
         addLayer: (layerLike) => {
             try {
                 if (typeof layerLike?.addTo === 'function') {
@@ -1216,7 +1216,7 @@ export async function initMap() {
             if (!layerLike)
                 return false;
             if (layerLike.__ml_type === 'marker') {
-                // Evitar depender de internals, pero permitir fallback si añadieron directo al mapa
+                // Avoid depending on internals, but allow a fallback if they added directly to the map
                 return !!(layerLike.__added || layerLike.__marker?._map);
             }
             const id = layerLike.__ml_id;
@@ -1234,7 +1234,7 @@ export async function initMap() {
         },
 
         getBounds: () => _ml.getBounds(),
-        // Panes “stub” que NO bloquean el mapa
+        // "stub" Panes that do NOT block the map
         _panes: Object.create(null),
         getPane: (name) => map._panes[name] || null,
         createPane: (name) => {
@@ -1254,7 +1254,7 @@ export async function initMap() {
         _ml
     };
 
-    // ===== Shim Leaflet =====
+    // ===== Leaflet shim =====
     const L = {};
 
     L.canvas = (opts = {}) => ({
@@ -1310,7 +1310,7 @@ export async function initMap() {
         };
     };
 
-    // --- Popup helper (único y compartido) ---
+    // --- Popup helper (single and shared) ---
     function _openPopupAtHTML(lngLat, html, owner = null) {
         if (!_popup)
             _popup = new maplibregl.Popup({
@@ -1318,17 +1318,17 @@ export async function initMap() {
                 closeOnClick: true
             });
         _popup.setLngLat(lngLat).setHTML(html).addTo(_ml);
-        // registra propietario para autocierre en remove()
+        // register the owner for auto-close in remove()
         try {
             _activeOverlayPopupOwner = owner;
         } catch {}
     }
 
-    // --- Marker (con setIcon) ---
+    // --- Marker (with setIcon) ---
     L.marker = ([lat, lng], opts = {}) => {
         const wrap = document.createElement('div');
         wrap.style.pointerEvents = 'auto';
-        // cursor de mano y evitar que el click atraviese al canvas del mapa
+        // hand cursor and prevent the click from passing through to the map canvas
         wrap.style.cursor = 'pointer';
         ['click', 'mousedown', 'mouseup', 'dblclick', 'contextmenu', 'touchstart', 'touchend'].forEach(ev => {
             wrap.addEventListener(ev, e => {
@@ -1385,7 +1385,7 @@ export async function initMap() {
                 }
             });
         }
-        // Forzamos togglePopup si hay popup ligado (algunos entornos no lo hacen por defecto con elementos custom)
+        // Force togglePopup if a popup is bound (some environments do not do it by default with custom elements)
         wrap.addEventListener('click', e => {
             emit('click', e);
             if (!_pWrap)
@@ -1393,14 +1393,14 @@ export async function initMap() {
 
             const isOpen = !!(_pWrap.__p && _pWrap.__p._map);
             if (isOpen) {
-                // estaba abierto → ciérralo (y ya)
+                // it was open -> close it (done)
                 try {
                     m.togglePopup();
                 } catch {}
                 return;
             }
 
-            // estaba cerrado → cierra los demás y ábrelo
+            // it was closed -> close the others and open it
             try {
                 map?.closePopup?.();
             } catch {}
@@ -1463,7 +1463,7 @@ export async function initMap() {
                 return _pWrap;
             },
             openPopup() {
-                // NEW: abrir sólo si está cerrado (no toggle)
+                // NEW: open only if closed (not a toggle)
                 if (_pWrap) {
                     if (!m._map)
                         m.addTo(_ml);
@@ -1498,7 +1498,7 @@ export async function initMap() {
         return api;
     };
 
-    // util: impedir que los eventos de los handles burbujeen al mapa
+    // util: prevent handle events from bubbling to the map
     function _stopMapClicks(el) {
         ['click', 'dblclick', 'contextmenu'].forEach(ev => {
             el.addEventListener(ev, e => e.stopPropagation(), {
@@ -1507,7 +1507,7 @@ export async function initMap() {
         });
     }
 
-    // --- Popup wrapper con setContent ---
+    // --- Popup wrapper with setContent ---
     function makePopupWrapper(p) {
         const w = {
             __isLeafletPopupShim: true,
@@ -1557,13 +1557,13 @@ export async function initMap() {
             ...options
         }));
 
-    // Util común
+    // Shared util
     const R_EARTH = 6371000;
     const toRad = (d) => d * Math.PI / 180;
     const toDeg = (r) => r * 180 / Math.PI;
 
-    // === Proyección WebMercator (metros) + simplificación RDP ===
-    const R_MERC = 6378137; // radio esférico para mercator
+    // === WebMercator projection (meters) + RDP simplification ===
+    const R_MERC = 6378137; // spherical radius for mercator
     function projectMercator(lng, lat) {
         const x = R_MERC * toRad(lng);
         const y = R_MERC * Math.log(Math.tan(Math.PI / 4 + toRad(lat) / 2));
@@ -1573,7 +1573,7 @@ export async function initMap() {
         const equatorMpp = 40075016.68557849 / (256 * Math.pow(2, z));
         return equatorMpp * Math.cos(toRad(lat));
     }
-    // RDP iterativo: pts = [[x,y], ...], devuelve boolean[] keep
+    // Iterative RDP: pts = [[x,y], ...], returns boolean[] keep
     function rdpKeepMask(pts, epsilon) {
         const n = pts.length;
         if (n <= 2)
@@ -1594,7 +1594,7 @@ export async function initMap() {
             const denom = dx * dx + dy * dy || 1e-12;
             for (let i = a + 1; i > b ? false : i < b; i++) {
                 const [px, py] = pts[i];
-                // distancia al segmento AB
+                // distance to segment AB
                 let t = ((px - ax) * dx + (py - ay) * dy) / denom;
                 t = Math.max(0, Math.min(1, t));
                 const qx = ax + t * dx,
@@ -1616,7 +1616,7 @@ export async function initMap() {
         const n = latlngs?.length || 0;
         if (n <= 2)
             return latlngs || [];
-        // proyecta
+        // project
         const proj = new Array(n);
         for (let i = 0; i < n; i++) {
             const [la, ln] = latlngs[i];
@@ -1628,7 +1628,7 @@ export async function initMap() {
             if (keep[i])
                 out.push(latlngs[i]);
 
-        // Decimación suave si aún quedan demasiados
+        // Gentle decimation if there are still too many
         if (out.length > hardCap) {
             const step = Math.ceil(out.length / hardCap);
             const dec = [];
@@ -1641,7 +1641,7 @@ export async function initMap() {
         return out;
     }
 
-    // --- Polyline con lineMetrics seguro y repintado determinista
+    // --- Polyline with safe lineMetrics and deterministic repainting
     L.polyline = (latlngs = [], options = {}) => {
         const id = `ll-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         let _alive = true;
@@ -1665,14 +1665,14 @@ export async function initMap() {
         let _added = false,
         _dirty = false;
 
-        // evitar listeners duplicados
+        // avoid duplicate listeners
         let _onZoom = null;
         let _zoomBound = false;
 
-        // NUEVO: recordamos si la source tiene lineMetrics habilitado
+        // NEW: remember whether the source has lineMetrics enabled
         let _srcHasLineMetrics = false;
 
-        // refs para desuscripción de eventos del layer
+        // refs for unsubscribing layer events
         let _layerHandlers = null;
         let _unbindLayer = null;
 
@@ -1692,18 +1692,18 @@ export async function initMap() {
             if (!_ml?.getLayer?.(id))
                 return;
             try {
-                // Quita cualquier gradiente previo
+                // Remove any previous gradient
                 _ml.setPaintProperty(id, 'line-gradient', null);
             } catch (_) {}
             try {
-                // Reaplica color/ancho/opacidad SIEMPRE
+                // ALWAYS reapply color/width/opacity
                 _ml.setPaintProperty(id, 'line-color', opts.color ?? '#3388ff');
                 _ml.setPaintProperty(id, 'line-width', Number.isFinite(opts.weight) ? opts.weight : 3);
                 _ml.setPaintProperty(id, 'line-opacity', opts.opacity ?? 1);
             } catch (e) {
                 console.warn('applyLinePaint(base):', e);
             }
-            // Sólo aplica gradiente si la source tiene lineMetrics
+            // Only apply the gradient if the source has lineMetrics
             if (opts.lineGradient && _srcHasLineMetrics) {
                 try {
                     _ml.setPaintProperty(id, 'line-gradient', opts.lineGradient);
@@ -1726,7 +1726,7 @@ export async function initMap() {
                 return;
             _lastZoomBucket = zb;
 
-            // usa lat media para m/px
+            // use the mean latitude for m/px
             let avgLat = 0,
             c = 0;
             for (const p of original) {
@@ -1757,7 +1757,7 @@ export async function initMap() {
                     });
                     _srcHasLineMetrics = true;
                 } catch (e) {
-                    console.warn('GeoJSON lineMetrics no disponible, continúo sin ello:', e);
+                    console.warn('GeoJSON lineMetrics unavailable, continuing without it:', e);
                     _ml.addSource(id, {
                         type: 'geojson',
                         data: srcData()
@@ -1782,21 +1782,21 @@ export async function initMap() {
                 });
             }
 
-            // Reaplica pintura de forma determinista (y gradiente sólo si procede)
+            // Reapply painting deterministically (and the gradient only if applicable)
             applyLinePaint();
 
-            // Garantiza que queda por encima de las bases
+            // Ensure it stays above the bases
             try {
                 _ml.moveLayer(id);
             } catch (_) {}
 
-            // === Eventos SIEMPRE (handler tolera bindPopup tardío) + compuerta ===
+            // === Events ALWAYS (handler tolerates a late bindPopup) + gate ===
             const layerClick = (e) => {
                 const willHandle = !!(_popupWrap || _popupHTML || opts.interactive);
                 if (!willHandle)
-                    return; // no bloquear; deja pasar a capas de abajo
+                    return; // do not block; let it pass to the layers below
                 if (_gateLayerClick(e))
-                    return; // ya gestionado por otra capa
+                    return; // already handled by another layer
                 (_handlers['click'] || []).forEach(fn => {
                     try {
                         fn(e);
@@ -1860,7 +1860,7 @@ export async function initMap() {
             whenStyleReady(add);
         }
 
-        // throttle setData a 1/frame
+        // throttle setData to 1/frame
         function refreshSourceNow(force = false) {
             _ensureAdded();
             recomputeSimplified(force);
@@ -1899,7 +1899,7 @@ export async function initMap() {
             __readd() {
                 try {
                     _ensureAdded();
-                    // al reinsertar, reaplica pintura y refresca datos (sin props internas)
+                    // on reinsert, reapply painting and refresh data (without internal props)
                     whenStyleReady(() => applyLinePaint());
                     scheduleRefresh(true);
                 } catch {}
@@ -1915,7 +1915,7 @@ export async function initMap() {
                 try {
                     _vectorOverlays.delete(api);
                 } catch {}
-                // autocierra si era el propietario del popup
+                // auto-close if it owned the popup
                 try {
                     if (_activeOverlayPopupOwner === api) {
                         _popup?.remove();
@@ -1929,7 +1929,7 @@ export async function initMap() {
                     } catch {}
                     _zoomBound = false;
                 }
-                // Desuscripción de eventos de layer
+                // Unsubscribe layer events
                 try {
                     _unbindLayer?.();
                 } catch {}
@@ -1990,7 +1990,7 @@ export async function initMap() {
                 }
                 return api;
             },
-            // === NUEVO: API de popup para compatibilidad con Leaflet ===
+            // === NEW: popup API for Leaflet compatibility ===
             getPopup() {
                 return {
                     getContent() {
@@ -2007,7 +2007,7 @@ export async function initMap() {
                     }
                 };
             },
-            // Método directo (atajo) usado por tu código de zonas
+            // Direct method (shortcut) used by the zones code
             setPopupContent(html) {
                 _popupHTML = String(html ?? '');
                 try {
@@ -2064,7 +2064,7 @@ export async function initMap() {
         return api;
     };
 
-    // --- Circle con options + edición + compat + _ensureAdded() + AUTO-ADD + throttle + menos vértices ---
+    // --- Circle with options + editing + compat + _ensureAdded() + AUTO-ADD + throttle + fewer vertices ---
     L.circle = ([lat, lng], {
         radius = 100,
         color = '#3388ff',
@@ -2106,14 +2106,14 @@ export async function initMap() {
         _radiusHandle = null;
         let _added = false,
         _dirty = false;
-        // refs para desuscribir handlers de layers del círculo
+        // refs to unsubscribe the circle's layer handlers
         let _circleHandlers = null;
         let _unbindCircle = null;
 
-        // === NUEVO: edición permitida (sin mostrar handles por defecto)
+        // === NEW: editing allowed (without showing handles by default)
         let _editAllowed = false;
 
-        // === NUEVO: estado de drag y control de re-clic post-drag
+        // === NEW: drag state and post-drag re-click control
         let _dragging = false;
         let _lastDragEnd = 0;
         const DRAG_CLICK_SUPPRESS_MS = 300;
@@ -2143,7 +2143,7 @@ export async function initMap() {
             if (!_alive)
                 return;
 
-            // limpiar restos anteriores del mismo id (por cambios de estilo)
+            // clean up previous remnants of the same id (from style changes)
             if (_ml.getLayer(id + '-line'))
                 try {
                     _ml.removeLayer(id + '-line');
@@ -2188,19 +2188,19 @@ export async function initMap() {
                 }
             });
 
-            // subir a lo más alto (mantener línea por encima del fill)
+            // raise to the top (keep the line above the fill)
             try {
                 _ml.moveLayer(id + '-fill');
                 _ml.moveLayer(id + '-line');
             } catch (e) {}
 
             const clicker = (e) => {
-                // Mientras se arrastra, o inmediatamente después, NO abrir popup
+                // While dragging, or immediately after, do NOT open the popup
                 if (_dragging)
                     return;
                 if (Date.now() - _lastDragEnd < DRAG_CLICK_SUPPRESS_MS)
                     return;
-                // No aplicamos compuerta aquí: acumulamos candidatos y resolvemos por menor radio
+                // We do not gate here: accumulate candidates and resolve by smallest radius
                 const ll = [e.lngLat.lng, e.lngLat.lat];
                 _queueCircleClick(
                     e,
@@ -2210,7 +2210,7 @@ export async function initMap() {
                         _popupWrap.setLatLng([ll[1], ll[0]]).openOn(map);
                     else if (_popupHTML)
                         _openPopupAtHTML(ll, _popupHTML, api);
-                    // NUEVO: este círculo pasa a ser el activo para edición
+                    // NEW: this circle becomes the active one for editing
                     _setActiveEditableCircle(api);
                 },
                     _radius);
@@ -2229,7 +2229,7 @@ export async function initMap() {
                 enter: onEnterFill,
                 leave: onLeaveFill
             };
-            // bind en fill y en line
+            // bind on fill and on line
             const unbindFill = bindLayerEvents(id + '-fill', _circleHandlers);
             const unbindLine = bindLayerEvents(id + '-line', {
                 click: clicker
@@ -2243,7 +2243,7 @@ export async function initMap() {
                 } catch {}
             };
 
-            // reaproxima con menos vértices al cambiar el zoom (una sola vez)
+            // re-approximate with fewer vertices on zoom change (only once)
             if (!_circleZoomHooked) {
                 _onZoom = () => scheduleRefresh();
                 _ml.on('zoom', _onZoom);
@@ -2286,22 +2286,22 @@ export async function initMap() {
             });
         }
 
-        // >>> helper de anclaje hacia el norte
+        // >>> north-anchoring helper
         function northOffsetLatLng(fraction = 0.6) {
             const f = Math.max(0, Math.min(1, fraction));
-            const dLat = toDeg((_radius * f) / R_EARTH); // f·radio hacia el norte
+            const dLat = toDeg((_radius * f) / R_EARTH); // f*radius to the north
             return {
                 lat: _lat + dLat,
                 lng: _lng
             };
         }
 
-        // === NUEVO: helpers para montar/desmontar handles bajo demanda
+        // === NEW: helpers to mount/unmount handles on demand
         function mountHandles() {
             if (_centerHandle || _radiusHandle)
                 return;
 
-            // helper: ocultar popup si este círculo es el dueño actual (sin disparar efectos de cierre)
+            // helper: hide the popup if this circle is the current owner (without firing close effects)
             function _hideOverlayPopupIfMine() {
                 try {
                     if (_popupWrap) {
@@ -2332,7 +2332,7 @@ export async function initMap() {
             _centerHandle.on('dragstart', () => {
                 _dragging = true;
                 _setActiveEditableCircle?.(api);
-                _hideOverlayPopupIfMine(); // ocultar popup mientras se arrastra
+                _hideOverlayPopupIfMine(); // hide the popup while dragging
                 emit('editable:vertex:dragstart');
             });
             _centerHandle.on('dragend', (e) => {
@@ -2368,7 +2368,7 @@ export async function initMap() {
             _radiusHandle.on('dragstart', () => {
                 _dragging = true;
                 _setActiveEditableCircle?.(api);
-                _hideOverlayPopupIfMine(); // ocultar popup mientras se arrastra
+                _hideOverlayPopupIfMine(); // hide the popup while dragging
                 emit('editable:vertex:dragstart');
             });
             _radiusHandle.on('dragend', (e) => {
@@ -2422,26 +2422,26 @@ export async function initMap() {
                 try {
                     _vectorOverlays.delete(api);
                 } catch {}
-                // autocierra si este círculo tenía abierto el popup
+                // auto-close if this circle had the popup open
                 try {
                     if (_activeOverlayPopupOwner === api) {
                         _popup?.remove();
                         _activeOverlayPopupOwner = null;
                     }
                 } catch {}
-                // Si era el activo de edición, límpialo
+                // If it was the active editing one, clear it
                 if (typeof _setActiveEditableCircle === 'function') {
                     if (_activeEditCircle === api)
                         _setActiveEditableCircle(null);
                 }
-                _alive = false; // marca como “muerto”
+                _alive = false; // mark as "dead"
                 if (_circleZoomHooked && _onZoom) {
                     try {
                         _ml.off('zoom', _onZoom);
                     } catch {}
                     _circleZoomHooked = false;
                 }
-                // Desuscripción de eventos de layers del círculo
+                // Unsubscribe the circle's layer events
                 try {
                     _unbindCircle?.();
                 } catch {}
@@ -2557,7 +2557,7 @@ export async function initMap() {
                 }
                 return api;
             },
-            // === API de popup para círculos (compat Leaflet) ===
+            // === Popup API for circles (Leaflet compat) ===
             getPopup() {
                 return {
                     getContent() {
@@ -2574,7 +2574,7 @@ export async function initMap() {
                     }
                 };
             },
-            // Atajo directo usado por zones.js
+            // Direct shortcut used by zones.js
             setPopupContent(html) {
                 _popupHTML = String(html ?? '');
                 try {
@@ -2585,16 +2585,16 @@ export async function initMap() {
                 return api;
             },
 
-            // >>> abrir popup en coordenada arbitraria
+            // >>> open the popup at an arbitrary coordinate
             openPopupAt([la, ln]) {
                 _ensureAdded();
-                // si ya es el propietario, no recolocar si ya está abierto
+                // if it is already the owner, do not relocate if already open
                 try {
                     if (_activeOverlayPopupOwner === api && _popup) {
-                        // sólo asegúrate de que esté en el mapa
+                        // just make sure it is on the map
                         if (_popupWrap)
                             _popupWrap.openOn(map);
-                        // activar edición en este círculo
+                        // enable editing on this circle
                         _setActiveEditableCircle(api);
                         return api;
                     }
@@ -2603,33 +2603,33 @@ export async function initMap() {
                     _popupWrap.setLatLng([la, ln]).openOn(map);
                 else
                     _openPopupAtHTML([ln, la], _popupHTML || '', api);
-                _setActiveEditableCircle(api); // NUEVO
+                _setActiveEditableCircle(api); // NEW
                 return api;
             },
 
-            // >>> abrir popup desplazado hacia el norte (por defecto 60% del radio)
+            // >>> open the popup shifted to the north (60% of the radius by default)
             openPopupAtNorth(fraction = 0.6) {
                 const p = northOffsetLatLng(fraction);
                 api.openPopupAt([p.lat, p.lng]);
-                _setActiveEditableCircle(api); // NUEVO
+                _setActiveEditableCircle(api); // NEW
                 return api;
             },
 
-            // >>> obtener el ancla propuesto
+            // >>> get the proposed anchor
             getPopupAnchorLatLng(fraction = 0.6) {
                 return northOffsetLatLng(fraction);
             },
 
-            // >>> sobrecarga de openPopup: detecta si viene de la tabla de zonas
+            // >>> openPopup overload: detects whether it comes from the zones table
             openPopup() {
                 _ensureAdded();
 
-                // no mover si ya está abierto y nos pertenece (evita que zones.js "recoloque")
+                // do not move if already open and owned by us (prevents zones.js from "relocating")
                 try {
                     if (_activeOverlayPopupOwner === api && _popup) {
                         if (_popupWrap)
                             _popupWrap.openOn(map);
-                        _setActiveEditableCircle(api); // NUEVO
+                        _setActiveEditableCircle(api); // NEW
                         return api;
                     }
                 } catch {}
@@ -2640,17 +2640,17 @@ export async function initMap() {
                         _popupWrap.setLatLng([p.lat, p.lng]).openOn(map);
                     else
                         _openPopupAtHTML([p.lng, p.lat], _popupHTML || '', api);
-                    _setActiveEditableCircle(api); // NUEVO
+                    _setActiveEditableCircle(api); // NEW
                     return api;
                 }
 
-                // comportamiento clásico: centro geométrico
+                // classic behavior: geometric center
                 const ll = [_lng, _lat];
                 if (_popupWrap)
                     _popupWrap.setLatLng([ll[1], ll[0]]).openOn(map);
                 else
                     _openPopupAtHTML([ll[0], ll[1]], _popupHTML || '', api);
-                _setActiveEditableCircle(api); // NUEVO
+                _setActiveEditableCircle(api); // NEW
                 return api;
             },
 
@@ -2661,14 +2661,14 @@ export async function initMap() {
                         _activeOverlayPopupOwner = null;
                     }
                 } catch {}
-                // si este círculo era el activo, desactívalo
+                // if this circle was the active one, deactivate it
                 if (typeof _setActiveEditableCircle === 'function') {
                     if (_activeEditCircle === api)
                         _setActiveEditableCircle(null);
                 }
                 return api;
             },
-            // estado real del popup único compartido
+            // real state of the single shared popup
             isPopupOpen() {
                 try {
                     return _activeOverlayPopupOwner === api;
@@ -2687,9 +2687,9 @@ export async function initMap() {
                 return api;
             },
 
-            // === NUEVO: señal interna para mostrar/ocultar handles según sea el círculo activo
+            // === NEW: internal signal to show/hide handles depending on whether this is the active circle
             __maybeUpdateHandleVisibility(active) {
-                // No tocar handles durante drag para evitar referencias nulas en callbacks
+                // Do not touch handles during drag to avoid null references in callbacks
                 if (_dragging)
                     return;
                 if (_editAllowed && active)
@@ -2698,15 +2698,15 @@ export async function initMap() {
                     unmountHandles();
             },
 
-            // Edición
+            // Editing
             enableEdit() {
                 _ensureAdded();
                 _editAllowed = true;
-                // mostrar handles sólo si este círculo es el activo
+                // show handles only if this circle is the active one
                 if (typeof _setActiveEditableCircle === 'function') {
                     api.__maybeUpdateHandleVisibility(_activeEditCircle === api);
                 } else {
-                    // fallback por si no existe el gestor global
+                    // fallback in case the global manager does not exist
                     mountHandles();
                 }
                 return api;
@@ -2717,7 +2717,7 @@ export async function initMap() {
                 return api;
             },
 
-            // Alias compat Leaflet.Editable
+            // Leaflet.Editable compat alias
             editing: {
                 enable() {
                     api.enableEdit();
@@ -2727,7 +2727,7 @@ export async function initMap() {
                 },
                 enabled() {
                     return !!_editAllowed;
-                } // antes era presencia de handles
+                } // it used to be handle presence
             }
         };
         try {
@@ -2769,13 +2769,13 @@ export function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
 
 // ==== teardown ====
 export function destroyMap() {
-    // abort geocoder en curso
+    // abort the in-flight geocoder
     try {
         _geocodeAbort?.abort();
     } catch {}
     _geocodeAbort = null;
 
-    // limpiar colas y colecciones
+    // clear queues and collections
     try {
         _readyQueue.length = 0;
     } catch {}
@@ -2783,11 +2783,11 @@ export function destroyMap() {
         _vectorOverlays.clear();
     } catch {}
 
-    // popups/controles
+    // popups/controls
     try {
         _popup?.remove();
     } catch {}
-    // limpiar y vaciar todos los popups registrados
+    // clear and empty all registered popups
     try {
         for (const p of _allPopups)
             p.remove();
@@ -2797,7 +2797,7 @@ export function destroyMap() {
     } catch {}
     _popup = null;
 
-    // >>> desuscribir rastreadores de origen UI
+    // >>> unsubscribe the UI-origin trackers
     try {
         if (_onUiPointer)
             document.removeEventListener('pointerdown', _onUiPointer, true);
@@ -2808,7 +2808,7 @@ export function destroyMap() {
     } catch {}
     _onUiPointer = _onUiClick = null;
 
-    // listeners globales
+    // global listeners
     try {
         if (_onResize)
             window.removeEventListener('resize', _onResize);
@@ -2819,21 +2819,21 @@ export function destroyMap() {
     } catch {}
     _onResize = _onVis = null;
 
-    // NEW: quitar el listener del poll de unidades y parar el poll
+    // NEW: remove the units poll listener and stop the poll
     try {
         if (_onUnitsVis)
             document.removeEventListener('visibilitychange', _onUnitsVis);
     } catch {}
     _onUnitsVis = null;
 
-    // polling unidades
+    // units polling
     try {
         if (_unitsPollId)
             clearInterval(_unitsPollId);
     } catch {}
     _unitsPollId = null;
 
-    // limpiar estilos inyectados (si son exclusivos de este mapa)
+    // clear injected styles (if they are exclusive to this map)
     try {
         document.getElementById('ml-ui-overrides')?.remove();
     } catch {}
@@ -2841,7 +2841,7 @@ export function destroyMap() {
         document.getElementById('mlgeoc-mincss')?.remove();
     } catch {}
 
-    // geocoder: desmontar de forma segura
+    // geocoder: unmount safely
     try {
         if (_geocoderCtrl?.onRemove)
             _geocoderCtrl.onRemove(_ml);
@@ -2850,19 +2850,19 @@ export function destroyMap() {
         _geocoderEl?.remove();
     } catch {}
     try {
-        // por si acaso alguien cambió a addControl en el futuro
+        // in case someone switched to addControl in the future
         if (_geocoderCtrl && _ml)
             _ml.removeControl?.(_geocoderCtrl);
     } catch {}
     _geocoderCtrl = null;
     _geocoderEl = null;
 
-    // refs de UI/estado
+    // UI/state refs
     _views = {};
     _searchCtlRef = null;
     _scaleCtrl = null;
 
-    // mapa
+    // map
     try {
         _ml?.remove();
     } catch {}

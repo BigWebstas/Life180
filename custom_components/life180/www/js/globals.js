@@ -12,14 +12,14 @@ export const SHOW_VISITS = false;
 export const DEFAULT_COLOR = '#008000';
 export const DEFAULT_ALPHA = 0.3
 
-// Formateadores de números
+// Number formatters
 export const fmt0 = formatNumber({
     max: 0
-}); // enteros (auto locale -> en-GB fallback)
+}); // integers (auto locale -> en-GB fallback)
 export const fmt2 = formatNumber({
     min: 2,
     max: 2
-}); // 2 decimales (auto locale -> en-GB fallback)
+}); // 2 decimals (auto locale -> en-GB fallback)
 
 export let isAdmin = false;
 export let isConnected = false;
@@ -30,7 +30,7 @@ export let geocodeDistance = 20;
 export let updatePos = 1;
 export let enableDebug = false;
 
-// Almacén para las referencias originales de console
+// Store for the original console references
 const originalConsole = {
     log: console.log,
     debug: console.debug,
@@ -39,24 +39,24 @@ const originalConsole = {
     error: console.error,
 };
 
-// Base URL de Home Assistant (sobrescribible por ?haUrl=... en la URL)
+// Home Assistant base URL (overridable via ?haUrl=... in the URL)
 function normalizeHaUrl(input) {
   if (!input) return null;
   let s = String(input).trim();
 
-  // Soporta URLs "scheme-relative" (//host:port)
+  // Supports "scheme-relative" URLs (//host:port)
   if (s.startsWith("//")) s = `${location.protocol}${s}`;
 
   try {
-    // Si no trae protocolo, resuélvelo relativo a la página (soporta "/proxy" o "ha")
+    // If there is no protocol, resolve it relative to the page (supports "/proxy" or "ha")
     const hasProto = /^https?:\/\//i.test(s);
     const u = hasProto ? new URL(s) : new URL(s, window.location.href);
 
-    // ✅ CONSERVA origin + pathname (no recortes el path base)
-    // y quita solo las barras finales
+    // KEEP origin + pathname (do not trim the base path)
+    // and remove only the trailing slashes
     return (u.origin + u.pathname).replace(/\/+$/, "");
   } catch {
-    console.warn("[haUrl] Valor inválido en query:", input, "-> se usa location.origin");
+    console.warn("[haUrl] Invalid value in query:", input, "-> using location.origin");
     return null;
   }
 }
@@ -126,14 +126,14 @@ export async function isActive() {
 
 export async function configureConsole() {
     if (!enableDebug) {
-        // Modo producción: deshabilitar mensajes de consola excepto advertencias y errores
+        // Production mode: disable console messages except warnings and errors
         console.log = () => {};
         console.debug = () => {};
         console.info = () => {};
         console.warn = (...args) => originalConsole.warn("[WARNING]:", ...args);
         console.error = (...args) => originalConsole.error("[ERROR]:", ...args);
     } else {
-        // Modo desarrollo: habilitar mensajes con marcas de tiempo
+        // Development mode: enable messages with timestamps
         const getTimeStamp = () => {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -163,7 +163,7 @@ export function formatDate(date, hour = true) {
 			second: '2-digit',
 			hour12: false,
 		};
-		// Usa `currentLang` o un idioma por defecto (por ejemplo, 'en')
+		// Use `currentLang` or a default language (e.g. 'en')
 		return parsedDate.toLocaleString(currentLang || 'en', options);
 	} else {
 		const options = {
@@ -172,7 +172,7 @@ export function formatDate(date, hour = true) {
 			month: 'short',
 			hour12: false,
 		};
-		// Usa `currentLang` o un idioma por defecto (por ejemplo, 'en')
+		// Use `currentLang` or a default language (e.g. 'en')
 		return parsedDate.toLocaleString(currentLang || 'en', options);
 	}
 }
@@ -183,7 +183,7 @@ function formatNumber({
     max = 0,
     grouping = true
 } = {}) {
-  // Locale del navegador; si no existe, en-GB
+  // Browser locale; if unavailable, en-GB
   const L =
     locale ??
     ((typeof navigator !== "undefined" &&
@@ -194,7 +194,7 @@ function formatNumber({
     style: "decimal",
     minimumFractionDigits: min,
     maximumFractionDigits: max,
-    useGrouping: grouping,           // fuerza separadores (1,234 / 1.234 / 1 234… según locale)
+    useGrouping: grouping,           // forces group separators (1,234 / 1.234 / 1 234... per locale)
   });
 
   return n => nf.format(Number(n) || 0);

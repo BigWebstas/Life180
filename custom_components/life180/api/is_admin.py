@@ -1,4 +1,4 @@
-"""Se usa para saber si un usuario es administrador"""
+"""Used to tell whether a user is an administrator."""
 
 import logging
 
@@ -10,14 +10,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class IsAdminEndpoint(HomeAssistantView):
-    """Punto de acceso a la API para saber si un ser es admin"""
+    """API endpoint that reports whether a user is an admin."""
 
     url = "/api/life180/is_admin"
     name = "api:life180/is_admin"
     requires_auth = True
 
     async def get(self, request):
-        """Devuelve si un usuario es administrador"""
+        """Return whether the requesting user is an administrator."""
         hass_user = request["hass_user"]
         if hass_user is None:
             error_msg = {"error": "User not authenticated"}

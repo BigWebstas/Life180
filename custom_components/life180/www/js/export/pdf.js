@@ -29,22 +29,22 @@ async function ensureJsPdf() {
     await loadScriptOnce(AUTOTABLE_CDN);
 }
 
-// helper para html2canvas
+// helper for html2canvas
 async function ensureHtml2Canvas() {
   if (window.html2canvas) return;
   await loadScriptOnce(HTML2CANVAS_CDN);
 }
 
-// Captura compuesta para PDF: MapLibre (GL) o Leaflet (canvas+tiles)
+// Composite capture for the PDF: MapLibre (GL) or Leaflet (canvas+tiles)
 async function captureMapPngDataURL() {
   const mapEl = document.getElementById('map');
   if (!mapEl) return null;
 
-  // ¿MapLibre (GL) o Leaflet?
+  // MapLibre (GL) or Leaflet?
   const isMapLibre = !!mapEl.querySelector('.maplibregl-canvas');
   const lfCanvas   = mapEl.querySelector('.leaflet-pane canvas');
 
-  // Asegura que el frame está pintado
+  // Make sure the frame is painted
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
   // ================= MAPLIBRE (GL): base = canvas GL, overlay = marcadores DOM =================
@@ -56,7 +56,7 @@ async function captureMapPngDataURL() {
       try { baseUrl = glCanvas.toDataURL('image/png'); } catch (e) {}
     }
 
-    // Overlay DOM (sin canvas GL para no duplicar)
+    // DOM overlay (without the GL canvas, to avoid duplicating)
     await ensureHtml2Canvas();
     const scale = glCanvas && mapEl.clientWidth
       ? Math.max(1, Math.round(glCanvas.width / mapEl.clientWidth))
@@ -72,7 +72,7 @@ async function captureMapPngDataURL() {
 
     if (!baseUrl) return overlayCanvas.toDataURL('image/png');
 
-    // Composición
+    // Compositing
     const w = glCanvas ? glCanvas.width  : overlayCanvas.width;
     const h = glCanvas ? glCanvas.height : overlayCanvas.height;
     const out = document.createElement('canvas');
@@ -84,10 +84,10 @@ async function captureMapPngDataURL() {
     return out.toDataURL('image/png');
   }
 
-  // ================= LEAFLET: incluir CANVAS + TILES (si CORS lo permite) =================
+  // ================= LEAFLET: include CANVAS + TILES (if CORS allows) =================
   await ensureHtml2Canvas();
 
-  // Espera a que los tiles estén cargados (mejor nitidez y menos parches)
+  // Wait for the tiles to load (sharper, fewer patches)
   const tiles = Array.from(mapEl.querySelectorAll('img.leaflet-tile'));
   await Promise.all(tiles.map(img => img?.complete ? Promise.resolve()
     : new Promise(res => { img.onload = img.onerror = res; })));
@@ -96,21 +96,21 @@ async function captureMapPngDataURL() {
     ? Math.max(1, Math.round(lfCanvas.width / mapEl.clientWidth))
     : 2;
 
-  // 1) Intento con tiles incluidos (fondo visible)
+  // 1) Attempt with tiles included (visible background)
   try {
     const full = await window.html2canvas(mapEl, {
       backgroundColor: '#ffffff',
       scale,
       logging: false,
-      useCORS: true, // importante: junto con crossOrigin:true en los tileLayers
-      // no ignoramos nada: queremos tiles + canvas + marcadores
+      useCORS: true, // important: together with crossOrigin:true on the tileLayers
+      // we ignore nothing: we want tiles + canvas + markers
     });
     return full.toDataURL('image/png');
   } catch (e) {
-    console.warn('html2canvas con tiles falló (posible CORS). Reintento sin tiles:', e);
+    console.warn('html2canvas with tiles failed (possible CORS). Retrying without tiles:', e);
   }
 
-  // 2) Fallback: SIN tiles (se verá ruta + marcadores, como antes)
+  // 2) Fallback: WITHOUT tiles (route + markers will show, as before)
   const overlayOnly = await window.html2canvas(mapEl, {
     backgroundColor: '#ffffff',
     scale,
@@ -158,28 +158,28 @@ export function reducePositionsForPdf(positions = []) {
     return out;
 }
 
-// --- helper para etiqueta+valor con estilos distintos en la misma línea ---
+// --- helper for label+value with different styles on the same line ---
 function drawLabelValueLine(doc, x, y, maxWidth, label, value, {
     font = 'helvetica',
     labelStyle = 'bold',
     valueStyle = 'normal',
     lineHeight = 14,
 } = {}) {
-    // Ancho del texto de la etiqueta
+    // Width of the label text
     doc.setFont(font, labelStyle);
     const labelW = doc.getTextWidth(label);
 
-    // Partimos el valor para que no se salga del ancho disponible
+    // Split the value so it does not overflow the available width
     doc.setFont(font, valueStyle);
     const valueLines = doc.splitTextToSize(String(value || ''), Math.max(20, maxWidth - labelW));
 
-    // Primera línea: etiqueta + primer fragmento del valor
+    // First line: label + first fragment of the value
     doc.setFont(font, labelStyle);
     doc.text(label, x, y);
     doc.setFont(font, valueStyle);
     doc.text(valueLines[0] || '', x + labelW, y);
 
-    // Resto de líneas del valor, alineadas bajo el inicio del valor
+    // Remaining value lines, aligned under the start of the value
     for (let i = 1; i < valueLines.length; i++) {
         y += lineHeight;
         doc.text(valueLines[i], x + labelW, y);
@@ -187,7 +187,7 @@ function drawLabelValueLine(doc, x, y, maxWidth, label, value, {
     return y + lineHeight; // siguiente Y disponible
 }
 
-// ——— cabecera / título ———
+// --- header / title ---
 function drawTitle(doc, {
     margin,
     pageW,
@@ -207,31 +207,31 @@ function drawTitle(doc, {
     doc.text(nameLines, margin, y);
     y += (nameLines.length * 18);
 
-    // Fechas (mismo color azul). Etiqueta en negrita, valor en normal.
+    // Dates (same blue color). Label in bold, value in normal.
     doc.setFontSize(11);
     doc.setTextColor(nameColor[0], nameColor[1], nameColor[2]);
 
-    y = drawLabelValueLine(doc, margin, y, maxWidth, `${t('start') || 'Inicio'}: `, startLocal || '', {
+    y = drawLabelValueLine(doc, margin, y, maxWidth, `${t('start') || 'Start'}: `, startLocal || '', {
         lineHeight: 14,
         labelStyle: 'bold',
         valueStyle: 'normal',
     });
 
-    y = drawLabelValueLine(doc, margin, y, maxWidth, `${t('end') || 'Fin'}: `, endLocal || '', {
+    y = drawLabelValueLine(doc, margin, y, maxWidth, `${t('end') || 'End'}: `, endLocal || '', {
         lineHeight: 14,
         labelStyle: 'bold',
         valueStyle: 'normal',
     });
 
-    y += 6; // pequeña separación antes de la primera tabla
+    y += 6; // small gap before the first table
     return y;
 }
 
-// Centra una tabla y limita su ancho al % del área útil (página - márgenes)
+// Center a table and limit its width to a % of the usable area (page - margins)
 function computeNarrowLayout(doc, margin, ratio = 0.90) {
     const pageW = doc.internal.pageSize.getWidth();
-    const avail = pageW - margin * 2; // ancho útil
-    const tableWidth = Math.floor(avail * ratio); // ancho de la tabla (narrow)
+    const avail = pageW - margin * 2; // usable width
+    const tableWidth = Math.floor(avail * ratio); // table width (narrow)
     const left = margin + Math.round((avail - tableWidth) / 2); // centrado
     return {
         tableWidth,
@@ -240,7 +240,7 @@ function computeNarrowLayout(doc, margin, ratio = 0.90) {
     };
 }
 
-// Anchos de columnas de la tabla POSICIONES a partir del ancho real de la tabla
+// Column widths for the POSITIONS table, derived from the table's real width
 function computePositionColWidths(tableWidth) {
     // porcentajes (suman ~1.00)
     const pct = {
@@ -251,7 +251,7 @@ function computePositionColWidths(tableWidth) {
         batt: 0.09,
         addr: 0.30
     };
-    // mínimos duros en pt
+    // hard minimums in pt
     const min = {
         date: 90,
         stop: 12,
@@ -268,11 +268,11 @@ function computePositionColWidths(tableWidth) {
     let wBatt = Math.max(min.batt, Math.floor(tableWidth * pct.batt));
     let wAddr = Math.max(min.addr, Math.floor(tableWidth * pct.addr));
 
-    // Ajuste fino: la suma debe ser EXACTAMENTE el ancho de la tabla
+    // Fine tuning: the sum must be EXACTLY the table width
     const sum = wDate + wStop + wZone + wSpeed + wBatt + wAddr;
     const diff = tableWidth - sum;
     if (diff !== 0)
-        wAddr = Math.max(min.addr, wAddr + diff); // absorbe en Dirección
+        wAddr = Math.max(min.addr, wAddr + diff); // absorb into Address
 
     return {
         wDate,
@@ -328,7 +328,7 @@ export async function exportPositionsToPdf({
     } catch {}
   }
 
-  // — TÍTULO —
+  // --- TITLE ---
   let y = drawTitle(doc, {
     margin,
     pageW,
@@ -338,25 +338,25 @@ export async function exportPositionsToPdf({
     nameColor: HEAD_BG // azul oscuro
   });
   
-  // — MAPA CON RUTA —
+  // --- MAP WITH ROUTE ---
   try {
     const dataUrl = await captureMapPngDataURL();
     if (dataUrl) {
-      // ajusta al ancho de tabla estrecha (centrado)
+      // fit to the narrow table width (centered)
       const imgProps = doc.getImageProperties(dataUrl);
       const targetW = L.tableWidth;
       const targetH = (imgProps.height * targetW) / imgProps.width;
       doc.addImage(dataUrl, 'PNG', L.left, y, targetW, targetH);
-      y += targetH + 8; // separación inferior
+      y += targetH + 8; // bottom gap
     }
   } catch (e) {
-    // si falla, seguimos sin imagen
+    // if it fails, continue without the image
     console.warn('No se pudo capturar el mapa:', e);
   }  
 
   // — RESUMEN —
   doc.autoTable({
-    head: [[t('metric') || 'Métrica', t('value') || 'Valor']],
+    head: [[t('metric') || 'Metric', t('value') || 'Value']],
     body: (summaryRows || []).map(r => [r.label, r.value]),
     startY: y,
     theme: 'grid',
@@ -381,7 +381,7 @@ export async function exportPositionsToPdf({
   });
   y = doc.lastAutoTable.finalY + 8;
 
-  // — ZONAS (columna "Visitas" opcional según SHOW_VISITS) —
+  // --- ZONES ("Visits" column optional per SHOW_VISITS) ---
   {
     const hasVisits = !!SHOW_VISITS;
 
@@ -390,23 +390,23 @@ export async function exportPositionsToPdf({
     const cwStops  = 60;
     const cwDist   = 60;
 
-    // Reparto de anchos: si no hay "Visitas", ese espacio va a "Zona"
+    // Width distribution: without "Visits", that space goes to "Zone"
     const fixedNoZone = cwTime + cwStops + cwDist + (hasVisits ? cwVisits : 0);
     const cwZone = Math.max(160, L.tableWidth - fixedNoZone);
 
-    // Definición de columnas dinámica
+    // Dynamic column definition
     const zoneColumns = [
-      { key: 'zone',     header: t('zone')     || 'Zona',      width: cwZone,   halign: 'left'   },
-      { key: 'time',     header: t('time')     || 'Tiempo',    width: cwTime,   halign: 'center' },
+      { key: 'zone',     header: t('zone')     || 'Zone',      width: cwZone,   halign: 'left'   },
+      { key: 'time',     header: t('time')     || 'Time',      width: cwTime,   halign: 'center' },
     ];
     if (hasVisits) {
       zoneColumns.push(
-        { key: 'visits',   header: t('visits')   || 'Visitas',   width: cwVisits, halign: 'center' },
+        { key: 'visits',   header: t('visits')   || 'Visits',    width: cwVisits, halign: 'center' },
       );
     }
     zoneColumns.push(
-      { key: 'stops',    header: t('stops')    || 'Paradas',   width: cwStops,  halign: 'center' },
-      { key: 'distance', header: t('distance') || 'Distancia', width: cwDist,   halign: 'center' },
+      { key: 'stops',    header: t('stops')    || 'Stops',     width: cwStops,  halign: 'center' },
+      { key: 'distance', header: t('distance') || 'Distance',  width: cwDist,   halign: 'center' },
     );
 
     const head = [ zoneColumns.map(c => c.header) ];
@@ -469,12 +469,12 @@ export async function exportPositionsToPdf({
 
   doc.autoTable({
     head: [[
-      t('date') || 'Fecha/Hora',
+      t('date') || 'Date/Time',
       '',
-      t('zone') || 'Zona',
+      t('zone') || 'Zone',
       speedHeader,
-      t('battery') || 'Batería',
-      t('address') || 'Dirección'
+      t('battery') || 'Battery',
+      t('address') || 'Address'
     ]],
     body,
     startY: y,

@@ -1,4 +1,4 @@
-"""Devuelve la configuración guardada en config_entries."""
+"""Returns the configuration stored in config_entries."""
 
 import logging
 
@@ -12,14 +12,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class ConfigEndpoint(HomeAssistantView):
-    """Obtener la configuración guardada en config_entries."""
+    """Get the configuration stored in config_entries."""
 
     url = "/api/life180/config"
     name = "api:life180/config"
     requires_auth = True
 
     async def get(self, request):
-        """Devuelve la configuración almacenada en config_entries."""
+        """Return the configuration stored in config_entries."""
 
         hass = request.app["hass"]
 
@@ -30,7 +30,7 @@ class ConfigEndpoint(HomeAssistantView):
             error_response = {"error": "Configuration not found"}
             return self.json(error_response, status_code=404)
 
-        # Los valores se guardan en imperial; el frontend los usa en métrico.
+        # Values are stored in imperial; the frontend consumes them in metric.
         config = imperial_to_metric(
             {**config_entry.data, **config_entry.options}
             if config_entry.options
@@ -46,7 +46,7 @@ class ConfigEndpoint(HomeAssistantView):
                 "geocode_time": config.get("geocode_time", 30),
                 "geocode_distance": config.get("geocode_distance", 20),
                 "enable_debug": config.get("enable_debug", False),
-                # La UI es imperial. El branching del frontend se elimina aparte.
+                # The UI is imperial. The frontend branching is removed separately.
                 "use_imperial": True,
             }
         )

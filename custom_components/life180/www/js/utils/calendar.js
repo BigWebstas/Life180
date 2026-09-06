@@ -1,12 +1,12 @@
 //
-// utils/calendar.js  (Flatpickr por CDN desde JS)
+// utils/calendar.js  (Flatpickr from CDN, via JS)
 //
-import { loadCSSOnce, loadScriptOnce } from './loader.js'; // ← misma carpeta
+import { loadCSSOnce, loadScriptOnce } from './loader.js'; // <- same folder
 import { t } from './i18n.js';
 
 const RANGE_SEP = " \u21D2 ";
 
-// ---- URLs fijas (UMD) para garantizar window.flatpickr/confirmDatePlugin ----
+// ---- Fixed (UMD) URLs to guarantee window.flatpickr/confirmDatePlugin ----
 
 const v = '4.6.13';
 
@@ -15,13 +15,13 @@ const FP_CDN = {
     coreCSS: './vendor/flatpickr/flatpickr.min.css?v=' + v,
     confirmJS: './vendor/flatpickr/plugins/confirmDate/confirmDate.js?v=' + v,
     confirmCSS: './vendor/flatpickr/plugins/confirmDate/confirmDate.css?v=' + v,
-    l10nBase: './vendor/flatpickr/l10n', // p.ej. `${l10nBase}/es.js?v=${v}`
+    l10nBase: './vendor/flatpickr/l10n', // e.g. `${l10nBase}/es.js?v=${v}`
 };
 
-// ---- Estado interno ----
+// ---- Internal state ----
 let _fpReady;
-let FP = null; // alias a window.flatpickr
-let Confirm = null; // alias a window.confirmDatePlugin
+let FP = null; // alias for window.flatpickr
+let Confirm = null; // alias for window.confirmDatePlugin
 
 function detectFpLocale() {
     const supported = new Set(['ar', 'de', 'es', 'fr', 'hi', 'it', 'ja', 'pt', 'ru', 'zh']);
@@ -44,7 +44,7 @@ async function ensureFlatpickrLoaded() {
         await loadCSSOnce(FP_CDN.coreCSS);
         await loadCSSOnce(FP_CDN.confirmCSS);
 
-        // 2) JS con verificación de globals
+        // 2) JS with globals verification
         await loadScriptOnce(FP_CDN.coreJS, {
             test: () => !!window.flatpickr
         });
@@ -52,7 +52,7 @@ async function ensureFlatpickrLoaded() {
             test: () => !!window.confirmDatePlugin
         });
 
-        // 3) Localización opcional
+        // 3) Optional localization
         const loc = detectFpLocale();
         if (loc !== 'en') {
             await loadScriptOnce(`${FP_CDN.l10nBase}/${loc}.js?v=${v}`, {
@@ -69,7 +69,7 @@ async function ensureFlatpickrLoaded() {
     return _fpReady;
 }
 
-// ========================= API pública / estado exportado =========================
+// ========================= Public API / exported state =========================
 
 
 export let lastAppliedRange = []; // [Date, Date]
@@ -79,7 +79,7 @@ let fpStartTime, fpEndTime, fpRange;
 let startTimeCache = "00:00:00";
 let endTimeCache = "23:59:59";
 
-// Helpers locales
+// Local helpers
 const pad = n => String(n).padStart(2, '0');
 const fmtLocal = d =>
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` + 
@@ -93,7 +93,7 @@ function hhmmFromHIS(his) {
     return `${pad(h)}:${pad(m)}`;
 }
 
-// ================================ Inicialización ================================
+// ================================ Initialization ================================
 export async function initRangePicker(opts = {}) {
     _onApplyFilter = typeof opts.onApplyFilter === 'function' ? opts.onApplyFilter : null;
     if (window.__rangePickerInitDone)
@@ -144,7 +144,7 @@ export async function initRangePicker(opts = {}) {
                 writeLocalizedRange(inst);
             },
             onOpen(_sel, _str, inst) {
-                // Congelar el update loop mientras esté abierto
+                // Freeze the update loop while it is open
                 window.__freezeUpdates = (window.__freezeUpdates || 0) + 1;
                 inst._prevTextboxValue = inst.input.value;
                 inst._prevSelectedDates = Array.isArray(inst.selectedDates) ? [...inst.selectedDates] : [];
@@ -156,7 +156,7 @@ export async function initRangePicker(opts = {}) {
                     writeLocalizedRange(inst);
             },
             onClose(_sel, _str, inst) {
-                // Reanudar el update loop al cerrar
+                // Resume the update loop on close
                 window.__freezeUpdates = Math.max(0, (window.__freezeUpdates || 0) - 1);
                 inst.calendarContainer.classList.remove('fp-at-top');
             },
@@ -177,8 +177,8 @@ export async function initRangePicker(opts = {}) {
         window.__rangePickerInitDone = true;
 }
 
-// ======================== API usada por screens/filter.js ========================
-/** Devuelve { startLocal, endLocal } en formato YYYY-MM-DDTHH:mm:ss (local). */
+// ======================== API used by screens/filter.js ========================
+/** Returns { startLocal, endLocal } in YYYY-MM-DDTHH:mm:ss (local) format. */
 export function getSelectedLocalRange() {
     let startRaw,
     endRaw;
@@ -218,7 +218,7 @@ export function getSelectedLocalRange() {
     };
 }
 
-/** Establece las horas HH:mm:ss de inicio/fin y refresca los time pickers. */
+/** Sets the start/end HH:mm:ss times and refreshes the time pickers. */
 export function setTimes(startHHMMSS = "00:00:00", endHHMMSS = "23:59:59") {
     startTimeCache = startHHMMSS || "00:00:00";
     endTimeCache = endHHMMSS || "23:59:59";
@@ -228,20 +228,20 @@ export function setTimes(startHHMMSS = "00:00:00", endHHMMSS = "23:59:59") {
         writeLocalizedRange(fpRange);
 }
 
-/** Establece el rango de fechas (objetos Date “día entero”). */
+/** Sets the date range (whole-day Date objects). */
 export function setRangeDates([startDate, endDate], updateInput = true) {
     if (!fpRange)
         return;
     fpRange.setDate([startDate, endDate], !!updateInput);
     if (!updateInput)
         writeLocalizedRange(fpRange);
-    // Sincroniza el "aplicado" si el caller desea reflejarlo en la UI
+    // Sync the "applied" range if the caller wants it reflected in the UI
     if (updateInput) {
         lastAppliedRange = [new Date(startDate), new Date(endDate || startDate)];
     }
 }
 
-/** Limpia el input del rango y el estado interno. */
+/** Clears the range input and internal state. */
 export function clearRangeTextbox() {
     lastAppliedRange = [];
     if (fpRange) {
@@ -250,7 +250,7 @@ export function clearRangeTextbox() {
     }
 }
 
-/** Muestra/oculta el bloque fecha según el selector de persona. */
+/** Shows/hides the date block based on the person selector. */
 export function updateDaterangeVisibility() {
     const personSelect = document.getElementById('person-select');
     const daterangeInput = document.getElementById('daterange');
@@ -266,7 +266,7 @@ export function updateDaterangeVisibility() {
     }
 }
 
-// ================================ Helpers UI =================================
+// ================================ UI helpers =================================
 function writeLocalizedRange(instance) {
     if (!instance)
         return;
@@ -300,7 +300,7 @@ function applySelection(instance) {
         const s = sd[0];
         instance.setDate([s, s], false);
     }
-    // Actualiza lastAppliedRange con las fechas + horas actuales
+    // Update lastAppliedRange with the current dates + times
     if (Array.isArray(instance.selectedDates) && instance.selectedDates.length) {
         const [sDate, eDate = instance.selectedDates[0]] = instance.selectedDates;
         const [sh, sm, ss] = (startTimeCache || "00:00:00").split(":").map(n => +n || 0);
@@ -393,14 +393,14 @@ function mountPanel(instance) {
 
             const startTimeAnchor = document.createElement("input");
             startTimeAnchor.type = "hidden";
-            // 👇 Oculta SIEMPRE el input, aunque Flatpickr lo convierta en text
+            // Always hide the input, even when Flatpickr turns it into text
             startTimeAnchor.classList.add("id-visually-hidden", "fp-time-anchor");
             startTimeAnchor.setAttribute("aria-hidden", "true");
             startTimeAnchor.tabIndex = -1;
 
             const endTimeAnchor = document.createElement("input");
             endTimeAnchor.type = "hidden";
-            // 👇 Igual aquí
+            // Same here
             endTimeAnchor.classList.add("id-visually-hidden", "fp-time-anchor");
             endTimeAnchor.setAttribute("aria-hidden", "true");
             endTimeAnchor.tabIndex = -1;
@@ -569,7 +569,7 @@ function getQuickRange(value) {
     }
 }
 
-// ============================ Parche de sombra (UI) ============================
+// ============================ Shadow patch (UI) ============================
 function injectFlatpickrShadowPatch() {
     if (document.getElementById('fp-shadow-patch'))
         return;
