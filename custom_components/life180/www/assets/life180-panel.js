@@ -144,7 +144,10 @@ class Life180Panel extends HTMLElement {
             if (e.persisted)
                 this._syncThemeFromParent();
         };
-        this._msgHandler = this._handleTokenRequest.bind(this);
+        this._msgHandler = (ev) => {
+            this._handleTokenRequest(ev);
+            this._maybeAnswerThemeRequest(ev);
+        };
         this._themeHandler = () => this._syncThemeFromParent();
 
         // Watch for parent theme changes (event and mutations on <html>)
@@ -266,18 +269,29 @@ class Life180Panel extends HTMLElement {
             const csRoot = P.getComputedStyle(root);
             const csBody = P.getComputedStyle(P.document.body);
 
-            ["--app-header-background-color", "--app-header-text-color",
-                "--primary-color", "--primary-text-color", "--primary-background-color",
-                "--secondary-background-color", "--divider-color"].forEach(v => {
-                const val = csRoot.getPropertyValue(v);
-                if (val)
-                    this.style.setProperty(v, val.trim());
+            const KEYS = [
+                "--app-header-background-color", "--app-header-text-color",
+                "--primary-color", "--accent-color",
+                "--primary-text-color", "--secondary-text-color", "--text-primary-color",
+                "--primary-background-color", "--secondary-background-color",
+                "--card-background-color", "--divider-color",
+                "--error-color", "--warning-color", "--success-color",
+                "--ha-card-border-radius", "--ha-card-box-shadow",
+            ];
+            const vars = {};
+            KEYS.forEach(v => {
+                const val = (csRoot.getPropertyValue(v) || "").trim();
+                if (val) {
+                    vars[v] = val;
+                    this.style.setProperty(v, val);
+                }
             });
 
             const famVar = (csRoot.getPropertyValue("--mdc-typography-font-family") || "").trim();
             const famBody = (csBody.fontFamily || "").trim();
             const fam = famVar || famBody ||
                 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"';
+            vars["--mdc-typography-font-family"] = fam;
 
             document.documentElement.style.setProperty("--mdc-typography-font-family", fam);
             this.style.setProperty("--mdc-typography-font-family", fam);
@@ -285,9 +299,42 @@ class Life180Panel extends HTMLElement {
 
             const weightBody = (csBody.fontWeight || "400").toString().trim();
             this.style.setProperty("--ha-toolbar-title-weight", weightBody);
+
+            // Is the HA theme dark? (luminance of the background)
+            const bg = (csRoot.getPropertyValue("--primary-background-color")
+                || csBody.backgroundColor || "").trim();
+            const m = bg.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+            const dark = m
+                ? (0.299 * +m[1] + 0.587 * +m[2] + 0.114 * +m[3]) < 128
+                : false;
+
+            // Relay into the app iframe: its own window.parent may be a bare
+            // wrapper with no theme, so it can't read HA directly in every setup.
+            this._lastTheme = { vars, dark };
+            const iframe = this.shadowRoot?.getElementById("life180-iframe");
+            const cw = iframe && iframe.contentWindow;
+            if (cw) {
+                try {
+                    cw.postMessage({ type: "life180-theme", vars, dark },
+                        this._iframeOrigin || "*");
+                } catch (_) {}
+            }
         } catch (err) {
             console.error("syncTheme error:", err?.message || err);
         }
+    }
+
+    _maybeAnswerThemeRequest(ev) {
+        if (ev?.data?.type !== "life180-request-theme")
+            return;
+        if (this._lastTheme && ev.source) {
+            try {
+                ev.source.postMessage(
+                    { type: "life180-theme", ...this._lastTheme },
+                    ev.origin || this._iframeOrigin || "*");
+            } catch (_) {}
+        }
+        this._syncThemeFromParent();
     }
 
     async _handleTokenRequest(ev) {

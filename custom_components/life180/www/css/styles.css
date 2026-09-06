@@ -1144,3 +1144,11 @@ body.no-scroll { overflow: hidden; }
     --modal-backdrop:   rgba(0, 0, 0, 0.6);
   }
 }
+
+/* ===== Dark map (2D Leaflet) =====
+   Leaflet tags each base tile <img> with .l180-base-tiles; the filter only
+   hits those, not the marker/circle panes. The 3D map dims via MapLibre
+   paint properties instead. */
+#map.l180-map-dark .l180-base-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.85);
+}

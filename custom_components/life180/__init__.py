@@ -131,8 +131,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         sidebar_title="Life180",
         sidebar_icon="mdi:at",
         require_admin=config.get("only_admin", False),
-        embed_iframe=True,                   # <- the key part
-    )    
+        # embed_iframe=False: the panel web component runs directly in the HA
+        # frontend, so it (and the app iframe it creates) can read the live HA
+        # theme. embed_iframe=True double-wraps in an empty iframe that has no
+        # theme, which left the app stuck in light mode.
+        embed_iframe=False,
+    )
 
     # ------------------------------------------------------------------ #
     #  6. BLUEPRINTS                                                     #

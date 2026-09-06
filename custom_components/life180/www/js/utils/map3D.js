@@ -12,7 +12,7 @@
 
 import { loadCSSOnce, loadScriptOnce } from './loader.js';
 import { t } from './i18n.js';
-import { tileUrl, basemapSource, onThemeChange } from '../globals.js';
+import { tileUrl, isDarkTheme, onThemeChange } from '../globals.js';
 
 export let map;
 let _ml, _popup, _views = {};
@@ -299,16 +299,31 @@ function _flushReadyQueue() {
 }
 
 // === UI util ====
-// Point the base raster source at the theme-appropriate tiles (OSM light /
-// CARTO dark). Safe to call any time after the source exists.
-function _applyBasemapTheme() {
+// OSM has no dark tiles, so in dark mode we dim and desaturate the raster
+// layer with paint properties. This only touches the 'osm' layer - zone
+// circles and route lines are separate layers and stay untouched.
+const _RASTER_DARK = {
+    'raster-brightness-min': 0,
+    'raster-brightness-max': 0.45,
+    'raster-contrast': -0.3,
+    'raster-saturation': -0.85,
+    'raster-hue-rotate': 20,
+};
+const _RASTER_LIGHT = {
+    'raster-brightness-min': 0,
+    'raster-brightness-max': 1,
+    'raster-contrast': 0,
+    'raster-saturation': 0,
+    'raster-hue-rotate': 0,
+};
+
+function _applyMapDark() {
     try {
-        const src = _ml && _ml.getSource && _ml.getSource('osm');
-        if (src && typeof src.setTiles === 'function') {
-            src.setTiles([tileUrl(basemapSource())]);
-        }
+        if (!_ml || !_ml.getLayer || !_ml.getLayer('osm')) return;
+        const p = isDarkTheme() ? _RASTER_DARK : _RASTER_LIGHT;
+        for (const k in p) _ml.setPaintProperty('osm', k, p[k]);
     } catch (e) {
-        console.error('basemap theme swap failed:', e);
+        console.error('map dark toggle failed:', e);
     }
 }
 
@@ -316,9 +331,9 @@ function addRasterBasesIfMissing() {
     if (!_ml.getSource('osm')) {
         _ml.addSource('osm', {
             type: 'raster',
-            tiles: [tileUrl(basemapSource())],
+            tiles: [tileUrl('osm')],
             tileSize: 256,
-            attribution: '© OpenStreetMap contributors, © CARTO',
+            attribution: '© OpenStreetMap contributors',
             maxzoom: 19
         });
         _ml.addLayer({
@@ -329,6 +344,7 @@ function addRasterBasesIfMissing() {
                 visibility: 'visible'
             }
         });
+        _applyMapDark();
     }
 }
 
@@ -929,9 +945,9 @@ export async function initMap() {
         if (!_ml.getSource('osm')) {
             _ml.addSource('osm', {
                 type: 'raster',
-                tiles: [tileUrl(basemapSource())],
+                tiles: [tileUrl('osm')],
                 tileSize: 256,
-                attribution: '© OpenStreetMap contributors, © CARTO',
+                attribution: '© OpenStreetMap contributors',
                 maxzoom: 19
             });
             _ml.addLayer({
@@ -943,12 +959,13 @@ export async function initMap() {
                 }
             });
         }
+        _applyMapDark();
         _views = {
             "OpenStreetMap": "osm"
         };
         if (!_themeHooked) {
             _themeHooked = true;
-            onThemeChange(_applyBasemapTheme);
+            onThemeChange(_applyMapDark);
         }
         tryFlush();
     });
