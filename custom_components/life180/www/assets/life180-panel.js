@@ -194,8 +194,8 @@ class Life180Panel extends HTMLElement {
             return;
 
         const base =
-            this._hass?.hassUrl?.("/life180/index.html") ||
-            new URL("life180/index.html", location.href).toString();
+            this._hass?.hassUrl?.("/life180_static/index.html") ||
+            new URL("life180_static/index.html", location.href).toString();
 
         let url = base;
         try {

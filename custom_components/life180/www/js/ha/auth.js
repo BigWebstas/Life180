@@ -124,7 +124,7 @@ async function authenticate() {
         // Redirect if there is no valid token
         console.log("No valid token found. Redirecting to authorize...");
 
-        const redirectUri = `${haUrl}/life180/index.html`;
+        const redirectUri = `${haUrl}/life180_static/index.html`;
         const authUrl = `${haUrl}/auth/authorize?client_id=${encodeURIComponent(`${haUrl}/`)}&redirect_uri=${encodeURIComponent(redirectUri)}`;
         window.location.href = authUrl;
     } catch (error) {

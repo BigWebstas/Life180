@@ -45,8 +45,8 @@ _LOGGER = logging.getLogger(__name__)
 
 STATIC_DIR = (Path(__file__).parent / "www").resolve()
 
-PANEL_URL = "/life180/assets/life180-panel.js"
-CARD_URL  = "/life180/assets/life180-card.js"
+PANEL_URL = "/life180_static/assets/life180-panel.js"
+CARD_URL  = "/life180_static/assets/life180-card.js"
 
 
 # --------------------------------------------------------------------------- #
@@ -104,7 +104,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     #  2. Register static paths                                          #
     # ------------------------------------------------------------------ #
     await hass.http.async_register_static_paths([
-        StaticPathConfig(url_path="/life180", path=str(STATIC_DIR), cache_headers=True),
+        StaticPathConfig(url_path="/life180_static", path=str(STATIC_DIR), cache_headers=True),
     ])
 
     # ------------------------------------------------------------------ #
