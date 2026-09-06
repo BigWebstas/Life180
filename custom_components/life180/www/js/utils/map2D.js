@@ -2,7 +2,7 @@
 
 import { loadCSSOnce, loadScriptOnce } from './loader.js';
 import {t} from './i18n.js';
-import { tileUrl } from '../globals.js';
+import { tileUrl, basemapSource, onThemeChange } from '../globals.js';
 
 export let map;
 
@@ -40,13 +40,14 @@ export async function initMap() {
         // Initialize the map
         map = L.map('map', mapOptions);
 
-        // Base layer: locked to OpenStreetMap, no layer switcher.
-        L.tileLayer(tileUrl('osm'), {
+        // Base layer: OSM in light, CARTO dark in dark. No layer switcher.
+        const baseTiles = L.tileLayer(tileUrl(basemapSource()), {
             maxZoom: 19,
             minZoom: 1,
             crossOrigin: true,
-            attribution: '© OpenStreetMap contributors',
+            attribution: '© OpenStreetMap contributors, © CARTO',
         }).addTo(map);
+        onThemeChange(() => baseTiles.setUrl(tileUrl(basemapSource())));
 
 		map.attributionControl.setPosition('bottomleft');
 

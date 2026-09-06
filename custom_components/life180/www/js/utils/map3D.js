@@ -12,10 +12,11 @@
 
 import { loadCSSOnce, loadScriptOnce } from './loader.js';
 import { t } from './i18n.js';
-import { tileUrl } from '../globals.js';
+import { tileUrl, basemapSource, onThemeChange } from '../globals.js';
 
 export let map;
 let _ml, _popup, _views = {};
+let _themeHooked = false;
 // NEW: global registry of all popups (markers and overlays)
 const _allPopups = new Set();
 let _cooperativeGestures = false;
@@ -298,13 +299,26 @@ function _flushReadyQueue() {
 }
 
 // === UI util ====
+// Point the base raster source at the theme-appropriate tiles (OSM light /
+// CARTO dark). Safe to call any time after the source exists.
+function _applyBasemapTheme() {
+    try {
+        const src = _ml && _ml.getSource && _ml.getSource('osm');
+        if (src && typeof src.setTiles === 'function') {
+            src.setTiles([tileUrl(basemapSource())]);
+        }
+    } catch (e) {
+        console.error('basemap theme swap failed:', e);
+    }
+}
+
 function addRasterBasesIfMissing() {
     if (!_ml.getSource('osm')) {
         _ml.addSource('osm', {
             type: 'raster',
-            tiles: [tileUrl('osm')],
+            tiles: [tileUrl(basemapSource())],
             tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
+            attribution: '© OpenStreetMap contributors, © CARTO',
             maxzoom: 19
         });
         _ml.addLayer({
@@ -912,13 +926,12 @@ export async function initMap() {
     };
 
     _ml.on('load', () => {
-        // OSM visible by default (Esri hidden, fallback)
         if (!_ml.getSource('osm')) {
             _ml.addSource('osm', {
                 type: 'raster',
-                tiles: [tileUrl('osm')],
+                tiles: [tileUrl(basemapSource())],
                 tileSize: 256,
-                attribution: '© OpenStreetMap contributors',
+                attribution: '© OpenStreetMap contributors, © CARTO',
                 maxzoom: 19
             });
             _ml.addLayer({
@@ -933,6 +946,10 @@ export async function initMap() {
         _views = {
             "OpenStreetMap": "osm"
         };
+        if (!_themeHooked) {
+            _themeHooked = true;
+            onThemeChange(_applyBasemapTheme);
+        }
         tryFlush();
     });
 

@@ -37,6 +37,42 @@ export function tileUrl(source) {
     return `${haUrl}/api/life180/tile/${source}/{z}/{x}/{y}`;
 }
 
+// --- Basemap theme ---------------------------------------------------------
+// True when the app should show a dark map. Embedded in HA the theme bridge
+// (see index.html) stamps data-ha-dark on <html>; standalone we fall back to
+// the OS preference.
+export function isDarkTheme() {
+    try {
+        const haDark = document.documentElement.getAttribute('data-ha-dark');
+        if (haDark === '1') return true;
+        if (haDark === '0') return false;
+        return !!(window.matchMedia
+            && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch {
+        return false;
+    }
+}
+
+// Tile source id for the current theme: OSM in light, CARTO dark in dark.
+export function basemapSource() {
+    return isDarkTheme() ? 'carto_dark' : 'osm';
+}
+
+// Run `cb` whenever the effective light/dark state may have changed.
+export function onThemeChange(cb) {
+    const fire = () => { try { cb(); } catch (e) { console.error(e); } };
+    try {
+        window.matchMedia('(prefers-color-scheme: dark)')
+            .addEventListener('change', fire);
+    } catch {}
+    try {
+        new MutationObserver(fire).observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-ha-dark', 'data-theme', 'class', 'style'],
+        });
+    } catch {}
+}
+
 // Store for the original console references
 const originalConsole = {
     log: console.log,

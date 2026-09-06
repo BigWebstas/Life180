@@ -31,6 +31,8 @@ _LOGGER = logging.getLogger(__name__)
 # {source: upstream URL template}. {z}/{x}/{y} are substituted per request.
 TILE_SOURCES = {
     "osm": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    # CARTO "dark matter" raster basemap - used when the theme is dark.
+    "carto_dark": "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
     "esri": (
         "https://server.arcgisonline.com/ArcGIS/rest/services/"
         "World_Imagery/MapServer/tile/{z}/{y}/{x}"
