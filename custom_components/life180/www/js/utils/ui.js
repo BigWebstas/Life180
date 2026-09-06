@@ -8,7 +8,7 @@ const invalidateSoon = () => requestAnimationFrame(() => map?.invalidateSize(tru
 
 export async function loadUI() {
     try {
-        enhanceSelectWithIcons(document.getElementById('combo-select')); // pantalla
+        enhanceSelectWithIcons(document.getElementById('combo-select')); // screen
 
         const personSelect = document.getElementById('person-select');
         if (personSelect) {
@@ -31,7 +31,7 @@ export async function loadUI() {
             filterContainer.classList.remove('hidden');
         }
 
-        // Garantizar que todo el contenido esté oculto hasta que las hojas de estilo y el DOM estén listos
+        // Ensure all content stays hidden until the stylesheets and the DOM are ready
         if (!document.body.classList.contains('loaded')) {
             document.body.classList.add('loaded');
         }
@@ -41,8 +41,8 @@ export async function loadUI() {
 }
 
 export async function updateUI() {
-    //ocultar VISITAS en FILTRO-> ZONAS
-    // Si ya existe el <style>, reutilízalo; si no, créalo
+    // hide VISITS in FILTER -> ZONES
+    // If the <style> already exists, reuse it; otherwise create it
     let style = document.getElementById('visits-col-css');
     if (!style) {
         style = document.createElement('style');
@@ -50,13 +50,13 @@ export async function updateUI() {
         document.head.appendChild(style);
     }
 
-    // Cuando está oculta: ocultar <th data-i18n="visits"> y la 3ª columna del body
+    // When hidden: hide <th data-i18n="visits"> and the 3rd body column
     style.textContent = SHOW_VISITS ? '' : `
         #summary-zones-table thead th[data-i18n="visits"] { display: none !important; }
         #summary-zones-table-body tr > td:nth-child(3) { display: none !important; }
     `;
 
-    // FILTRO -> POSICIONES-> speed
+    // FILTER -> POSITIONS -> speed
     const unitSpeed = t('mi_per_hour');
     const unitDistKm = t('miles');
     const unitDistMeters = t('feet');
@@ -68,10 +68,10 @@ export async function updateUI() {
         if (label)
             label.textContent = unitSpeed;
         else
-            th.textContent = unitSpeed; // fallback si no hay estructura
+            th.textContent = unitSpeed; // fallback when there is no structure
     });
 
-    // FILTRO -> ZONAS -> distance (con fallback igual)
+    // FILTER -> ZONES -> distance (with the same fallback)
     document
     .querySelectorAll('#summary-zones-table thead th[data-i18n="distance"]')
     .forEach(th => {
@@ -79,7 +79,7 @@ export async function updateUI() {
         if (label)
             label.textContent = unitDistKm;
         else
-            th.textContent = unitDistKm; // <- aquí estaba el problema
+            th.textContent = unitDistKm; // <- this was the problem
     });
 
     // ZONAS -> radio
@@ -89,7 +89,7 @@ export async function updateUI() {
         el.textContent = `${unitDistMeters}`;
     });
 
-    // PERSONAS -> velocidad
+    // PERSONS -> speed
     document
     .querySelectorAll('#persons-table thead th[data-i18n="speed"] .hdr-label')
     .forEach(el => {
@@ -119,23 +119,23 @@ document.getElementById('hamburger-button').addEventListener('click', async() =>
 
 document.getElementById('combo-select').addEventListener('change', function () {
     try {
-        const selectedValue = this.value; // Obtiene el valor seleccionado
+        const selectedValue = this.value; // gets the selected value
         const filterContainer = document.getElementById('filter-container');
         const zonesContainer = document.getElementById('zones-container');
         const personsContainer = document.getElementById('persons-container');
 
         if (selectedValue === 'filter') {
-            // Mostrar filterContainer
+            // Show filterContainer
             filterContainer.style.display = 'block';
             zonesContainer.style.display = 'none';
             personsContainer.style.display = 'none';
         } else if (selectedValue === 'zones') {
-            // Mostrar zonesContainer
+            // Show zonesContainer
             filterContainer.style.display = 'none';
             zonesContainer.style.display = 'block';
             personsContainer.style.display = 'none';
 
-            // No seleccionar ninguna zona al entrar en "zones"
+            // Do not select any zone when entering "zones"
             const zonesTableBody = document.getElementById('zones-table-body');
             if (zonesTableBody) {
                 zonesTableBody.querySelectorAll('tr.selected')
@@ -145,12 +145,12 @@ document.getElementById('combo-select').addEventListener('change', function () {
             updateZoneActionButtons();
 
         } else if (selectedValue === 'users') {
-            // Mostrar personsContainer
+            // Show personsContainer
             filterContainer.style.display = 'none';
             zonesContainer.style.display = 'none';
             personsContainer.style.display = 'block';
 
-            // No seleccionar ninguna persona al entrar en "persons"
+            // Do not select any person when entering "persons"
             const personsTableBody = document.getElementById('persons-table-body');
             if (personsTableBody) {
                 personsTableBody.querySelectorAll('tr.selected')
@@ -161,7 +161,7 @@ document.getElementById('combo-select').addEventListener('change', function () {
             }
         }
 
-        // cerrar cualquier popup abierto en el mapa:
+        // close any popup open on the map:
         if (typeof map !== 'undefined' && map && typeof map.closePopup === 'function')
             map.closePopup();
 
@@ -177,11 +177,11 @@ async function toggleContainer() {
         const isHidden = formsContainer.classList.contains('hidden');
 
         if (isHidden) {
-            // Mostrar el contenedor de edición
+            // Show the edit container
             formsContainer.classList.remove('hidden');
             formsContainer.classList.add('visible');
         } else {
-            // Ocultar el contenedor de edición
+            // Hide the edit container
             formsContainer.classList.add('hidden');
             formsContainer.classList.remove('visible');
         }
@@ -190,7 +190,7 @@ async function toggleContainer() {
     }
 }
 
-// Iconos SVG (puedes ampliar este mapa cuando quieras)
+// SVG icons (extend this map whenever you want)
 const ICONS = {
     users: '<path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5z"/>',
     zones: '<path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5z"/>',
@@ -205,7 +205,7 @@ function enhanceSelectWithIcons(select) {
     if (!select || select.dataset.enhanced === "1")
         return;
 
-    // Envoltorio y botón
+    // Wrapper and button
     const wrap = document.createElement('div');
     wrap.className = 'id-wrap';
     const btn = document.createElement('button');
@@ -222,7 +222,7 @@ function enhanceSelectWithIcons(select) {
     menu.setAttribute('aria-hidden', 'true');
     menu.hidden = true;
 
-    // Inserta UI y oculta el select
+    // Insert the UI and hide the select
     select.classList.add('id-visually-hidden');
     select.parentNode.insertBefore(wrap, select.nextSibling);
     wrap.appendChild(btn);
@@ -233,7 +233,7 @@ function enhanceSelectWithIcons(select) {
     }
 
     function iconFor(opt) {
-        // Prioridad: data-icon de la opción -> data-default-icon del select -> value -> dot
+        // Priority: option's data-icon -> select's data-default-icon -> value -> dot
         return (opt?.dataset.icon) || select.dataset.defaultIcon || (opt?.value) || 'dot';
     }
 
@@ -269,7 +269,7 @@ function enhanceSelectWithIcons(select) {
                 btn.focus();
             });
             menu.appendChild(optBtn);
-            // Roving tabindex dentro del menú
+            // Roving tabindex within the menu
             optBtn.tabIndex = (opt.selected || (!select.value && idx === 0)) ? 0 : -1;
         });
     }
@@ -279,7 +279,7 @@ function enhanceSelectWithIcons(select) {
         menu.hidden = false;
         menu.setAttribute('aria-hidden', 'false');
         btn.setAttribute('aria-expanded', 'true');
-        // Enfoca la opción seleccionada
+        // Focus the selected option
         const selected = menu.querySelector('.id-option[aria-selected="true"]') || menu.querySelector('.id-option');
         selected?.focus();
         document.addEventListener('click', onDocClick);
@@ -333,16 +333,16 @@ function enhanceSelectWithIcons(select) {
         }
     }
 
-    // Sincronización si tu lógica cambia el <select>
+    // Sync if your logic changes the <select>
     select.addEventListener('change', () => {
         updateButtonLabel();
-        // Marcar seleccionado en menú si está abierto
+        // Mark selected in the menu if it is open
         menu.querySelectorAll('.id-option').forEach(b => {
             b.setAttribute('aria-selected', String(b.dataset.value === select.value));
         });
     });
 
-    // Apertura/cierre y navegación desde el botón
+    // Open/close and navigation from the button
     btn.addEventListener('click', toggleMenu);
     btn.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
@@ -351,7 +351,7 @@ function enhanceSelectWithIcons(select) {
         }
     });
 
-    // Observer: si agregas/eliminás/modificás opciones, se refleja solo
+    // Observer: if you add/remove/modify options, it updates automatically
     const obs = new MutationObserver(() => {
         updateButtonLabel();
         if (!menu.hidden)
@@ -363,7 +363,7 @@ function enhanceSelectWithIcons(select) {
         characterData: true
     });
 
-    // Inicial
+    // Initial
     updateButtonLabel();
     select.dataset.enhanced = "1";
 }

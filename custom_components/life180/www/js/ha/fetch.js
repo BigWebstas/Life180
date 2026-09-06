@@ -23,13 +23,13 @@ async function fetchData(
         let currentToken;
         if (authRequired) {
 
-            // 1) Intenta leer el token desde la URL (?token=... o ?access_token=...)
+            // 1) Try to read the token from the URL (?token=... or ?access_token=...)
             let urlToken = "";
             try {
                 const sp = new URLSearchParams(window.location.search);
                 urlToken = (sp.get("token") || sp.get("access_token") || "").trim();
             } catch (_) {}
-            // 2) Prioriza el token de la URL; si no hay, usa getToken()
+            // 2) Prefer the URL token; if absent, use getToken()
             currentToken = urlToken || await getToken();
 
             if (!currentToken || !currentToken.trim()) {
@@ -66,7 +66,7 @@ async function fetchData(
 		const retryAfterHdr = parseRetryAfter(raRaw);
         const contentType = (response.headers.get('content-type') || '').toLowerCase();
 
-        // 202 Accepted → cola: puede venir con o sin JSON
+        // 202 Accepted -> queued: may come with or without JSON
         if (status === 202) {
             if (contentType.includes('json')) {
                 try {
@@ -82,7 +82,7 @@ async function fetchData(
                     };
                 }
             }
-            // sin JSON
+            // no JSON
             return {
                 error: 'queued',
                 retry_after: Number.isFinite(retryAfterHdr) ? retryAfterHdr : 1.5
@@ -95,7 +95,7 @@ async function fetchData(
         }
 
         if (!response.ok) {
-            // Intenta leer JSON de error para capturar retry_after / error
+            // Try to read an error JSON to capture retry_after / error
             let errorJson = null;
             try { errorJson = await response.clone().json(); } catch (_) {}
             const errorText = errorJson ? JSON.stringify(errorJson) : (await response.text().catch(() => ''));
@@ -150,7 +150,7 @@ export async function fetchReverseGeocode(lat, lon) {
         const data = await fetchData(u.toString(), {
             timeoutMs: 15000
         });
-        return data; // puede ser {error:'queued', retry_after:n} o {address:{display_name:'...'}}
+        return data; // may be {error:'queued', retry_after:n} or {address:{display_name:'...'}}
     } catch (error) {
         console.error("Error getting reverse geocode:", error);
         throw error;
@@ -453,7 +453,7 @@ export async function fetchTokenRefresh(refreshToken) {
         console.log("************ Renewed Token ************", data);
         return data;
     } catch (error) {
-        console.error("Error en la solicitud de renovación del token:", error);
+        console.error("Error in the token refresh request:", error);
         return null;
     }
 }
