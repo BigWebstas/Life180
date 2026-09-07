@@ -179,7 +179,8 @@ async function updateZoneMarkers() {
             existingCircle.getRadius() !== radius;
 
         // Derived colors (hex border + rgba fill with default alpha)
-        const baseHex = zone.color || DEFAULT_COLOR;
+        // Zones are always green; the per-zone color option was removed.
+        const baseHex = DEFAULT_COLOR;
         const strokeColor = baseHex;
         const fillColor = toRgba(baseHex, DEFAULT_ALPHA);
 
@@ -320,7 +321,7 @@ async function updateZoneMarkers() {
                             updatedRadius,
                             updatedLatLng.lat,
                             updatedLatLng.lng,
-                            z.color,
+                            DEFAULT_COLOR,
                             z.visible !== false);
 
                     if (response && response.success) {
@@ -519,25 +520,17 @@ async function handleEditZone() {
             isHA ? t('zone_name_ha') : t('enter_zone_name'),
             zone.name || t('zone_without_name'), {
             title: t('zones'),
-            withColor: true,
-            defaultColor: zone.color,
-            colorLabel: t('select_color'),
             withVisibility: true,
             visibilityValue: (zone.visible !== false),
             visibilityLabel: t ? t('show_on_map') : 'Show on the map',
             // If it is HA, we do not allow changing the name:
             inputDisabled: isHA,
-            colorOptions: {
-                palette: [],
-                allowAlpha: false,
-                showNative: false
-            },
         });
     if (res === null)
         return;
 
     const newVisible = (res.visible !== undefined) ? !!res.visible : (zone.visible !== false);
-    const newColor = res.color || zone.color || DEFAULT_COLOR;
+    const newColor = DEFAULT_COLOR;
 
     let cleaned = zone.name;
     if (!isHA) {
@@ -610,14 +603,6 @@ async function handleCreateZone() {
     // Ask the user for the zone name
     const res = await uiPrompt(t('enter_zone_name'), '', {
         title: t('zones'),
-        withColor: true,
-        defaultColor: DEFAULT_COLOR,
-        colorLabel: t('select_color'),
-        colorOptions: {
-            palette: [],
-            allowAlpha: false,
-            showNative: false
-        },
     });
     if (res === null)
         return; // cancelado
@@ -643,7 +628,7 @@ async function handleCreateZone() {
 
     try {
         // Create the zone with the validated name
-        const color = res.color || DEFAULT_COLOR;
+        const color = DEFAULT_COLOR;
         const newZoneId = await createZone(cleaned, radius, latitude, longitude, "mdi:map-marker", false, true, color);
         if (newZoneId) {
             await fetchZones();
@@ -861,7 +846,7 @@ async function updateZonesTable() {
         }
 
         // Determine the content of the first column
-        const color = zone.color || DEFAULT_COLOR;
+        const color = DEFAULT_COLOR;
         const isVisible = zone.visible !== false; // visible by default
         row.dataset.visible = String(isVisible);
         row.style.setProperty('--color-bg', toRgba(color, DEFAULT_ALPHA));
@@ -1074,7 +1059,7 @@ export function getZoneStyleById(id) {
     const z = getZoneById(id);
     if (!z)
         return null;
-    const baseHex = z.color || DEFAULT_COLOR;
+    const baseHex = DEFAULT_COLOR;
     return {
         id: z.id,
         name: z.name,
