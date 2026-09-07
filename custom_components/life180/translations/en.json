@@ -47,7 +47,8 @@
           "anti_spike_radius": "Anti-spike radius (ft)",
           "anti_spike_time": "Anti-spike time (seconds)",
           "map_cache_enabled": "Cache map tiles locally",
-          "map_cache_max_mb": "Max cache size (MB)"
+          "map_cache_max_mb": "Max cache size (MB)",
+          "map_cache_clear": "Clear cached tiles now (on save)"
         }
       }
     },
@@ -129,7 +130,8 @@
             "description": "Cache map tiles on the Home Assistant server for offline use and faster loads.",
             "data": {
               "map_cache_enabled": "Cache map tiles locally",
-              "map_cache_max_mb": "Max cache size (MB)"
+              "map_cache_max_mb": "Max cache size (MB)",
+              "map_cache_clear": "Clear cached tiles now (on save)"
             }
           }
         }

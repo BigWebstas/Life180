@@ -236,6 +236,41 @@ class TileEndpoint(HomeAssistantView):
         hass.async_add_executor_job(_evict_lru, root, cap)
 
 
+def _clear_tile_dir(root: Path) -> int:
+    """Delete every cached tile under root and prune empty subdirs.
+
+    Returns the number of bytes freed. The root directory itself is kept.
+    """
+    freed = 0
+    if not root.is_dir():
+        return 0
+    for dirpath, _dirs, names in os.walk(root):
+        for name in names:
+            fp = os.path.join(dirpath, name)
+            try:
+                freed += os.stat(fp).st_size
+                os.remove(fp)
+            except OSError:
+                continue
+    for dirpath, _dirs, _files in os.walk(root, topdown=False):
+        if Path(dirpath) == root:
+            continue
+        try:
+            os.rmdir(dirpath)
+        except OSError:
+            pass
+    return freed
+
+
+async def async_clear_tile_cache(hass) -> int:
+    """Wipe the on-disk tile cache. Returns the number of bytes freed."""
+    root = _tile_root(hass)
+    freed = await hass.async_add_executor_job(_clear_tile_dir, root)
+    hass.data.setdefault(DOMAIN, {})[_LAST_EVICT_KEY] = 0.0
+    _LOGGER.info("Life180 tile cache cleared (%d bytes freed)", freed)
+    return freed
+
+
 def _write_tile(path: Path, data: bytes) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
