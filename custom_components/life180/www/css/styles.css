@@ -1189,6 +1189,12 @@ body.no-scroll { overflow: hidden; }
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   pointer-events: none;
 }
+.l180-move-mode {
+  margin-right: 3px;
+  font-size: 12px;
+  line-height: 1;
+  vertical-align: -1px;
+}
 .l180-move-badge::after {
   content: "";
   position: absolute;
