@@ -1177,3 +1177,35 @@ body.no-scroll { overflow: hidden; }
   border: 5px solid transparent;
   border-top-color: var(--l180-primary, #03a9f4);
 }
+
+/* ===== Map popups follow the theme ===== */
+/* Vendor maplibre-gl.css hard-codes a white popup background and never sets a
+   text colour, so in a dark theme it was light text on white. */
+.maplibregl-popup-content,
+.leaflet-popup-content-wrapper {
+  background: var(--l180-surface, #fff) !important;
+  color: var(--l180-text, #212121) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3) !important;
+}
+.maplibregl-popup-content a,
+.leaflet-popup-content-wrapper a { color: var(--l180-primary, #03a9f4); }
+.maplibregl-popup-close-button { color: var(--l180-text, #212121) !important; }
+.leaflet-popup-tip { background: var(--l180-surface, #fff) !important; }
+/* The maplibre tip is a CSS-border triangle; recolour the one coloured edge
+   per popup anchor. */
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--l180-surface, #fff) !important;
+}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--l180-surface, #fff) !important;
+}
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--l180-surface, #fff) !important;
+}
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--l180-surface, #fff) !important;
+}
