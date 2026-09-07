@@ -1339,3 +1339,21 @@ span.flatpickr-weekday {
 .flatpickr-weekwrapper .flatpickr-weeks {
   box-shadow: 1px 0 0 var(--l180-divider) !important;
 }
+
+/* ===== Map attribution chip follows the theme ===== */
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib.maplibregl-compact,
+.leaflet-control-attribution {
+  background-color: var(--l180-surface, #fff) !important;
+  color: var(--l180-text-2, #444) !important;
+}
+.maplibregl-ctrl-attrib a,
+.maplibregl-ctrl-attrib a:hover,
+.leaflet-control-attribution a {
+  color: var(--l180-primary, #0078d4) !important;
+}
+/* the compact-mode (i) icon is a black SVG; flip it on dark */
+:root[data-ha-dark="1"] .maplibregl-ctrl-attrib.maplibregl-compact::after,
+:root[data-ha-dark="1"] .maplibregl-ctrl-attrib-button {
+  filter: invert(1) hue-rotate(180deg);
+}
