@@ -1359,6 +1359,7 @@ span.flatpickr-weekday {
 }
 
 /* ===== Zone name labels on the map ===== */
+#map.l180-hide-zone-labels .l180-zone-label { display: none; }
 .l180-zone-label {
   display: inline-block;
   padding: 1px 6px;
