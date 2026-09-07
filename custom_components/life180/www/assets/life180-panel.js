@@ -9,6 +9,27 @@ const PANEL_VERSION = (() => {
     }
 })();
 
+// null = undetermined; true/false = dark/light. Handles #rgb, #rrggbb,
+// rgb()/rgba() and the black/white keywords.
+function _isDarkColor(str) {
+    if (!str) return null;
+    str = String(str).trim().toLowerCase();
+    if (str === "transparent" || str === "white" || str === "#fff" || str === "#ffffff") return false;
+    if (str === "black" || str === "#000" || str === "#000000") return true;
+    let r, g, b;
+    const m = str.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+    if (m) { r = +m[1]; g = +m[2]; b = +m[3]; }
+    else {
+        let h = str.replace("#", "");
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        if (h.length < 6 || /[^0-9a-f]/.test(h.slice(0, 6))) return null;
+        r = parseInt(h.slice(0, 2), 16);
+        g = parseInt(h.slice(2, 4), 16);
+        b = parseInt(h.slice(4, 6), 16);
+    }
+    return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+}
+
 class Life180Panel extends HTMLElement {
     constructor() {
         super();
@@ -300,13 +321,19 @@ class Life180Panel extends HTMLElement {
             const weightBody = (csBody.fontWeight || "400").toString().trim();
             this.style.setProperty("--ha-toolbar-title-weight", weightBody);
 
-            // Is the HA theme dark? (luminance of the background)
-            const bg = (csRoot.getPropertyValue("--primary-background-color")
-                || csBody.backgroundColor || "").trim();
-            const m = bg.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
-            const dark = m
-                ? (0.299 * +m[1] + 0.587 * +m[2] + 0.114 * +m[3]) < 128
-                : false;
+            // Is the HA theme dark? color-scheme, then bg colour (hex or rgb),
+            // then the page body bg, then the inverse of the text colour.
+            const scheme = (csRoot.getPropertyValue("color-scheme") || "").trim().toLowerCase();
+            let dark = null;
+            if (scheme.includes("dark") && !scheme.includes("light")) dark = true;
+            else if (scheme.includes("light") && !scheme.includes("dark")) dark = false;
+            if (dark === null) dark = _isDarkColor(csRoot.getPropertyValue("--primary-background-color"));
+            if (dark === null) dark = _isDarkColor(csBody.backgroundColor);
+            if (dark === null) {
+                const td = _isDarkColor(csRoot.getPropertyValue("--primary-text-color"));
+                if (td !== null) dark = !td;
+            }
+            if (dark === null) dark = false;
 
             // Relay into the app iframe: its own window.parent may be a bare
             // wrapper with no theme, so it can't read HA directly in every setup.

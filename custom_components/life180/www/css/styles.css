@@ -1150,6 +1150,22 @@ body.no-scroll { overflow: hidden; }
   }
 }
 
+/* ===== Embedded in a dark HA theme =====
+   The bridge sets data-ha-dark="1". Some HA themes leave surface/card
+   colours unset, so keep the same HA tokens but make the *fallbacks* dark
+   (not the #fff defaults from :root). Real theme values still win. */
+:root[data-ha-dark="1"] {
+  --l180-bg:        var(--primary-background-color, #111417);
+  --l180-surface:   var(--card-background-color,
+                      var(--ha-card-background,
+                        var(--primary-background-color, #1c1f24)));
+  --l180-surface-2: var(--secondary-background-color, #262a30);
+  --l180-text:      var(--primary-text-color, #e2e4e7);
+  --l180-text-2:    var(--secondary-text-color, #9aa0a6);
+  --l180-divider:   var(--divider-color, rgba(255, 255, 255, 0.14));
+  --modal-backdrop: rgba(0, 0, 0, 0.6);
+}
+
 /* ===== Dark map (2D Leaflet) =====
    Leaflet tags each base tile <img> with .l180-base-tiles; the filter only
    hits those, not the marker/circle panes. The 3D map dims via MapLibre

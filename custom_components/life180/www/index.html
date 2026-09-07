@@ -43,6 +43,24 @@
         } catch (e) { return null; }
       }
 
+      // null = can't tell; true/false = dark/light. Handles #rgb, #rrggbb,
+      // rgb()/rgba() and the black/white keywords.
+      function isDarkColor(str) {
+        if (!str) return null;
+        str = String(str).trim().toLowerCase();
+        if (str === "transparent" || str === "white" || str === "#fff" || str === "#ffffff") return false;
+        if (str === "black" || str === "#000" || str === "#000000") return true;
+        var r, g, b, m = str.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+        if (m) { r = +m[1]; g = +m[2]; b = +m[3]; }
+        else {
+          var h = str.replace("#", "");
+          if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+          if (h.length < 6 || /[^0-9a-f]/.test(h.slice(0, 6))) return null;
+          r = parseInt(h.slice(0, 2), 16); g = parseInt(h.slice(2, 4), 16); b = parseInt(h.slice(4, 6), 16);
+        }
+        return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+      }
+
       function apply() {
         var pdoc = parentDoc();
         if (!pdoc) return;
@@ -53,16 +71,23 @@
             if (v && v.trim()) root.style.setProperty(VARS[i], v.trim());
             else root.style.removeProperty(VARS[i]);
           }
-          var scheme = cs.getPropertyValue("color-scheme").trim();
+          var scheme = (cs.getPropertyValue("color-scheme") || "").trim().toLowerCase();
           if (scheme) root.style.setProperty("color-scheme", scheme);
-          // Dark heuristic when the theme doesn't set color-scheme
-          var bg = cs.getPropertyValue("--primary-background-color").trim()
-                || cs.backgroundColor || "";
-          var m = bg.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
-          if (m) {
-            var lum = (0.299 * +m[1] + 0.587 * +m[2] + 0.114 * +m[3]);
-            root.setAttribute("data-ha-dark", lum < 128 ? "1" : "0");
+
+          // Decide dark/light: color-scheme, then the background colour, then
+          // the page body's computed background, then (inverted) the text colour.
+          var dark = null;
+          if (scheme.indexOf("dark") >= 0 && scheme.indexOf("light") < 0) dark = true;
+          else if (scheme.indexOf("light") >= 0 && scheme.indexOf("dark") < 0) dark = false;
+          if (dark === null) dark = isDarkColor(cs.getPropertyValue("--primary-background-color"));
+          if (dark === null) {
+            try { dark = isDarkColor(window.parent.getComputedStyle(pdoc.body).backgroundColor); } catch (e) {}
           }
+          if (dark === null) {
+            var td = isDarkColor(cs.getPropertyValue("--primary-text-color"));
+            if (td !== null) dark = !td;
+          }
+          if (dark !== null) root.setAttribute("data-ha-dark", dark ? "1" : "0");
         } catch (e) { /* cross-origin race: ignore */ }
       }
 
