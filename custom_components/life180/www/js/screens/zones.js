@@ -23,6 +23,17 @@ function zoneLabelIcon(name) {
         html: `<span class="l180-zone-label">${escHtml(name)}</span>`,
     });
 }
+
+// Zone labels only make sense when zoomed in enough to tell the circles apart.
+const ZONE_LABEL_MIN_ZOOM = 13;
+let _zoneLabelZoomWired = false;
+
+function applyZoneLabelVisibility() {
+    const el = document.getElementById('map');
+    if (!el) return;
+    const z = (typeof map.getZoom === 'function') ? map.getZoom() : 20;
+    el.classList.toggle('l180-hide-zone-labels', z < ZONE_LABEL_MIN_ZOOM);
+}
 let zonesSortColumn = "name"; // default sort column
 let zonesSortAscending = true; // Orden ascendente predeterminado
 let previousSortColumn = "";
@@ -103,6 +114,14 @@ async function updateZoneMarkers() {
         map.createPane('circlePane'); // create a pane for the circles
         map.getPane('circlePane').style.zIndex = 400; // low z-index for the circles
     }
+
+    // Toggle zone labels by zoom level (wire once)
+    if (!_zoneLabelZoomWired && typeof map.on === 'function') {
+        _zoneLabelZoomWired = true;
+        map.on('zoom', applyZoneLabelVisibility);
+        map.on('zoomend', applyZoneLabelVisibility);
+    }
+    applyZoneLabelVisibility();
 
     // Get the IDs of the current zones
     const currentZoneIds = zones.map(z => String(z.id));
