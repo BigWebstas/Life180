@@ -9,7 +9,20 @@ import { updatePersonsTable } from '../screens/persons.js';
 import { t, tWithVars } from '../utils/i18n.js';
 import { uiConfirm, uiPrompt, uiAlert, toRgba } from '../utils/dialogs.js';
 
-let zones = [], zoneMarkers = {};
+let zones = [], zoneMarkers = {}, zoneLabels = {};
+
+function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+}
+
+function zoneLabelIcon(name) {
+    return L.divIcon({
+        className: '',
+        html: `<span class="l180-zone-label">${escHtml(name)}</span>`,
+    });
+}
 let zonesSortColumn = "name"; // default sort column
 let zonesSortAscending = true; // Orden ascendente predeterminado
 let previousSortColumn = "";
@@ -102,6 +115,12 @@ async function updateZoneMarkers() {
             delete editingZones[zoneId]; // remove from the edit states
         }
     });
+    Object.keys(zoneLabels).forEach(zoneId => {
+        if (!currentZoneIds.includes(String(zoneId))) {
+            map.removeLayer(zoneLabels[zoneId]);
+            delete zoneLabels[zoneId];
+        }
+    });
 
     // Add or update the current zones
     zones.forEach(zone => {
@@ -120,6 +139,10 @@ async function updateZoneMarkers() {
                 map.removeLayer(zoneMarkers[key]);
                 delete zoneMarkers[key];
                 delete editingZones[key];
+            }
+            if (zoneLabels[key]) {
+                map.removeLayer(zoneLabels[key]);
+                delete zoneLabels[key];
             }
             return;
         }
@@ -158,6 +181,23 @@ async function updateZoneMarkers() {
                     fillOpacity: 1
                 });
             }
+        }
+
+        // Zone name label at the centre (kept in sync even on a pure rename)
+        if (name && String(name).trim()) {
+            if (zoneLabels[key]) {
+                zoneLabels[key].setLatLng([latitude, longitude]);
+                zoneLabels[key].setIcon(zoneLabelIcon(name));
+            } else {
+                zoneLabels[key] = L.marker([latitude, longitude], {
+                    icon: zoneLabelIcon(name)
+                })
+                    .addTo(map)
+                    .on('click', () => handleZoneRowSelection(zone.id).catch(() => {}));
+            }
+        } else if (zoneLabels[key]) {
+            map.removeLayer(zoneLabels[key]);
+            delete zoneLabels[key];
         }
 
         // If there are no changes and the marker already exists, skip
