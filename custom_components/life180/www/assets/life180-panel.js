@@ -274,7 +274,7 @@ class Life180Panel extends HTMLElement {
                 "--primary-color", "--accent-color",
                 "--primary-text-color", "--secondary-text-color", "--text-primary-color",
                 "--primary-background-color", "--secondary-background-color",
-                "--card-background-color", "--divider-color",
+                "--card-background-color", "--ha-card-background", "--divider-color",
                 "--error-color", "--warning-color", "--success-color",
                 "--ha-card-border-radius", "--ha-card-box-shadow",
             ];

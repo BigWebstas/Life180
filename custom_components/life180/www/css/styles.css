@@ -8,10 +8,15 @@
   --l180-primary:      var(--primary-color, #03a9f4);
   --l180-on-primary:   var(--text-primary-color, #ffffff);
   --l180-bg:           var(--primary-background-color, #fafafa);
-  --l180-surface:      var(--card-background-color, #ffffff);
-  --l180-surface-2:    var(--secondary-background-color, #e8edf1);
+  /* card-background-color isn't set by every HA theme; fall back to the
+     page background so a dark theme never lands on the white default. */
+  --l180-surface:      var(--card-background-color,
+                         var(--ha-card-background,
+                           var(--primary-background-color, #ffffff)));
+  --l180-surface-2:    var(--secondary-background-color,
+                         var(--primary-background-color, #e8edf1));
   --l180-text:         var(--primary-text-color, #212121);
-  --l180-text-2:       var(--secondary-text-color, #5f6368);
+  --l180-text-2:       var(--secondary-text-color, var(--primary-text-color, #5f6368));
   --l180-divider:      var(--divider-color, rgba(0, 0, 0, 0.12));
   --l180-danger:       var(--error-color, #db4437);
   --l180-warning:      var(--warning-color, #ffa600);
