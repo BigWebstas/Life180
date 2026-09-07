@@ -34,6 +34,7 @@ DEFAULTS = {
     "enable_debug": False,
     "map_cache_enabled": False,
     "map_cache_max_mb": 500,
+    "map_cache_clear": False,
 }
 
 MINIMUMS = {
@@ -114,6 +115,7 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         map_cache = vol.Schema({
             vol.Required("map_cache_enabled", default=DEFAULTS["map_cache_enabled"]): bool,
             vol.Required("map_cache_max_mb", default=DEFAULTS["map_cache_max_mb"]): vol.All(vol.Coerce(int)),
+            vol.Required("map_cache_clear", default=False): bool,
         })
 
         data_schema = vol.Schema({
@@ -139,6 +141,9 @@ class Life180ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Custom validation (numeric minimums only)
             errors.update(_validate_minimums(flat))
+
+            # "Clear cached tiles now" is a one-shot action, never persisted.
+            flat["map_cache_clear"] = False
 
             if not errors:
                 return self.async_create_entry(title="Life180", data=flat)
@@ -197,6 +202,14 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
                     errors=errors,
                 )
 
+            # "Clear cached tiles now" is a one-shot action: run it here and
+            # never persist the flag as True.
+            if flat.get("map_cache_clear"):
+                from .api.tiles import async_clear_tile_cache
+
+                await async_clear_tile_cache(self.hass)
+            flat["map_cache_clear"] = False
+
             return self.async_create_entry(title="", data=flat)
 
         return self.async_show_form(
@@ -240,6 +253,7 @@ class Life180OptionsFlowHandler(config_entries.OptionsFlow):
         map_cache = vol.Schema({
             vol.Required("map_cache_enabled", default=self._opts["map_cache_enabled"]): bool,
             vol.Required("map_cache_max_mb", default=self._opts["map_cache_max_mb"]): vol.All(vol.Coerce(int)),
+            vol.Required("map_cache_clear", default=False): bool,
         })
 
         data_schema = {
