@@ -577,8 +577,9 @@ function injectFlatpickrShadowPatch() {
     st.id = 'fp-shadow-patch';
     st.textContent = `
     .flatpickr-calendar{
-      background:#fff !important;
-      border:1px solid rgba(0,0,0,.12) !important;
+      background:var(--l180-surface, #fff) !important;
+      color:var(--l180-text, #212121) !important;
+      border:1px solid var(--l180-divider, rgba(0,0,0,.12)) !important;
       border-radius:12px !important;
       box-shadow:0 12px 28px rgba(0,0,0,.30) !important;
       overflow:hidden;
