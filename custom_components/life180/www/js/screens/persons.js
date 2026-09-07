@@ -281,10 +281,12 @@ async function updatePersonsMarkers() {
         const bat = readBattery(device);
         const batteryLevel = bat != null ? `<br>${t('battery')}: ${bat}${t('percentage')}` : "";
 
-        // Floating badge above the marker while the person is moving
+        // Floating badge above the marker while the person is moving.
+        // Under 3 mph -> on foot (shoe), 3 mph and up -> driving (car).
         const speedMph = Math.round((Number(speed) || 0) * 2.23694);
+        const modeIcon = speedMph >= 3 ? '🚗' : '👟';
         const moveBadge = speedMph >= 1
-            ? `<div class="l180-move-badge">${speedMph} ${t('mi_per_hour')}${bat != null ? ` · ${bat}%` : ''}</div>`
+            ? `<div class="l180-move-badge"><span class="l180-move-mode">${modeIcon}</span>${speedMph} ${t('mi_per_hour')}${bat != null ? ` · ${bat}%` : ''}</div>`
             : '';
 
         if (!isValidCoordinates(latitude, longitude))
