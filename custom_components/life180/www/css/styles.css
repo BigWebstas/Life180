@@ -1211,12 +1211,6 @@ body.no-scroll { overflow: hidden; }
   25% { transform: translateX(-1px); }
   75% { transform: translateX(1px); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .l180-move-mode.l180-mode-walk,
-  .l180-move-mode.l180-mode-drive {
-    animation: none;
-  }
-}
 .l180-move-badge::after {
   content: "";
   position: absolute;
@@ -1225,6 +1219,51 @@ body.no-scroll { overflow: hidden; }
   transform: translateX(-50%);
   border: 5px solid transparent;
   border-top-color: var(--l180-primary, #03a9f4);
+}
+
+/* Critically low battery: pulse the badge (and its tip) red instead of the
+   normal accent color. Shown while moving, or standalone at rest. */
+.l180-move-badge.l180-battery-low {
+  animation: l180-battery-pulse 1.2s ease-in-out infinite;
+}
+.l180-move-badge.l180-battery-low::after {
+  animation: l180-battery-pulse-tip 1.2s ease-in-out infinite;
+}
+@keyframes l180-battery-pulse {
+  0%, 100% { background: var(--l180-primary, #03a9f4); }
+  50% { background: var(--l180-danger, #db4437); }
+}
+@keyframes l180-battery-pulse-tip {
+  0%, 100% { border-top-color: var(--l180-primary, #03a9f4); }
+  50% { border-top-color: var(--l180-danger, #db4437); }
+}
+
+/* Zone-crossing pulse: a brief expanding ring around the marker the moment
+   its zone changes. Class is only present for the one rebuild that follows
+   the crossing (see persons.js), so this never loops. */
+.l180-zone-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: l180-zone-pulse-ring 0.8s ease-out 1;
+  pointer-events: none;
+}
+@keyframes l180-zone-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--l180-primary, #03a9f4) 60%, transparent); opacity: 1; }
+  100% { box-shadow: 0 0 0 18px color-mix(in srgb, var(--l180-primary, #03a9f4) 0%, transparent); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .l180-move-mode.l180-mode-walk,
+  .l180-move-mode.l180-mode-drive,
+  .l180-move-badge.l180-battery-low,
+  .l180-move-badge.l180-battery-low::after {
+    animation: none;
+  }
+  .l180-zone-pulse::after {
+    display: none;
+  }
 }
 
 /* ===== Map popups follow the theme ===== */

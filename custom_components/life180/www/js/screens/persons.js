@@ -15,6 +15,9 @@ const DEFAULT_ICON_URL = './images/location-red.png';
 // History trail (drawn automatically for every tracked person)
 const TRAIL_HOURS = 3;
 const TRAIL_COLOR = '#03a9f4';
+// A 3h window barely changes in 10s, so refetch it less often than the markers.
+const TRAIL_REFRESH_MS = 30000;
+let _lastTrailFetch = 0;
 
 export let persons = [];
 
@@ -22,6 +25,9 @@ let devices = [];
 let personsDevicesMap = {};
 let personsMarkers = {};
 let trailLayers = {}; // { [personId]: polyline }
+let personZones = {}; // { [personId]: last known zone name ('' = none) } - drives the zone-crossing pulse
+
+const LOW_BATTERY_PCT = 15;
 
 let sortColumn = "name";
 let sortAscending = true;
@@ -124,6 +130,20 @@ async function updatePersonTrails() {
     if (!currentPersonIds.length)
         return;
 
+    // Always fetch for people who don't have a trail drawn yet (new arrivals,
+    // or a prior fetch that came back empty); otherwise wait for the full
+    // refresh interval.
+    const now = Date.now();
+    const dueForRefresh = (now - _lastTrailFetch) >= TRAIL_REFRESH_MS;
+    const idsToFetch = dueForRefresh
+        ? currentPersonIds
+        : currentPersonIds.filter(personId => !trailLayers[personId]);
+
+    if (!idsToFetch.length)
+        return;
+    if (dueForRefresh)
+        _lastTrailFetch = now;
+
     if (!map.getPane('personsTrail')) {
         const pane = map.createPane('personsTrail');
         pane.style.zIndex = 550; // above zone circles (400), below person markers (600)
@@ -135,7 +155,7 @@ async function updatePersonTrails() {
     const startIso = startDate.toISOString();
     const endIso = endDate.toISOString();
 
-    await Promise.all(currentPersonIds.map(async personId => {
+    await Promise.all(idsToFetch.map(async personId => {
         const data = await fetchPersonTrail(personId, startIso, endIso);
 
         const coords = (data?.positions || [])
@@ -321,6 +341,25 @@ export function resolveWithHaUrl(pathLike) {
   return new URL(pathLike, haUrl + "/").href;
 }
 
+// Ease-out glide between two marker positions instead of snapping on update.
+const MARKER_GLIDE_MS = 400;
+function glideMarkerTo(marker, [fromLat, fromLng], [toLat, toLng]) {
+    if (marker.__l180GlideRaf)
+        cancelAnimationFrame(marker.__l180GlideRaf);
+
+    const start = performance.now();
+    const step = (now) => {
+        const t = Math.min(1, (now - start) / MARKER_GLIDE_MS);
+        const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+        marker.setLatLng([
+            fromLat + (toLat - fromLat) * eased,
+            fromLng + (toLng - fromLng) * eased
+        ]);
+        marker.__l180GlideRaf = t < 1 ? requestAnimationFrame(step) : null;
+    };
+    marker.__l180GlideRaf = requestAnimationFrame(step);
+}
+
 async function updatePersonsMarkers() {
     if (!map.getPane('personsMarkers')) {
         const pane = map.createPane('personsMarkers');
@@ -350,12 +389,29 @@ async function updatePersonsMarkers() {
         const isDriving = speedMph >= 3;
         const modeIcon = isDriving ? '🚗' : '👟';
         const modeClass = isDriving ? 'l180-mode-drive' : 'l180-mode-walk';
-        const moveBadge = speedMph >= 1
-            ? `<div class="l180-move-badge"><span class="l180-move-mode ${modeClass}">${modeIcon}</span>${speedMph} ${t('mi_per_hour')}${bat != null ? ` · ${bat}%` : ''}</div>`
-            : '';
+        const isMoving = speedMph >= 1;
+        const isLowBattery = bat != null && bat <= LOW_BATTERY_PCT;
+        const battClass = isLowBattery ? ' l180-battery-low' : '';
+
+        // Moving -> speed/mode badge (pulses red when battery is also low).
+        // Stationary but critically low battery -> a standalone battery badge,
+        // so the warning isn't hidden just because the person isn't moving.
+        const moveBadge = isMoving
+            ? `<div class="l180-move-badge${battClass}"><span class="l180-move-mode ${modeClass}">${modeIcon}</span>${speedMph} ${t('mi_per_hour')}${bat != null ? ` · ${bat}%` : ''}</div>`
+            : isLowBattery
+                ? `<div class="l180-move-badge${battClass}">🔋 ${bat}%</div>`
+                : '';
 
         if (!isValidCoordinates(latitude, longitude))
             return;
+
+        // Zone-crossing pulse: fires exactly one rebuild when the person's
+        // zone actually changes (not on first sighting).
+        const zone = handleZonePosition(latitude, longitude);
+        const zoneName = zone ? zone.name : '';
+        const prevZoneName = personZones[personId];
+        const zoneJustChanged = prevZoneName !== undefined && prevZoneName !== zoneName;
+        personZones[personId] = zoneName;
 
         const formattedDate = formatDate(device.last_updated || t("date_unavailable"));
         const personObj = persons.find(p => p.entity_id === personId);
@@ -371,26 +427,52 @@ async function updatePersonsMarkers() {
 		  <br><br><a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"><strong>${t('open_location')}</strong></a>
 		`;
 
-        const markerIcon = L.divIcon({
-            className: '',
-            html: `<div style="position:relative;width:48px;height:48px;">${moveBadge}<img src="${iconUrl}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;" /></div>`,
-            iconSize: [48, 48],
-            iconAnchor: [24, 24],
-            popupAnchor: [0, -24],
-        });
+        // Rebuild the icon/popup DOM only when their content actually changed.
+        // Including the pulse flag here forces exactly one rebuild to show it,
+        // then one more to clear it on the following cycle.
+        const iconSig = `${iconUrl}|${moveBadge}|${zoneJustChanged ? 'pulse' : ''}`;
+        const wrapAttrs = zoneJustChanged ? ' class="l180-zone-pulse"' : '';
 
         if (personsMarkers[personId]) {
             const existing = personsMarkers[personId];
-            existing.setLatLng([latitude, longitude]);
-            existing.setIcon(markerIcon);
+
+            const prevLatLng = existing.getLatLng();
+            if (prevLatLng.lat !== latitude || prevLatLng.lng !== longitude)
+                glideMarkerTo(existing, [prevLatLng.lat, prevLatLng.lng], [latitude, longitude]);
+            existing.__l180Target = [latitude, longitude]; // real position, even mid-glide
+
+            if (existing.__l180IconSig !== iconSig) {
+                existing.__l180IconSig = iconSig;
+                existing.setIcon(L.divIcon({
+                    className: '',
+                    html: `<div style="position:relative;width:48px;height:48px;"${wrapAttrs}>${moveBadge}<img src="${iconUrl}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;" /></div>`,
+                    iconSize: [48, 48],
+                    iconAnchor: [24, 24],
+                    popupAnchor: [0, -24],
+                }));
+            }
+
             const p = existing.getPopup?.();
-            if (p)
-                p.setContent(popupContent);
-            else
+            if (p) {
+                if (existing.__l180Popup !== popupContent) {
+                    existing.__l180Popup = popupContent;
+                    p.setContent(popupContent);
+                }
+            } else {
+                existing.__l180Popup = popupContent;
                 existing.bindPopup(popupContent, {
                     autoPan: false
                 });
+            }
         } else {
+            const markerIcon = L.divIcon({
+                className: '',
+                html: `<div style="position:relative;width:48px;height:48px;"${wrapAttrs}>${moveBadge}<img src="${iconUrl}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;" /></div>`,
+                iconSize: [48, 48],
+                iconAnchor: [24, 24],
+                popupAnchor: [0, -24],
+            });
+
             personsMarkers[personId] = L.marker([latitude, longitude], {
                 icon: markerIcon,
                 pane: 'personsMarkers'
@@ -402,16 +484,21 @@ async function updatePersonsMarkers() {
                 .on('click', async() => {
                     await handlePersonRowSelection(personId);
                     map.invalidateSize();
-                    const ll = personsMarkers[personId].getLatLng();
-                    focusPoint(ll, {
+                    const marker = personsMarkers[personId];
+                    const target = marker.getLatLng();
+                    const [ll_lat, ll_lng] = marker.__l180Target || [target.lat, target.lng];
+                    focusPoint([ll_lat, ll_lng], {
                         zoom: map.getZoom(),
                         animate: false
                     });
                     try {
                         map.closePopup?.();
                     } catch {}
-                    personsMarkers[personId].openPopup?.();
+                    marker.openPopup?.();
                 });
+            personsMarkers[personId].__l180IconSig = iconSig;
+            personsMarkers[personId].__l180Popup = popupContent;
+            personsMarkers[personId].__l180Target = [latitude, longitude];
         }
     });
 }
