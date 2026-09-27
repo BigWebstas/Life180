@@ -12,7 +12,7 @@ import { toRgba } from '../utils/dialogs.js';
 
 const DEFAULT_ICON_URL = './images/location-red.png';
 
-// History trail (drawn for the currently selected person only)
+// History trail (drawn automatically for every tracked person)
 const TRAIL_HOURS = 3;
 const TRAIL_COLOR = '#03a9f4';
 
@@ -21,8 +21,7 @@ export let persons = [];
 let devices = [];
 let personsDevicesMap = {};
 let personsMarkers = {};
-let trailPersonId = null;
-let trailLayer = null;
+let trailLayers = {}; // { [personId]: polyline }
 
 let sortColumn = "name";
 let sortAscending = true;
@@ -102,7 +101,7 @@ export async function updatePersons() {
         await updatePersonsDevicesMap();
         await updatePersonsTable();
         await updatePersonsMarkers();
-        await updatePersonTrail();
+        await updatePersonTrails();
         await updatePersonsFilter();
     } catch (error) {
         console.error("Error updating devices:", error);
@@ -110,48 +109,19 @@ export async function updatePersons() {
     }
 }
 
-// Select whose trail is drawn on the map. Pass null/undefined to clear it.
-export function setTrailPerson(personId) {
-    if ((personId || null) === trailPersonId)
-        return;
-    trailPersonId = personId || null;
-    updatePersonTrail().catch(error => console.error("Error updating person trail:", error));
-}
+// Draw the last TRAIL_HOURS of positions for every tracked person as a polyline.
+async function updatePersonTrails() {
+    const currentPersonIds = Object.keys(personsDevicesMap);
 
-// Draw the last TRAIL_HOURS of positions for the selected person as a polyline.
-async function updatePersonTrail() {
-    const personId = trailPersonId;
-
-    if (!personId || !personsDevicesMap[personId]) {
-        if (trailLayer) {
-            map.removeLayer(trailLayer);
-            trailLayer = null;
+    // Drop trails for people who no longer have a device.
+    Object.keys(trailLayers).forEach(personId => {
+        if (!currentPersonIds.includes(personId)) {
+            map.removeLayer(trailLayers[personId]);
+            delete trailLayers[personId];
         }
-        return;
-    }
+    });
 
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - TRAIL_HOURS * 3600 * 1000);
-    const data = await fetchPersonTrail(personId, startDate.toISOString(), endDate.toISOString());
-
-    // The selection may have changed while the request was in flight.
-    if (personId !== trailPersonId)
-        return;
-
-    if (trailLayer) {
-        map.removeLayer(trailLayer);
-        trailLayer = null;
-    }
-
-    const coords = (data?.positions || [])
-        .map(p => {
-            const lat = p?.attributes?.latitude;
-            const lon = p?.attributes?.longitude;
-            return isValidCoordinates(lat, lon) ? [lat, lon] : null;
-        })
-        .filter(Boolean);
-
-    if (coords.length < 2)
+    if (!currentPersonIds.length)
         return;
 
     if (!map.getPane('personsTrail')) {
@@ -160,14 +130,39 @@ async function updatePersonTrail() {
         pane.style.pointerEvents = 'none';
     }
 
-    trailLayer = L.polyline(coords, {
-        color: TRAIL_COLOR,
-        weight: 4,
-        opacity: 0.8,
-        dashArray: '1,8',
-        lineCap: 'round',
-        pane: 'personsTrail'
-    }).addTo(map);
+    const endDate = new Date();
+    const startDate = new Date(endDate.getTime() - TRAIL_HOURS * 3600 * 1000);
+    const startIso = startDate.toISOString();
+    const endIso = endDate.toISOString();
+
+    await Promise.all(currentPersonIds.map(async personId => {
+        const data = await fetchPersonTrail(personId, startIso, endIso);
+
+        const coords = (data?.positions || [])
+            .map(p => {
+                const lat = p?.attributes?.latitude;
+                const lon = p?.attributes?.longitude;
+                return isValidCoordinates(lat, lon) ? [lat, lon] : null;
+            })
+            .filter(Boolean);
+
+        if (trailLayers[personId]) {
+            map.removeLayer(trailLayers[personId]);
+            delete trailLayers[personId];
+        }
+
+        if (coords.length < 2)
+            return;
+
+        trailLayers[personId] = L.polyline(coords, {
+            color: TRAIL_COLOR,
+            weight: 4,
+            opacity: 0.8,
+            dashArray: '1,8',
+            lineCap: 'round',
+            pane: 'personsTrail'
+        }).addTo(map);
+    }));
 }
 
 export async function setDevices(data) {
@@ -402,7 +397,6 @@ async function updatePersonsMarkers() {
                     autoPan: false
                 })
                 .on('click', async() => {
-                    setTrailPerson(personId);
                     await handlePersonRowSelection(personId);
                     map.invalidateSize();
                     const ll = personsMarkers[personId].getLatLng();
@@ -699,7 +693,6 @@ export async function updatePersonsTable() {
                 row.classList.add("selected");
                 if (addressRow)
                     addressRow.classList.add("selected");
-                setTrailPerson(personId);
                 handlePersonsSelection(personId);
             };
 
