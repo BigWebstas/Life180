@@ -345,10 +345,13 @@ async function updatePersonsMarkers() {
 
         // Floating badge above the marker while the person is moving.
         // Under 3 mph -> on foot (shoe), 3 mph and up -> driving (car).
+        // Each mode gets its own CSS animation class (see .l180-mode-walk/.l180-mode-drive).
         const speedMph = Math.round((Number(speed) || 0) * 2.23694);
-        const modeIcon = speedMph >= 3 ? '🚗' : '👟';
+        const isDriving = speedMph >= 3;
+        const modeIcon = isDriving ? '🚗' : '👟';
+        const modeClass = isDriving ? 'l180-mode-drive' : 'l180-mode-walk';
         const moveBadge = speedMph >= 1
-            ? `<div class="l180-move-badge"><span class="l180-move-mode">${modeIcon}</span>${speedMph} ${t('mi_per_hour')}${bat != null ? ` · ${bat}%` : ''}</div>`
+            ? `<div class="l180-move-badge"><span class="l180-move-mode ${modeClass}">${modeIcon}</span>${speedMph} ${t('mi_per_hour')}${bat != null ? ` · ${bat}%` : ''}</div>`
             : '';
 
         if (!isValidCoordinates(latitude, longitude))
