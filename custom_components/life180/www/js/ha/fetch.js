@@ -373,6 +373,22 @@ export async function fetchFilteredPositions(person_id, startDate, endDate) {
     }
 }
 
+export async function fetchPersonTrail(personId, startDate, endDate) {
+    if (!personId || !startDate || !endDate) {
+        console.error("The personId, startDate and endDate parameters are required.");
+        return null;
+    }
+
+    const url = `${haUrl}/api/life180/filtered_positions?person_id=${encodeURIComponent(personId)}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+
+    try {
+        return await fetchData(url);
+    } catch (error) {
+        console.error("Error getting person trail:", error);
+        return null;
+    }
+}
+
 export async function fetchAuthCallback(code) {
     if (!code) {
         console.error("No authorization code found in the URL.");
