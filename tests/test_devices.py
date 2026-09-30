@@ -354,6 +354,97 @@ def test_none_device_id_lookup_returns_nothing():
     assert ent_reg.async_entries_for_device(None, include_disabled_entities=False) == []
 
 
+def test_entity_registry_has_no_async_entries_helper():
+    """Regression guard for the 0.5.1 outage.
+
+    `_build_battery_sensor_index` briefly iterated with `er.async_entries`,
+    which does not exist on Home Assistant's entity_registry module -- only
+    async_entries_for_device / _for_area / _for_label / _for_category /
+    _for_config_entry. Every /api/life180/devices request raised
+    AttributeError and 500'd, and the frontend renders a failed devices fetch
+    as "no devices", which empties the person map and hides everyone.
+
+    `conftest` used to stub `async_entries` anyway, so the code passed this
+    suite and still failed in production. This asserts the stub is absent, so
+    the suite fails here if anyone reintroduces the call.
+    """
+    from homeassistant.helpers import entity_registry as er
+
+    assert not hasattr(er, "async_entries"), (
+        "entity_registry must not expose an async_entries stub; real HA has no "
+        "such helper and a stub here would mask an AttributeError in production"
+    )
+    # The accessor the production code actually uses must be the real one.
+    assert hasattr(er, "async_entries_for_device")
+
+
+def test_index_reads_registry_entities_attribute():
+    """The index must be built from `ent_reg.entities.values()`.
+
+    That is the only all-entries accessor HA offers: `EntityRegistry.entities`
+    is a UserDict whose `values()` is overridden to skip `__iter__` overhead.
+    """
+    ent_reg = FakeEntityRegistry(
+        entries=[
+            FakeRegistryEntry("sensor.phone_battery", device_id="dev1",
+                              original_device_class="battery"),
+        ],
+        tracker_devices={},
+    )
+    # `entities` is keyed by entity_id, like the real registry.
+    assert "sensor.phone_battery" in ent_reg.entities
+    index = devices._build_battery_sensor_index(ent_reg)
+    assert "dev1" in index
+
+
+def test_index_failure_degrades_to_none_instead_of_raising():
+    """A broken registry walk must not raise out of the index builder.
+
+    The endpoint has no other way to report this than a 500, and a 500 here
+    reads as "no devices" in the frontend, which hides every person. Returning
+    None routes `_battery_from_device_sensors` back to its per-device walk, so
+    the worst case is a missing battery reading rather than an empty map.
+    """
+    class _ExplodingEntities:
+        @property
+        def values(self):
+            raise RuntimeError("registry is on fire")
+
+    class _Exploding:
+        entities = _ExplodingEntities()
+
+    assert devices._build_battery_sensor_index(_Exploding()) is None
+
+
+def test_endpoint_survives_a_failing_battery_index():
+    """End-to-end: a failing index must not empty the devices payload."""
+    registry = FakeEntityRegistry(
+        entries=[
+            FakeRegistryEntry("sensor.phone_battery", device_id="dev1"),
+        ],
+        tracker_devices={"device_tracker.phone": "dev1"},
+    )
+    # Swap in a registry whose `.entities` blows up, after __init__ has run.
+    class _ExplodingEntities:
+        @property
+        def values(self):
+            raise RuntimeError("registry is on fire")
+
+    registry.entities = _ExplodingEntities()
+
+    hass = FakeHass(
+        states={
+            "device_tracker.phone": _tracker("device_tracker.phone", "Phone"),
+            "sensor.phone_battery": "47",
+        }
+    )
+    payload = _call_endpoint(hass, registry)
+
+    assert len(payload) == 1, "a failing battery lookup must not drop devices"
+    # Falls back to the per-device walk, so the battery still resolves.
+    assert payload[0]["battery_level"] == 47
+
+
 def test_index_is_populated_for_a_real_registry():
     """The index must actually contain entries, not be silently empty.
 

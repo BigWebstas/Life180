@@ -75,18 +75,34 @@ def _build_battery_sensor_index(ent_reg):
     otherwise repeats the same work once per device. The result is equivalent
     to letting `_battery_from_device_sensors` do its own registry walk.
 
-    Iterates with `er.async_entries`, deliberately not
+    Iterates `ent_reg.entities.values()`, deliberately not
     `er.async_entries_for_device`. The latter looks entries up in the
     device_id index, so passing `device_id=None` matches nothing and yields an
     empty list -- which silently blanks every tracker's battery. Disabled
     entries are filtered here to preserve the `include_disabled_entities=False`
     behaviour the per-device call used to give us.
 
+    Note there is no `er.async_entries` helper in HA. The registry's dict is
+    reached through the `.entities` attribute, whose `values()` is overridden
+    in `BaseRegistryItems` specifically to skip `__iter__` overhead -- which is
+    the whole point of doing this once per request. That accessor does not
+    filter disabled entities, hence the explicit `disabled_by` check.
+
     Entries with no device_id are dropped: they cannot be attributed to any
     tracker, and including them would create a meaningless `None` bucket.
+
+    Returns None if the registry walk fails, which routes the caller back
+    through `_battery_from_device_sensors`' own per-device lookup. Losing a
+    battery reading is recoverable; raising here takes down the entire devices
+    payload and hides every person on the map.
     """
     index = {}
-    for entry in er.async_entries(ent_reg):
+    try:
+        entries = ent_reg.entities.values()
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("battery sensor index unavailable, using per-device lookup: %s", err)
+        return None
+    for entry in entries:
         if entry.disabled_by or not entry.entity_id.startswith("sensor."):
             continue
         is_battery = (
