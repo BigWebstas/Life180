@@ -155,34 +155,41 @@ async function updatePersonTrails() {
     const startIso = startDate.toISOString();
     const endIso = endDate.toISOString();
 
-    await Promise.all(idsToFetch.map(async personId => {
-        const data = await fetchPersonTrail(personId, startIso, endIso);
+    // Fetch in batches: one request per tracked person at once can exceed the
+    // browser's per-host connection limit and leave some requests queued behind
+    // the others, so cap the concurrency instead of firing them all at once.
+    const BATCH_SIZE = 4;
+    for (let i = 0; i < idsToFetch.length; i += BATCH_SIZE) {
+        const batch = idsToFetch.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(async personId => {
+            const data = await fetchPersonTrail(personId, startIso, endIso);
 
-        const coords = (data?.positions || [])
-            .map(p => {
-                const lat = p?.attributes?.latitude;
-                const lon = p?.attributes?.longitude;
-                return isValidCoordinates(lat, lon) ? [lat, lon] : null;
-            })
-            .filter(Boolean);
+            const coords = (data?.positions || [])
+                .map(p => {
+                    const lat = p?.attributes?.latitude;
+                    const lon = p?.attributes?.longitude;
+                    return isValidCoordinates(lat, lon) ? [lat, lon] : null;
+                })
+                .filter(Boolean);
 
-        if (trailLayers[personId]) {
-            map.removeLayer(trailLayers[personId]);
-            delete trailLayers[personId];
-        }
+            if (trailLayers[personId]) {
+                map.removeLayer(trailLayers[personId]);
+                delete trailLayers[personId];
+            }
 
-        if (coords.length < 2)
-            return;
+            if (coords.length < 2)
+                return;
 
-        trailLayers[personId] = L.polyline(coords, {
-            color: TRAIL_COLOR,
-            weight: 4,
-            opacity: 0.8,
-            dashArray: '1,8',
-            lineCap: 'round',
-            pane: 'personsTrail'
-        }).addTo(map);
-    }));
+            trailLayers[personId] = L.polyline(coords, {
+                color: TRAIL_COLOR,
+                weight: 4,
+                opacity: 0.8,
+                dashArray: '1,8',
+                lineCap: 'round',
+                pane: 'personsTrail'
+            }).addTo(map);
+        }));
+    }
 }
 
 export async function setDevices(data) {
