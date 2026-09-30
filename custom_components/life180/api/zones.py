@@ -460,7 +460,7 @@ async def register_zones(hass):
 
     zones_path = os.path.join(hass.config.path(), ZONES_FILE)
 
-    if not os.path.exists(zones_path):
+    if not await hass.async_add_executor_job(os.path.exists, zones_path):
         _LOGGER.warning("Zones file not found, creating empty zones file.")
         await write_zones_file(zones_path, [])
         return
@@ -532,7 +532,7 @@ async def _write_store(zones_path, store):
 
 async def read_zones_file(zones_path):
     """Read and parse the zones JSON file."""
-    if not os.path.exists(zones_path):
+    if not await hass.async_add_executor_job(os.path.exists, zones_path):
         return []
 
     try:

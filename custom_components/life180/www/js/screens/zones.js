@@ -97,9 +97,9 @@ export async function setZones(data) {
     try {
         if (data && Array.isArray(data)) {
             zones = data; // assign the fetched data to the global variable
-            console.log("Zones:", zones);
+
         } else {
-            console.log("No valid zones were obtained from the server.");
+
             zones = []; // ensure `zones` is an empty array on error
         }
     } catch (error) {

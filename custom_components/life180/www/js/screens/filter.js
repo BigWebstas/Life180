@@ -180,7 +180,7 @@ export async function setFilter(payload) {
         const zones = Array.isArray(payload) ? null : (payload?.zones || null);
 
         if (positions.length > 0) {
-            console.log("Positions:", positions);
+
 
             await resetFilter(false, false);
 

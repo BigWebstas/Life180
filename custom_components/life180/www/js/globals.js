@@ -136,7 +136,7 @@ export async function updateConfig() {
 			}
 		}
 		await configureConsole();		
-		console.log("Configuration: ", config);
+	
     } catch (error) {
         console.error("Error checking admin set: ", error);
 		throw error;

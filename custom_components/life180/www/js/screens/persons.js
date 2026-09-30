@@ -188,7 +188,7 @@ async function updatePersonTrails() {
 export async function setDevices(data) {
     try {
         devices = Array.isArray(data) ? data.filter(d => d.entity_id && d.attributes) : [];
-        console.log("Devices:", devices);
+
     } catch (error) {
         console.error("Error processing devices:", error);
         devices = [];
@@ -198,7 +198,7 @@ export async function setDevices(data) {
 export async function setPersons(data) {
     try {
         persons = Array.isArray(data) ? data.filter(p => p.attributes?.friendly_name) : [];
-        console.log("Persons:", persons);
+
     } catch (error) {
         console.error("Error processing persons:", error);
         persons = [];
@@ -332,7 +332,7 @@ async function updatePersonsDevicesMap() {
         personsDevicesMap[person.entity_id] = device;
     }
 
-    console.log("Devices to persons:", personsDevicesMap);
+
 }
 
 export function resolveWithHaUrl(pathLike) {
