@@ -416,8 +416,6 @@ export async function fetchAuthCallback(code) {
             return;
         }
 
-        console.log("************ Token Obtained ************", data);
-
         const tokenData = {
             ...data,
             hassUrl: haUrl,
@@ -466,7 +464,6 @@ export async function fetchTokenRefresh(refreshToken) {
             return;
         }
 
-        console.log("************ Renewed Token ************", data);
         return data;
     } catch (error) {
         console.error("Error in the token refresh request:", error);
