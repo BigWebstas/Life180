@@ -1,0 +1,5 @@
+# Test-only dependencies. The integration's own runtime dependencies
+# (homeassistant, aiofiles, ...) are deliberately absent: tests/conftest.py
+# stubs the two Home Assistant imports the unit under test needs, so the suite
+# runs on any supported Python without installing Home Assistant.
+pytest>=8.0

@@ -1,0 +1,38 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Home Assistant currently supports 3.12 and 3.13. The suite itself is
+        # dependency-light and should pass on any of these.
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
+      - name: Byte-compile the integration
+        # Cheap guard against a syntax error in a file the suite does not
+        # import (the suite only loads devices.py and units.py by path).
+        run: python -m compileall -q custom_components/life180
