@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import sys
 import types
+from collections import UserDict
 from pathlib import Path
 
 # Make the custom component importable as `custom_components.life180.*`,
@@ -74,14 +75,15 @@ def _install_homeassistant_stubs() -> bool:
             device_id, include_disabled_entities=include_disabled_entities
         )
 
-    def async_entries(registry, include_disabled_entities=True):
-        """Stub: every entry in the registry."""
-        return registry.async_entries(
-            include_disabled_entities=include_disabled_entities
-        )
+    # NOTE: there is deliberately no `async_entries` stub here. Home Assistant
+    # does not define that helper on the entity_registry module -- only
+    # async_entries_for_device / _for_area / _for_label / _for_category /
+    # _for_config_entry. A previous version of this suite invented it, which
+    # let code calling it pass green here and then raise AttributeError in
+    # production, taking the whole /api/life180/devices payload with it.
+    # Only real helpers get stubs, so a missing one fails the suite.
 
     entity_registry.async_entries_for_device = async_entries_for_device
-    entity_registry.async_entries = async_entries
 
     def async_get(hass):
         """Stub: return the entity registry carried by the fake `hass`."""
@@ -178,6 +180,14 @@ class FakeEntityRegistry:
         self._entries = entries
         # tracker_devices: {tracker_entity_id: device_id}
         self._tracker_devices = tracker_devices or {}
+        # Real HA exposes the registry as EntityRegistry.entities, a UserDict
+        # keyed by entity_id whose values() is overridden to skip __iter__
+        # overhead. devices.py reaches it that way. Modelling it here means
+        # anything the suite does not anticipate fails in the suite rather
+        # than in production.
+        # Real HA keys this dict by entity_id, so duplicate entity_ids collapse
+        # to the last one, exactly as they do in production.
+        self.entities = _FakeRegistryItems({e.entity_id: e for e in entries})
 
     def async_get(self, entity_id):
         device_id = self._tracker_devices.get(entity_id)
@@ -198,6 +208,17 @@ class FakeEntityRegistry:
         if not include_disabled_entities:
             pool = [e for e in pool if not e.disabled_by]
         return [e for e in pool if e.device_id == device_id]
+
+
+class _FakeRegistryItems(UserDict):
+    """Stand-in for HA's `BaseRegistryItems` (a UserDict of registry entries).
+
+    Mirrors the real `values()` override, which returns the underlying dict's
+    values directly instead of going through `__iter__`.
+    """
+
+    def values(self):
+        return self.data.values()
 
 
 class FakeState:
