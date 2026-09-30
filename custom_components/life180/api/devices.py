@@ -67,15 +67,19 @@ def _battery_from_attrs(attributes):
     return ""
 
 
-def _battery_from_device_sensors(hass, ent_reg, tracker_entity_id):
+def _battery_from_device_sensors(hass, ent_reg, tracker_entity_id, battery_sensors_by_device=None):
     """Look for a battery sensor on the same registry device as the tracker."""
     try:
         reg_entry = ent_reg.async_get(tracker_entity_id)
         if not reg_entry or not reg_entry.device_id:
             return ""
-        for entry in er.async_entries_for_device(
-            ent_reg, reg_entry.device_id, include_disabled_entities=False
-        ):
+        if battery_sensors_by_device is not None:
+            entries = battery_sensors_by_device.get(reg_entry.device_id, [])
+        else:
+            entries = er.async_entries_for_device(
+                ent_reg, reg_entry.device_id, include_disabled_entities=False
+            )
+        for entry in entries:
             if not entry.entity_id.startswith("sensor."):
                 continue
             is_battery = (
@@ -124,6 +128,22 @@ class DevicesEndpoint(HomeAssistantView):
         devices = hass.states.async_all("device_tracker")
         ent_reg = er.async_get(hass)
         device_data = []
+
+        # Build a lookup of battery sensors by device_id once, so the per-tracker
+        # lookup below doesn't have to walk the registry for every device.
+        battery_sensors_by_device = {}
+        for entry in er.async_entries_for_device(
+            ent_reg, None, include_disabled_entities=False
+        ):
+            if not entry.entity_id.startswith("sensor."):
+                continue
+            is_battery = (
+                entry.original_device_class == "battery"
+                or getattr(entry, "device_class", None) == "battery"
+                or entry.entity_id.endswith(("_battery_level", "_battery"))
+            )
+            if is_battery and entry.device_id:
+                battery_sensors_by_device.setdefault(entry.device_id, []).append(entry)
 
         for device in devices:
             lat = device.attributes.get("latitude")
@@ -181,7 +201,7 @@ class DevicesEndpoint(HomeAssistantView):
             #    Companion app, whose tracker has no battery attribute).
             if battery_level == "":
                 battery_level = _battery_from_device_sensors(
-                    hass, ent_reg, device.entity_id
+                    hass, ent_reg, device.entity_id, battery_sensors_by_device
                 )
 
             # 3) Legacy guess: sensor.<slugified friendly name>_battery_level.
