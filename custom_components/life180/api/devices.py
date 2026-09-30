@@ -67,6 +67,38 @@ def _battery_from_attrs(attributes):
     return ""
 
 
+def _build_battery_sensor_index(ent_reg):
+    """Index every battery sensor in the registry by device_id.
+
+    Used to answer "does this tracker have a battery sensor?" in one dict
+    lookup instead of re-walking the entity registry for each tracker, which
+    otherwise repeats the same work once per device. The result is equivalent
+    to letting `_battery_from_device_sensors` do its own registry walk.
+
+    Iterates with `er.async_entries`, deliberately not
+    `er.async_entries_for_device`. The latter looks entries up in the
+    device_id index, so passing `device_id=None` matches nothing and yields an
+    empty list -- which silently blanks every tracker's battery. Disabled
+    entries are filtered here to preserve the `include_disabled_entities=False`
+    behaviour the per-device call used to give us.
+
+    Entries with no device_id are dropped: they cannot be attributed to any
+    tracker, and including them would create a meaningless `None` bucket.
+    """
+    index = {}
+    for entry in er.async_entries(ent_reg):
+        if entry.disabled_by or not entry.entity_id.startswith("sensor."):
+            continue
+        is_battery = (
+            entry.original_device_class == "battery"
+            or getattr(entry, "device_class", None) == "battery"
+            or entry.entity_id.endswith(("_battery_level", "_battery"))
+        )
+        if is_battery and entry.device_id:
+            index.setdefault(entry.device_id, []).append(entry)
+    return index
+
+
 def _battery_from_device_sensors(hass, ent_reg, tracker_entity_id, battery_sensors_by_device=None):
     """Look for a battery sensor on the same registry device as the tracker."""
     try:
@@ -131,17 +163,7 @@ class DevicesEndpoint(HomeAssistantView):
 
         # Build a lookup of battery sensors by device_id once, so the per-tracker
         # lookup below doesn't have to walk the registry for every device.
-        battery_sensors_by_device = {}
-        for entry in er.async_entries(ent_reg):
-            if entry.disabled_by or not entry.entity_id.startswith("sensor."):
-                continue
-            is_battery = (
-                entry.original_device_class == "battery"
-                or getattr(entry, "device_class", None) == "battery"
-                or entry.entity_id.endswith(("_battery_level", "_battery"))
-            )
-            if is_battery and entry.device_id:
-                battery_sensors_by_device.setdefault(entry.device_id, []).append(entry)
+        battery_sensors_by_device = _build_battery_sensor_index(ent_reg)
 
         for device in devices:
             lat = device.attributes.get("latitude")
