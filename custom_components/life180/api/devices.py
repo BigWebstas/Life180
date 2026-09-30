@@ -132,10 +132,8 @@ class DevicesEndpoint(HomeAssistantView):
         # Build a lookup of battery sensors by device_id once, so the per-tracker
         # lookup below doesn't have to walk the registry for every device.
         battery_sensors_by_device = {}
-        for entry in er.async_entries_for_device(
-            ent_reg, None, include_disabled_entities=False
-        ):
-            if not entry.entity_id.startswith("sensor."):
+        for entry in er.async_entries(ent_reg):
+            if entry.disabled_by or not entry.entity_id.startswith("sensor."):
                 continue
             is_battery = (
                 entry.original_device_class == "battery"
