@@ -333,12 +333,68 @@ def test_index_of_empty_registry_is_empty():
     assert devices._build_battery_sensor_index(FakeEntityRegistry(entries=[], tracker_devices={})) == {}
 
 
+def test_none_device_id_lookup_returns_nothing():
+    """Regression guard for the 0.5.0 battery regression.
+
+    `_build_battery_sensor_index` originally iterated with
+    `er.async_entries_for_device(ent_reg, None)` on the assumption that a None
+    device_id meant "every entry". It does not: real HA looks entries up in its
+    device_id index, so None matches nothing and the index came out empty,
+    blanking the battery of every tracker whose battery lives on a sibling
+    sensor -- notably the HA Companion app.
+
+    This asserts the assumption itself is false, so no test double can quietly
+    reintroduce it.
+    """
+    ent_reg = FakeEntityRegistry(
+        entries=[FakeRegistryEntry("sensor.phone_battery", device_id="dev1")],
+        tracker_devices={},
+    )
+    assert ent_reg.async_entries_for_device(None) == []
+    assert ent_reg.async_entries_for_device(None, include_disabled_entities=False) == []
+
+
+def test_index_is_populated_for_a_real_registry():
+    """The index must actually contain entries, not be silently empty.
+
+    This is the check whose absence let 0.5.0 ship: every battery lookup
+    returned nothing and no test noticed, because the doubles agreed with the
+    broken implementation.
+    """
+    ent_reg = FakeEntityRegistry(
+        entries=[
+            FakeRegistryEntry("sensor.phone_battery", device_id="dev1"),
+            FakeRegistryEntry(
+                "sensor.watch_cell", device_id="dev2", original_device_class="battery"
+            ),
+        ],
+        tracker_devices={"device_tracker.phone": "dev1"},
+    )
+    index = devices._build_battery_sensor_index(ent_reg)
+    assert sorted(index) == ["dev1", "dev2"]
+
+
+def test_index_is_empty_when_registry_has_no_battery_sensors():
+    """A genuinely empty result is fine, and distinct from the broken lookup."""
+    ent_reg = FakeEntityRegistry(
+        entries=[
+            FakeRegistryEntry(
+                "sensor.phone_signal",
+                device_id="dev1",
+                original_device_class="signal_strength",
+            ),
+        ],
+        tracker_devices={},
+    )
+    assert devices._build_battery_sensor_index(ent_reg) == {}
+
+
 def test_index_excludes_disabled_entities():
     """Disabled battery sensors must not be offered as a battery source."""
     ent_reg = FakeEntityRegistry(
         entries=[
             FakeRegistryEntry("sensor.enabled_battery", device_id="dev1"),
-            FakeRegistryEntry("sensor.disabled_battery", device_id="dev1", disabled=True),
+            FakeRegistryEntry("sensor.disabled_battery", device_id="dev1", disabled_by="user"),
         ],
         tracker_devices={"device_tracker.phone": "dev1"},
     )
@@ -352,7 +408,7 @@ def test_index_prefers_enabled_sensor_over_disabled_one():
     """A disabled sensor earlier in the list must not shadow an enabled one."""
     ent_reg = FakeEntityRegistry(
         entries=[
-            FakeRegistryEntry("sensor.a_battery", device_id="dev1", disabled=True),
+            FakeRegistryEntry("sensor.a_battery", device_id="dev1", disabled_by="integration"),
             FakeRegistryEntry("sensor.b_battery", device_id="dev1"),
         ],
         tracker_devices={"device_tracker.phone": "dev1"},

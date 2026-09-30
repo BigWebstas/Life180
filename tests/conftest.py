@@ -63,12 +63,25 @@ def _install_homeassistant_stubs() -> bool:
     http.HomeAssistantView = HomeAssistantView
 
     def async_entries_for_device(registry, device_id, include_disabled_entities=True):
-        """Stub: delegate to the registry object under test."""
+        """Stub: delegate to the registry object under test.
+
+        Real Home Assistant looks entries up in its device_id index, so a
+        `device_id` of None matches nothing and yields an empty list. That is
+        deliberate here: a stub that returned everything for None would hide
+        exactly the 0.5.0 regression this suite exists to guard against.
+        """
         return registry.async_entries_for_device(
             device_id, include_disabled_entities=include_disabled_entities
         )
 
+    def async_entries(registry, include_disabled_entities=True):
+        """Stub: every entry in the registry."""
+        return registry.async_entries(
+            include_disabled_entities=include_disabled_entities
+        )
+
     entity_registry.async_entries_for_device = async_entries_for_device
+    entity_registry.async_entries = async_entries
 
     def async_get(hass):
         """Stub: return the entity registry carried by the fake `hass`."""
@@ -133,7 +146,7 @@ class FakeRegistryEntry:
         device_id=None,
         original_device_class=None,
         device_class=None,
-        disabled=False,
+        disabled_by=None,
     ):
         self.entity_id = entity_id
         self.device_id = device_id
@@ -142,12 +155,23 @@ class FakeRegistryEntry:
         # stays absent-able to exercise the getattr() fallback.
         if device_class is not None:
             self.device_class = device_class
-        # Lets the `include_disabled_entities` flag actually mean something.
-        self.disabled = disabled
+        # Mirrors HA's RegistryEntry.disabled_by, which devices.py reads to skip
+        # disabled entries. `entry.disabled` is HA's derived property.
+        self.disabled_by = disabled_by
+
+    @property
+    def disabled(self):
+        """HA exposes `disabled` as a property derived from `disabled_by`."""
+        return self.disabled_by is not None
 
 
 class FakeEntityRegistry:
-    """Stand-in for the entity registry, supporting the two calls devices.py makes."""
+    """Stand-in for the entity registry, supporting the calls devices.py makes.
+
+    `async_entries_for_device` mirrors real HA: lookups go through a device_id
+    index, so `device_id=None` matches nothing. This matters -- see
+    `test_none_device_id_lookup_returns_nothing`.
+    """
 
     def __init__(self, entries, tracker_devices=None):
         # entries: list[FakeRegistryEntry]
@@ -161,12 +185,18 @@ class FakeEntityRegistry:
             return None
         return FakeRegistryEntry(entity_id=entity_id, device_id=device_id)
 
+    def async_entries(self, include_disabled_entities=True):
+        if include_disabled_entities:
+            return list(self._entries)
+        return [e for e in self._entries if not e.disabled_by]
+
     def async_entries_for_device(self, device_id, include_disabled_entities=True):
+        # Real HA indexes by device_id and yields nothing for None.
+        if device_id is None:
+            return []
         pool = self._entries
         if not include_disabled_entities:
-            pool = [e for e in pool if not getattr(e, "disabled", False)]
-        if device_id is None:
-            return list(pool)
+            pool = [e for e in pool if not e.disabled_by]
         return [e for e in pool if e.device_id == device_id]
 
 
