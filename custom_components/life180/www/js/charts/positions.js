@@ -20,13 +20,23 @@
 
 import { handleZonePosition, getZoneStyleById } from '../screens/zones.js';
 import { toRgba } from '../utils/dialogs.js';
-import { formatDate } from '../globals.js';
+import { formatDate, onThemeChange } from '../globals.js';
 
 const ALPHA = 0.3;
 
-// Colores
-const COLOR_DARK_BLUE = '#003366';
-const COLOR_SEP_GRAY  = '#d1d5db'; // thin gray for the separator flush with the chart
+// Colours, re-read from the theme tokens at the start of every draw so the
+// canvas follows HA light/dark. The literals are the light-theme fallbacks.
+let COLOR_DARK_BLUE = '#003366';  // text, marker and day-end line
+let COLOR_SEP_GRAY  = '#d1d5db';  // thin separator flush with the chart
+
+/** Refresh the text/separator colours and return the background colour. */
+function readThemeColors() {
+  const cs = getComputedStyle(document.documentElement);
+  const token = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
+  COLOR_DARK_BLUE = token('--l180-text', '#003366');
+  COLOR_SEP_GRAY  = token('--l180-divider', '#d1d5db');
+  return token('--l180-surface', '#fff');
+}
 
 // Alturas (en px)
 const DATE_HDR_H               = 18;
@@ -84,6 +94,9 @@ export function initPositionsChart() {
         if (lastData) drawAll(lastData.positions, lastData.opts || {});
       });
       resizeObs.observe(stackHost);
+      onThemeChange(() => {
+        if (lastData) drawAll(lastData.positions, lastData.opts || {});
+      });
     }
   }
 
@@ -359,9 +372,9 @@ function drawPanel(panel, positions, meta) {
   const topY    = headerH;
   const botY    = topY + trackH + GAP_TRACKS;
 
-  // Fondo blanco
+  // Background (theme surface)
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = readThemeColors();
   ctx.fillRect(0, 0, W, H);
 
   // === DATE header (only the first segment of the day) ===
