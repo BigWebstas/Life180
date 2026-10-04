@@ -205,22 +205,6 @@ export async function fetchAdmin() {
     }
 }
 
-export async function fetchConnection() {
-    try {
-        const url = `${haUrl}/api/config`;
-        const data = await fetchData(url);
-
-        if (!data || typeof data !== "object") {
-            console.log("Home Assistant responds, but doesn't seem ready.");
-            return false;
-        }
-        return true;
-    } catch (error) {
-        console.error('Error checking Home Assistant status:', error);
-        throw error;
-    }
-}
-
 export async function fetchDevices() {
     const url = `${haUrl}/api/life180/devices`;
     try {

@@ -88,7 +88,6 @@
   "export_positions": "Möchten Sie auch die Positionen exportieren?",
   "filter_date_range": "Daten für den Bericht auswählen",
   "long_zone": "Der Zonenname ist zu lang",
-  "select_color": "Wählen Sie eine Farbe",
   "error_creating_zone": "Die Zone konnte nicht erstellt werden",
   "zone_name_exists": "Es gibt bereits eine Zone mit diesem Namen. Wähle einen anderen Namen.",
   "color": "Farbe",

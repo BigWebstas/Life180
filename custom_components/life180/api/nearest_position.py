@@ -15,21 +15,6 @@ _LOGGER = logging.getLogger(__name__)
 
 NEAREST_WINDOW_MINUTES = 30  # +/- X min window
 
-def _parse_date_to_utc(date_str):
-    dt = dt_util.parse_datetime(date_str)
-    if dt is None:
-        return None, {"error":"Invalid date format", "status_code":400}
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
-    return dt_util.as_utc(dt), None
-
-def _validate_query(q):
-    person_id = q.get("person_id")
-    date_str  = q.get("date")
-    if not person_id or not date_str:
-        return None, None, {"error":"Missing parameters (need person_id and date)", "status_code":400}
-    return person_id, date_str, None
-
 def validate_person(hass, person_id):
     """Validate that the person and their tracking device are valid."""
     person_state = hass.states.get(person_id)

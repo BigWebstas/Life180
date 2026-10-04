@@ -1,12 +1,9 @@
 // utils/map.js
-import { USE_MAP } from '../globals.js';
 
 let _implPromise;
 function _getImpl() {
     if (!_implPromise) {
-        _implPromise = USE_MAP === '2D'
-             ? import('./map2d.js')
-             : import('./map3d.js');
+        _implPromise = import('./map3D.js');
     }
     return _implPromise;
 }
@@ -19,17 +16,6 @@ export async function initMap(...args) {
     // NOTE: update the export here so it stops being undefined
     map = m.map;
     return result ?? map;
-}
-
-// A helper to get the map guaranteed to be ready:
-export async function getMap() {
-    const m = await _getImpl();
-    if (!m.map) {
-        // if initMap has not been called yet, call it with no args
-        await m.initMap?.();
-    }
-    map = m.map;
-    return map;
 }
 
 // =====================

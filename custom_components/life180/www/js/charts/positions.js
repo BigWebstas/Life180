@@ -94,17 +94,6 @@ export function initPositionsChart() {
   ensureClickHandlers();
 }
 
-export function onChartTabShown() {
-  initPositionsChart();   // ensure the host
-  bindRealScroller();     // re-resolve the real scroller if it changed with the tab
-  updateHeaderMetrics();  // recompute the header metrics
-
-  const t = toTsMs(lastData?.opts?.markerTs);
-  if (Number.isFinite(t)) {
-    afterReflow(() => ensureMarkerPanelInView(t)); // center the marker segment
-  }
-}
-
 /** Fully clears the header and the chart state */
 export function clearPositionsChart() {
   if (!stackHost) return;
@@ -197,13 +186,6 @@ export function setPositionsMarker(tsLike) {
 
   // --- NEW: try to scroll to the segment right away (if not visible, retry when it becomes visible) ---
   waitUntilVisible(stackHost, () => afterReflow(() => ensureMarkerPanelInView(t)));
-}
-
-/** Limpia el marcador */
-export function clearPositionsMarker() {
-  if (!lastData) return;
-  if (lastData.opts) delete lastData.opts.markerTs;
-  drawAll(lastData.positions, lastData.opts || {});
 }
 
 /* ===================== helpers de tiempo y segmentos ===================== */

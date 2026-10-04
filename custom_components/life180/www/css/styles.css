@@ -476,17 +476,6 @@ td {
   max-height: none !important;
 }
 
-/* ===== Leaflet layers ===== */
-.leaflet-control-layers-expanded {
-  width: auto;
-  white-space: nowrap;
-  overflow-x: auto;
-}
-.leaflet-control-layers-list {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
 /* ====== Modals & Toasts ====== */
 body.no-scroll { overflow: hidden; }
 
@@ -749,99 +738,11 @@ body.no-scroll { overflow: hidden; }
   font-style: italic; color: var(--l180-text-2);
 }
 
-/*************************************************
- * Modal color picker (consistente cross-device)
- *************************************************/
-.modal-color{
-  --gap: 12px;
-  --rail-w: 18px;
-  --sv-min: 150px;
-  --sv-max: 380px;
-  --sv-ratio: 0.72;
-  --sv-w: clamp(var(--sv-min), 60vw, var(--sv-max));
-  --sv-h: calc(var(--sv-w) * var(--sv-ratio));
-  display: grid; gap: var(--gap);
-}
-.cp{
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 28ch);
-  gap: var(--gap); align-items: start;
-}
-.cp-left{ display: flex; gap: var(--gap); align-items: stretch; min-width: 0; }
-.cp-sv{
-  position: relative; width: var(--sv-w); height: var(--sv-h);
-  border-radius: 10px; overflow: hidden; background: hsl(0, 100%, 50%);
-  cursor: crosshair; user-select: none; touch-action: none; max-width: 100%;
-}
-.cp-sv::before{ content:""; position:absolute; inset:0; background: linear-gradient(to right, #fff, rgba(255,255,255,0)); }
-.cp-sv::after{ content:""; position:absolute; inset:0; background: linear-gradient(to top, #000, rgba(0,0,0,0)); }
-.cp-hue,.cp-alpha{
-  position: relative; width: var(--rail-w); height: var(--sv-h);
-  border-radius: 10px; overflow: hidden; cursor: pointer; user-select: none; touch-action: none;
-}
-.cp-hue{
-  background: linear-gradient(to bottom,
-    #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
-}
-.cp-alpha{
-  background:
-    conic-gradient(#ccc 25%, #fff 0 50%, #ccc 0 75%, #fff 0) 0 0/12px 12px,
-    linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1));
-}
-.cp-cursor{
-  position:absolute; width:12px; height:12px;
-  border:2px solid #fff; border-radius:50%;
-  box-shadow:0 0 0 1px rgba(0,0,0,.35);
-  transform: translate(-50%, -50%);
-  pointer-events:none;
-}
-.cp-cursor.h{ left:50%; }
-.cp-right{ min-width: 0; }
-.cp-fields{ display:grid; gap:8px; min-width: 0; }
-.cp-preview{
-  --prev: clamp(36px, 8vw, 48px);
-  width: var(--prev); height: var(--prev);
-  border-radius: 10px; border:1px solid var(--l180-divider);
-  background: conic-gradient(#ccc 25%, #fff 0 50%, #ccc 0 75%, #fff 0) 0 0/12px 12px;
-  position: relative; overflow: hidden;
-}
-.cp-preview>span{ position:absolute; inset:0; }
-.cp-row{ display:flex; gap:8px; align-items:center; }
-.cp-row label{ width:56px; font-size:12px; opacity:.8; }
-.cp-row input[type="text"]{
-  flex:1; padding:6px 8px; border:1px solid var(--l180-divider); border-radius:8px; min-width: 0;
-  background: var(--l180-surface); color: var(--l180-text);
-}
-.cp-palette{
-  display:grid; grid-auto-rows: 1fr; gap:6px;
-  grid-template-columns: repeat(auto-fill, minmax(22px, 1fr));
-}
-.cp-swatch{
-  width:100%; aspect-ratio: 1 / 1; border-radius: 6px;
-  border:1px solid rgba(0,0,0,.15); cursor:pointer;
-}
-.cp-native details{ font-size:12px; }
-.cp-native input[type="color"]{ width:100%; height:32px; padding:0; border:none; background:none; }
-@media (max-width: 600px){
-  .cp{ grid-template-columns: 1fr; }
-}
-
 /* Modal gutters/padding */
 .modal{ width: min(96vw, 600px); border-radius: 12px; overflow: hidden; }
 .modal-header, .modal-actions{ padding: 12px 20px; }
 .modal-body{ padding: 10px 10px; overflow-x: hidden; }
 .modal-body > * + *{ margin-top: 5px; }
-.modal-color{
-  margin-top: 5px; padding: 8px 10px; border: 1px solid var(--l180-divider);
-  border-radius: 10px; background: var(--l180-surface); max-width: 100%;
-}
-.modal-label{
-  display:block; margin: 4px 0 8px; font-size: 12px; opacity: .8;
-}
-.cp, .cp-left, .cp-right, .cp-fields, .cp-row input[type="text"] { min-width: 0; max-width: 100%; }
-.cp-stacked .cp{ grid-template-columns: 1fr; }
-.cp-stacked .cp-left, .cp-stacked .cp-right{ width: 100%; }
-.cp-palette{ grid-template-columns: repeat(auto-fill, minmax(20px, 1fr)); }
 
 /* === Icon Dropdown (enhanced combos) === */
 .id-wrap {
@@ -1166,14 +1067,6 @@ body.no-scroll { overflow: hidden; }
   --modal-backdrop: rgba(0, 0, 0, 0.6);
 }
 
-/* ===== Dark map (2D Leaflet) =====
-   Leaflet tags each base tile <img> with .l180-base-tiles; the filter only
-   hits those, not the marker/circle panes. The 3D map dims via MapLibre
-   paint properties instead. */
-#map.l180-map-dark .l180-base-tiles {
-  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.85);
-}
-
 /* ===== Moving-person badge (speed + battery above the map marker) ===== */
 .l180-move-badge {
   position: absolute;
@@ -1269,16 +1162,13 @@ body.no-scroll { overflow: hidden; }
 /* ===== Map popups follow the theme ===== */
 /* Vendor maplibre-gl.css hard-codes a white popup background and never sets a
    text colour, so in a dark theme it was light text on white. */
-.maplibregl-popup-content,
-.leaflet-popup-content-wrapper {
+.maplibregl-popup-content {
   background: var(--l180-surface, #fff) !important;
   color: var(--l180-text, #212121) !important;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3) !important;
 }
-.maplibregl-popup-content a,
-.leaflet-popup-content-wrapper a { color: var(--l180-primary, #03a9f4); }
+.maplibregl-popup-content a { color: var(--l180-primary, #03a9f4); }
 .maplibregl-popup-close-button { color: var(--l180-text, #212121) !important; }
-.leaflet-popup-tip { background: var(--l180-surface, #fff) !important; }
 /* The maplibre tip is a CSS-border triangle; recolour the one coloured edge
    per popup anchor. */
 .maplibregl-popup-anchor-top .maplibregl-popup-tip,
@@ -1409,14 +1299,12 @@ span.flatpickr-weekday {
 
 /* ===== Map attribution chip follows the theme ===== */
 .maplibregl-ctrl-attrib,
-.maplibregl-ctrl-attrib.maplibregl-compact,
-.leaflet-control-attribution {
+.maplibregl-ctrl-attrib.maplibregl-compact {
   background-color: var(--l180-surface, #fff) !important;
   color: var(--l180-text-2, #444) !important;
 }
 .maplibregl-ctrl-attrib a,
-.maplibregl-ctrl-attrib a:hover,
-.leaflet-control-attribution a {
+.maplibregl-ctrl-attrib a:hover {
   color: var(--l180-primary, #0078d4) !important;
 }
 /* the compact-mode (i) icon is a black SVG; flip it on dark */
