@@ -1,5 +1,6 @@
 """Life180 zone handling."""
 
+import copy
 import json
 import logging
 import os
@@ -101,8 +102,7 @@ class ZonesAPI(HomeAssistantView):
                 "color": normalize_color(state.attributes.get("color", DEFAULT_COLOR)),
                 "visible": True,  # visible by default
             }
-            for state in hass.states.async_all()
-            if state.entity_id.startswith("zone.")
+            for state in hass.states.async_all("zone")
         ]
         
         # Apply overrides (color/visible) to HA zones and clean up orphaned overrides
@@ -383,7 +383,7 @@ class ZonesAPI(HomeAssistantView):
             # Check that it exists in HA
             exists_in_ha = any(
                 sanitize_id(s.entity_id.split("zone.",1)[1]) == zone_id_s
-                for s in hass.states.async_all() if s.entity_id.startswith("zone.")
+                for s in hass.states.async_all("zone")
             )
             if not exists_in_ha:
                 return self.json({"error": "Zone not found or cannot be updated"}, status_code=404)
@@ -448,8 +448,8 @@ class ZonesAPI(HomeAssistantView):
 async def unregister_zones(hass):
     """Remove custom zones registered in Home Assistant."""
     try:
-        for state in hass.states.async_all():
-            if state.entity_id.startswith("zone.") and state.attributes.get("custom", False):
+        for state in hass.states.async_all("zone"):
+            if state.attributes.get("custom", False):
                 hass.states.async_remove(state.entity_id)
     except Exception as e:  # noqa: BLE001
         _LOGGER.error("Error unregistering zones: %s", e)
@@ -504,13 +504,28 @@ async def register_zones(hass):
 
 
 # ---------- unified storage helpers ----------
+# Parsed zones file keyed by path, reused while the file's mtime is unchanged
+# (the frontend GETs zones on every update tick).
+_store_cache: dict[str, tuple[int, object]] = {}
+
+
 async def _read_store(zones_path):
     """
     Return a dict shaped like:
       { "zones": [ ...custom... ], "ha_overrides": { "<id>": {"color":"#rrggbb","visible": true/false}, ... } }
     Also accepts the old format (a list) and adapts it.
     """
-    data = await read_zones_file(zones_path)
+    try:
+        mtime = os.stat(zones_path).st_mtime_ns
+    except OSError:
+        mtime = None
+    cached = _store_cache.get(zones_path)
+    if mtime is not None and cached and cached[0] == mtime:
+        data = copy.deepcopy(cached[1])
+    else:
+        data = await read_zones_file(zones_path)
+        if mtime is not None:
+            _store_cache[zones_path] = (mtime, copy.deepcopy(data))
     if isinstance(data, list):
         return {"zones": data, "ha_overrides": {}}
     if isinstance(data, dict):
@@ -527,7 +542,12 @@ async def _write_store(zones_path, store):
         "zones": store.get("zones", []) or [],
         "ha_overrides": store.get("ha_overrides", {}) or {},
     }
-    await write_zones_file(zones_path, payload)
+    try:
+        await write_zones_file(zones_path, payload)
+    finally:
+        # Drop the cache after every write: coarse filesystem timestamps could
+        # otherwise leave the pre-write copy looking current.
+        _store_cache.pop(zones_path, None)
 
 
 async def read_zones_file(zones_path):
@@ -675,11 +695,10 @@ def name_key(name: str) -> str:
 def get_ha_zone_name_keys(hass) -> set[str]:
     """Return the set of 'name_key' values for the HA zones (friendly_name)."""
     keys = set()
-    for state in hass.states.async_all():
-        if state.entity_id.startswith("zone."):
-            fname = state.attributes.get("friendly_name")
-            if isinstance(fname, str) and fname.strip():
-                keys.add(name_key(fname))
+    for state in hass.states.async_all("zone"):
+        fname = state.attributes.get("friendly_name")
+        if isinstance(fname, str) and fname.strip():
+            keys.add(name_key(fname))
     return keys
 
 

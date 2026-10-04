@@ -102,8 +102,7 @@ function ensurePersonsAddrObserver() {
 
 export async function updatePersons() {
     try {
-        await fetchPersons();
-        await fetchDevices();
+        await Promise.all([fetchPersons(), fetchDevices()]);
         await updatePersonsDevicesMap();
         await updatePersonsTable();
         await updatePersonsMarkers();

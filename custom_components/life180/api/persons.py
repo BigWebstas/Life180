@@ -34,7 +34,7 @@ class PersonsEndpoint(HomeAssistantView):
         if only_admin and (user is None or not user.is_admin):
             return self.json([])
 
-        persons = hass.states.async_all()
+        persons = hass.states.async_all("person")
 
         person_data = []
         for person in persons:

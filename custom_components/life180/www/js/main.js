@@ -72,16 +72,23 @@ function startUpdateLoop() {
     requestAnimationFrame(frame); // start
 }
 
+// Config, version and admin status rarely change; refresh them on the first
+// tick and then only every SLOW_REFRESH_MS instead of every update.
+const SLOW_REFRESH_MS = 5 * 60 * 1000;
+let lastSlowRefresh = -Infinity;
+
 async function update() {
     try {
-        // Run the functions in order and stop if an error occurs
         const active = await isActive();
         if (active) {
-            await updateConfig();
-            await updateVersion();
-            await updateAdmin();
-            await updatePersons();
-            await updateZones();
+            const now = performance.now();
+            if (now - lastSlowRefresh >= SLOW_REFRESH_MS) {
+                await updateConfig();
+                await updateVersion();
+                await updateAdmin();
+                lastSlowRefresh = now;
+            }
+            await Promise.all([updatePersons(), updateZones()]);
             await updateUI();
             hideOfflineBanner();
         } else {
