@@ -2,7 +2,7 @@
 // DEVICES
 //
 
-import { haUrl, formatDate, geocodeTime, geocodeDistance, DEFAULT_ALPHA } from '../globals.js';
+import { haUrl, formatDate, geocodeTime, geocodeDistance, DEFAULT_ALPHA, escapeHtml } from '../globals.js';
 import { fetchPersons, fetchDevices, fetchPersonTrail } from '../ha/fetch.js';
 import { handleZonePosition } from '../screens/zones.js';
 import { map, isValidCoordinates, getDistanceFromLatLonInMeters, fitBoundsSafe, focusPoint } from '../utils/map.js';
@@ -426,7 +426,7 @@ async function updatePersonsMarkers() {
 
         const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
         const popupContent = `
-		  <strong>${ownerName}</strong> (${friendly_name})<br>
+		  <strong>${escapeHtml(ownerName)}</strong> (${escapeHtml(friendly_name)})<br>
 		  ${formattedDate}<br>
 		  ${t('speed')}: ${Math.round((speed || 0) * 2.23694)} ${t('mi_per_hour')}
 		  ${batteryLevel}
@@ -451,7 +451,7 @@ async function updatePersonsMarkers() {
                 existing.__l180IconSig = iconSig;
                 existing.setIcon(L.divIcon({
                     className: '',
-                    html: `<div style="position:relative;width:48px;height:48px;"${wrapAttrs}>${moveBadge}<img src="${iconUrl}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;" /></div>`,
+                    html: `<div style="position:relative;width:48px;height:48px;"${wrapAttrs}>${moveBadge}<img src="${escapeHtml(iconUrl)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;" /></div>`,
                     iconSize: [48, 48],
                     iconAnchor: [24, 24],
                     popupAnchor: [0, -24],
@@ -473,7 +473,7 @@ async function updatePersonsMarkers() {
         } else {
             const markerIcon = L.divIcon({
                 className: '',
-                html: `<div style="position:relative;width:48px;height:48px;"${wrapAttrs}>${moveBadge}<img src="${iconUrl}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;" /></div>`,
+                html: `<div style="position:relative;width:48px;height:48px;"${wrapAttrs}>${moveBadge}<img src="${escapeHtml(iconUrl)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;" /></div>`,
                 iconSize: [48, 48],
                 iconAnchor: [24, 24],
                 popupAnchor: [0, -24],
@@ -748,9 +748,9 @@ export async function updatePersonsTable() {
             }
 
             const newContent = `
-				<td><p style="font-weight:bold;color:var(--l180-text);margin:0;">${friendlyName}</p></td>
+				<td><p style="font-weight:bold;color:var(--l180-text);margin:0;">${escapeHtml(friendlyName)}</p></td>
 				<td>${time}</td>
-				<td>${currentZoneName}</td>
+				<td>${escapeHtml(currentZoneName)}</td>
 				<td>${speed}</td>
 				<td>${battery != null ? battery + '%' : ''}</td>
 			  `;

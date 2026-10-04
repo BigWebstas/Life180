@@ -7,7 +7,11 @@ import { t } from '../utils/i18n.js';
 function sanitizeField(v) {
     if (v == null)
         return '';
-    const s = String(v).replace(/\r?\n/g, ' ').trim();
+    let s = String(v).replace(/\r?\n/g, ' ').trim();
+    // Spreadsheets run a cell starting with = + - @ as a formula. Addresses
+    // come from OpenStreetMap, so neutralise those (but keep negative numbers).
+    if (/^[=+\-@]/.test(s) && !Number.isFinite(Number(s)))
+        s = `'${s}`;
     // CSV-safe within double quotes (doubling internal quotes)
     return `"${s.replace(/"/g, '""')}"`;
 }
