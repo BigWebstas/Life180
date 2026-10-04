@@ -2,7 +2,7 @@
 // ZONES
 //
 
-import { isAdmin, fmt0, DEFAULT_COLOR, DEFAULT_ALPHA } from '../globals.js';
+import { isAdmin, fmt0, DEFAULT_COLOR, DEFAULT_ALPHA, escapeHtml } from '../globals.js';
 import { map, getDistanceFromLatLonInMeters, fitBoundsSafe, focusPoint } from '../utils/map.js';
 import { deleteZone, updateZone, createZone, fetchZones } from '../ha/fetch.js';
 import { updatePersonsTable } from '../screens/persons.js';
@@ -11,16 +11,10 @@ import { uiConfirm, uiPrompt, uiAlert, toRgba } from '../utils/dialogs.js';
 
 let zones = [], zoneMarkers = {}, zoneLabels = {};
 
-function escHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => (
-        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-    ));
-}
-
 function zoneLabelIcon(name) {
     return L.divIcon({
         className: '',
-        html: `<span class="l180-zone-label">${escHtml(name)}</span>`,
+        html: `<span class="l180-zone-label">${escapeHtml(name)}</span>`,
     });
 }
 
@@ -869,7 +863,7 @@ async function updateZonesTable() {
         const newContent = `
 		  <td>${adminColumnContent}</td>
           <td>${typeColumnContent}</td>
-		  <td>${name || t('zone_without_name')}</td>
+		  <td>${name ? escapeHtml(name) : t('zone_without_name')}</td>
 		  <td>${radiusText}</td>
 		`;
 
@@ -1044,7 +1038,7 @@ function buildZonePopup(zone) {
     const r = fmt0(radius * 3.28084); // metros -> pies
     const unit = t('feet');
     return `
-    <strong>${zone.name || t("zone_without_name")}</strong><br>
+    <strong>${zone.name ? escapeHtml(zone.name) : t("zone_without_name")}</strong><br>
     ${t('radius')}: ${r} ${unit}
     <br><br><a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"><strong>${t('open_location')}</strong></a>
   `;

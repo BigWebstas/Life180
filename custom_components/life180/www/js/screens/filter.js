@@ -3,7 +3,7 @@
 //
 
 import { map, fitBoundsSafe, focusPoint } from '../utils/map.js';
-import { formatDate, fmt0, fmt2, DEFAULT_ALPHA } from '../globals.js';
+import { formatDate, fmt0, fmt2, DEFAULT_ALPHA, escapeHtml } from '../globals.js';
 import { fetchFilteredPositions, fetchResetReverseGeocodeCache } from '../ha/fetch.js';
 import { handleZonePosition, showZone, getZoneStyleById } from '../screens/zones.js';
 import { handlePersonsSelection, updatePersonsFilter } from '../screens/persons.js';
@@ -324,7 +324,7 @@ async function updatePositionsTable(positions) {
 				<td><button class="toggle-btn">►</button></td>
 				<td>${stop}</td>
 				<td>${fecha}</td>
-				<td>${zoneName}</td>
+				<td>${escapeHtml(zoneName)}</td>
 				<td>${vel}</td>
 				<td>
 				  <button class="group-filter-btn" title="${t('filter') || 'Filtrar'}"
@@ -377,7 +377,7 @@ async function updatePositionsTable(positions) {
 				<td></td>
 				<td>${stop}</td>
 				<td>${fecha}</td>
-				<td>${zoneName}</td>
+				<td>${escapeHtml(zoneName)}</td>
 				<td>${vel}</td>
 				<td></td>
 			  `;
@@ -1302,7 +1302,7 @@ async function updateSummaryZonesTable() {
 
         const row = document.createElement('tr');
         row.innerHTML = `
-		  <td>${pretty}</td>
+		  <td>${escapeHtml(pretty)}</td>
 		  <td>${formatTotalTime(duration)}</td>
 		  <td>${fmt0(visits)}</td>
 		  <td>${fmt0(stops)}</td>

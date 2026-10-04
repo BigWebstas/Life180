@@ -588,66 +588,6 @@ class SearchToggleControl {
     }
 }
 
-// ===== Layers control (button that opens a menu on the RIGHT) =====
-class LayerControl {
-    onAdd(map) {
-        this._map = map;
-        const wrap = document.createElement('div');
-        wrap.className = 'maplibregl-ctrl maplibregl-ctrl-group';
-        wrap.style.position = 'relative';
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.title = t('layers');
-        btn.setAttribute('aria-label', t('layers'));
-        btn.innerText = '🗺️';
-        wrap.appendChild(btn);
-
-        const menu = document.createElement('div');
-        menu.className = 'ml-layers-menu';
-        menu.style.cssText = `
-      position:absolute; left:calc(100% + 6px); top:0;
-      background:#fff; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,.25);
-      overflow:hidden; display:none; z-index:10; min-width:180px; font:12px/1.2 system-ui;
-    `;
-        const mkItem = (label) => {
-            const it = document.createElement('button');
-            it.type = 'button';
-            it.textContent = label;
-            it.style.cssText = 'display:block;width:100%;text-align:left;padding:6px 8px;border:0;border-bottom:1px solid #eee;background:#fff;cursor:pointer';
-            it.onclick = () => {
-                switchBase(label);
-                menu.style.display = 'none';
-            };
-            return it;
-        };
-        const fillMenu = () => {
-            menu.innerHTML = '';
-            Object.keys(_views || {}).forEach((lab, idx) => {
-                const el = mkItem(lab);
-                if (idx === Object.keys(_views).length - 1)
-                    el.style.borderBottom = '0';
-                menu.appendChild(el);
-            });
-        };
-        btn.onclick = () => {
-            fillMenu();
-            const v = getComputedStyle(menu).display !== 'none';
-            if (v) {
-                menu.style.display = 'none';
-            } else {
-                menu.style.display = '';
-                _wireOutsideClose(menu, () => menu.style.display = 'none');
-            }
-        };
-        wrap.appendChild(menu);
-        return (this._container = wrap);
-    }
-    onRemove() {
-        this._container?.remove();
-        this._map = undefined;
-    }
-}
-
 // ==== Scale (always imperial) ====
 function _applyScaleUnit() {
     if (_scaleCtrl) {
@@ -856,7 +796,7 @@ export async function initMap() {
                     if (r.center) {
                         const gp = new maplibregl.Popup()
                             .setLngLat(r.center)
-                            .setHTML(r.place_name || '')
+                            .setText(r.place_name || '')
                             .addTo(_ml);
                         try {
                             _allPopups.add(gp);

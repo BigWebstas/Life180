@@ -34,6 +34,14 @@ export function tileUrl(source) {
     return `${haUrl}/api/life180/tile/${source}/{z}/{x}/{y}`;
 }
 
+// Escape text before interpolating it into an HTML string (innerHTML, popup
+// HTML, divIcon html). Names and addresses come from HA or OpenStreetMap.
+export function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+}
+
 // --- Theme -----------------------------------------------------------------
 // True when the app should render dark. Embedded in HA the theme bridge (see
 // index.html) stamps data-ha-dark on <html>; standalone we fall back to the
