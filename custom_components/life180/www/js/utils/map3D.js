@@ -12,7 +12,8 @@
 
 import { loadCSSOnce, loadScriptOnce } from './loader.js';
 import { t } from './i18n.js';
-import { tileUrl, isDarkTheme, onThemeChange } from '../globals.js';
+import { tileUrl, isDarkTheme, onThemeChange, haUrl, mapCacheEnabled } from '../globals.js';
+import { lastKnownToken } from '../ha/fetch.js';
 
 export let map;
 let _ml, _popup, _views = {};
@@ -646,6 +647,17 @@ export async function initMap() {
         // OPT: lowers render cost
         antialias: false,
         preserveDrawingBuffer: true,
+        // The tile cache only serves logged-in requests, so attach the HA
+        // token to our own tile URLs. Only while the cache is on: with it off
+        // the endpoint redirects to the upstream tile server.
+        transformRequest: (url, resourceType) => {
+            const token = lastKnownToken();
+            if (resourceType === 'Tile' && mapCacheEnabled && token
+                && url.startsWith(`${haUrl}/api/life180/tile/`)) {
+                return { url, headers: { Authorization: `Bearer ${token}` } };
+            }
+            return undefined;
+        },
         style: {
             version: 8,
             sources: {},

@@ -46,6 +46,8 @@ class ConfigEndpoint(HomeAssistantView):
                 "geocode_time": config.get("geocode_time", 30),
                 "geocode_distance": config.get("geocode_distance", 20),
                 "enable_debug": config.get("enable_debug", False),
+                # Tells the map to send its token with tile requests.
+                "map_cache_enabled": bool(config.get("map_cache_enabled", False)),
                 # The UI is imperial. The frontend branching is removed separately.
                 "use_imperial": True,
             }

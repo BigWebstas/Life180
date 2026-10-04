@@ -8,6 +8,14 @@ import { setDevices, setPersons } from '../screens/persons.js';
 import { setZones } from '../screens/zones.js';
 import { setFilter } from '../screens/filter.js';
 
+// Last bearer token used for an API call. MapLibre's transformRequest is
+// synchronous, so the tile requests read this instead of awaiting getToken();
+// the update loop's API calls keep it fresh.
+let lastToken = '';
+export function lastKnownToken() {
+    return lastToken;
+}
+
 async function fetchData(
     url, {
     method = 'GET',
@@ -35,6 +43,7 @@ async function fetchData(
             if (!currentToken || !currentToken.trim()) {
                 throw new Error("Invalid token.");
             }
+            lastToken = currentToken;
             headers = {
                 ...headers,
                 Authorization: `Bearer ${currentToken}`
