@@ -8,19 +8,9 @@
 import { fetchReverseGeocode } from '../ha/fetch.js';
 
 // ---------- Config ----------
-let POS_CACHE_MAX = 400; // LRU cache keyed by uniqueId
-let RG_MAX = 4; // max concurrency
-let MAX_EMPTY_RETRIES = 2; // extra retries when a 200 arrives with no address
-
-export function setGeocodeCacheSize(n) {
-    POS_CACHE_MAX = Math.max(50, Number(n) || POS_CACHE_MAX);
-}
-export function setGeocodeConcurrency(n) {
-    RG_MAX = Math.max(1, Number(n) || RG_MAX);
-}
-export function setGeocodeEmptyRetries(n) {
-    MAX_EMPTY_RETRIES = Math.max(0, Number(n) || MAX_EMPTY_RETRIES);
-}
+const POS_CACHE_MAX = 400; // LRU cache keyed by uniqueId
+const RG_MAX = 4; // max concurrency
+const MAX_EMPTY_RETRIES = 2; // extra retries when a 200 arrives with no address
 
 // ---------- Key helpers ----------
 const DECIMALS = 4; // same as the backend
@@ -267,13 +257,4 @@ export function cancelAddress(uniqueId) {
     wanted.delete(uniqueId);
     inFlight.delete(uniqueId);
     resetRetry(uniqueId);
-}
-
-export function clearGeocodeCaches() {
-    posCache.clear();
-    coordAddrCache.clear();
-    coordInFlight.clear();
-    wanted.clear();
-    inFlight.clear();
-    retryCount.clear();
 }

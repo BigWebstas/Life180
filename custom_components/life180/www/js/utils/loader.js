@@ -110,13 +110,3 @@ export function loadScriptOnce(src, {
     GLB.__assetLoader.js.set(key, p);
     return p.finally(() => GLB.__assetLoader.js.delete(key));
 }
-
-/** Load an array of resources {type:'css'|'js', url, opts} in order */
-export async function loadResources(resources = []) {
-    for (const r of resources) {
-        if (r.type === 'css')
-            await loadCSSOnce(r.url, r.opts);
-        else if (r.type === 'js')
-            await loadScriptOnce(r.url, r.opts);
-    }
-}

@@ -2,12 +2,11 @@
 // GLOBALS
 //
 
-import { fetchAdmin, fetchConnection, fetchConfig, fetchManifest } from './ha/fetch.js';
+import { fetchAdmin, fetchConfig, fetchManifest } from './ha/fetch.js';
 import { currentLang, t } from './utils/i18n.js';
 
 
 
-export const USE_MAP = '3D';
 export const SHOW_VISITS = false;
 export const DEFAULT_COLOR = '#008000';
 export const DEFAULT_ALPHA = 0.3
@@ -22,12 +21,10 @@ export const fmt2 = formatNumber({
 }); // 2 decimals (auto locale -> en-GB fallback)
 
 export let isAdmin = false;
-export let isConnected = false;
 export let version = "";
 export let updateInterval = 10;
 export let geocodeTime = 30;
 export let geocodeDistance = 20;
-export let updatePos = 1;
 export let enableDebug = false;
 
 // Raster tile URL template for a base layer. Always routed through the local
@@ -139,15 +136,6 @@ export async function updateConfig() {
 		console.log("Configuration: ", config);
     } catch (error) {
         console.error("Error checking admin set: ", error);
-		throw error;
-    }
-}
-
-export async function updateConnection() {
-    try {
-		isConnected = await fetchConnection();
-    } catch (error) {
-        console.error("Error checking the connection establishment:", error);
 		throw error;
     }
 }

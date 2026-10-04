@@ -3,11 +3,8 @@ from __future__ import annotations
 
 import json
 import logging
-import asyncio
 import aiofiles
-import re
 
-from datetime import timedelta
 from functools import partial
 from typing import Any, Dict
 from urllib.parse import urlsplit, urlunsplit
@@ -22,8 +19,6 @@ from homeassistant.components.panel_custom import async_register_panel
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, CoreState
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.network import get_url
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 
 from .api import register_api_views
