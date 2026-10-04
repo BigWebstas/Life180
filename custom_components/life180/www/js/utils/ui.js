@@ -3,6 +3,7 @@ import { t } from './i18n.js';
 import { map } from './map.js';
 import { SHOW_VISITS } from '../globals.js';
 import { updateZoneActionButtons } from '../screens/zones.js';
+import { updatePersonsTable } from '../screens/persons.js';
 
 const invalidateSoon = () => requestAnimationFrame(() => map?.invalidateSize(true));
 
@@ -156,9 +157,7 @@ document.getElementById('combo-select').addEventListener('change', function () {
                 personsTableBody.querySelectorAll('tr.selected')
                 .forEach(r => r.classList.remove('selected'));
             }
-            if (typeof updatePersonsTable === 'function') {
-                updatePersonsTable();
-            }
+            updatePersonsTable();
         }
 
         // close any popup open on the map:
