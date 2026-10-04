@@ -26,6 +26,7 @@ export let updateInterval = 10;
 export let geocodeTime = 30;
 export let geocodeDistance = 20;
 export let enableDebug = false;
+export let mapCacheEnabled = false;
 
 // Raster tile URL template for a base layer. Always routed through the local
 // tile endpoint; when the server-side cache is disabled that endpoint just
@@ -139,6 +140,7 @@ export async function updateConfig() {
 			if (typeof config.enable_debug === "boolean") {
 				enableDebug = config.enable_debug;
 			}
+			mapCacheEnabled = config.map_cache_enabled === true;
 		}
 		await configureConsole();		
 		console.log("Configuration: ", config);

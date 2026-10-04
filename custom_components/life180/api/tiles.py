@@ -129,9 +129,12 @@ class TileEndpoint(HomeAssistantView):
 
     url = "/api/life180/tile/{source}/{z}/{x}/{y}"
     name = "api:life180/tile"
-    # Map libraries request tiles as plain <img>/fetch with no bearer token, and
-    # the data is public map imagery, so this endpoint is unauthenticated - the
-    # same trust level as the /life180 static path.
+    # Not requires_auth: with the cache off this only redirects to public map
+    # imagery, which needs no login. With the cache on, only logged-in requests
+    # (the app sends its bearer token) are served from / fetched into the
+    # cache; anonymous ones get the same redirect. That stops anyone who can
+    # reach HA from pulling tiles through this IP or reading which areas are
+    # cached (which reveals where the household's people go).
     requires_auth = False
 
     async def get(self, request, source, z, x, y):
@@ -152,14 +155,26 @@ class TileEndpoint(HomeAssistantView):
         if not (0 <= xi < span and 0 <= yi < span):
             return web.Response(status=400, text="x/y out of range")
 
-        # Caching off -> redirect the client straight to upstream. The redirect
-        # is cacheable, so after the first hit the browser goes direct and HA is
+        # Caching off -> redirect straight to upstream. The redirect is
+        # cacheable, so after the first hit the browser goes direct and HA is
         # out of the loop.
+        upstream = TILE_SOURCES[source].format(z=zi, x=xi, y=yi)
         if not _cache_enabled(hass):
             return web.HTTPFound(
-                TILE_SOURCES[source].format(z=zi, x=xi, y=yi),
+                upstream,
                 headers={
                     "Cache-Control": f"public, max-age={BROWSER_MAX_AGE}",
+                    "Access-Control-Allow-Origin": "*",
+                },
+            )
+        # Cache on but anonymous -> same redirect, never stored: the app sends
+        # its token once config has loaded, and a cached redirect would keep
+        # bypassing the cache for that tile.
+        if request.get("hass_user") is None:
+            return web.HTTPFound(
+                upstream,
+                headers={
+                    "Cache-Control": "no-store",
                     "Access-Control-Allow-Origin": "*",
                 },
             )
@@ -218,7 +233,8 @@ class TileEndpoint(HomeAssistantView):
     @staticmethod
     def _tile_response(data: bytes, stale: bool = False) -> web.Response:
         headers = {
-            "Cache-Control": f"public, max-age={BROWSER_MAX_AGE}",
+            # private: served only to logged-in callers, so no shared cache.
+            "Cache-Control": f"private, max-age={BROWSER_MAX_AGE}",
             "Access-Control-Allow-Origin": "*",
         }
         if stale:
