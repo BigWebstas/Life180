@@ -98,12 +98,12 @@ function ensureOfflineBanner() {
       position: fixed; top: 0; left: 0; right: 0;
       z-index: 2147483647; display: none;
       padding: 10px 16px;
-      background: #c0392b; color: #fff;
+      background: var(--l180-danger, #c0392b); color: #fff;
       font: 600 14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       text-align: center; cursor: pointer; user-select: none;
       box-shadow: 0 2px 10px rgba(0,0,0,.25);
     }
-    #life180-offline-banner:hover{ background: #a93226; }
+    #life180-offline-banner:hover{ background: color-mix(in srgb, var(--l180-danger, #c0392b) 88%, #000); }
     #life180-offline-banner .obh{ margin-left: 6px; font-weight: 400; opacity: .85; }
   `;
   document.head.appendChild(style);
