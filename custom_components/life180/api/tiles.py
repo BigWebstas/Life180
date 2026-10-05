@@ -155,22 +155,15 @@ class TileEndpoint(HomeAssistantView):
         if not (0 <= xi < span and 0 <= yi < span):
             return web.Response(status=400, text="x/y out of range")
 
-        # Caching off -> redirect straight to upstream. The redirect is
-        # cacheable, so after the first hit the browser goes direct and HA is
-        # out of the loop.
+        # Caching off, or an anonymous caller -> redirect straight to upstream.
+        # The app itself never relies on this: HA stamps Referrer-Policy:
+        # no-referrer on every response, so a browser following this redirect
+        # reaches OSM without a Referer and gets blocked. The map rewrites
+        # tile URLs to upstream instead (see transformRequest in map3D.js).
+        # Never stored, so a redirect cached while the cache was off can't
+        # shadow a logged-in request after it is turned on.
         upstream = TILE_SOURCES[source].format(z=zi, x=xi, y=yi)
-        if not _cache_enabled(hass):
-            return web.HTTPFound(
-                upstream,
-                headers={
-                    "Cache-Control": f"public, max-age={BROWSER_MAX_AGE}",
-                    "Access-Control-Allow-Origin": "*",
-                },
-            )
-        # Cache on but anonymous -> same redirect, never stored: the app sends
-        # its token once config has loaded, and a cached redirect would keep
-        # bypassing the cache for that tile.
-        if request.get("hass_user") is None:
+        if not _cache_enabled(hass) or request.get("hass_user") is None:
             return web.HTTPFound(
                 upstream,
                 headers={

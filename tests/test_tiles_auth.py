@@ -101,13 +101,14 @@ def _get(hass, request, monkeypatch):
     return resp, fetches
 
 
-def test_cache_off_redirects_publicly(tmp_path, monkeypatch):
+def test_cache_off_redirects_without_storing(tmp_path, monkeypatch):
     hass = _Hass(tmp_path, cache_enabled=False)
     resp, fetches = _get(hass, _Request(hass, FakeUser()), monkeypatch)
 
     assert resp.status == 302
     assert resp.location == "https://tile.openstreetmap.org/3/4/5.png"
-    assert resp.headers["Cache-Control"].startswith("public")
+    # A stored redirect would later shadow logged-in cache requests.
+    assert resp.headers["Cache-Control"] == "no-store"
     assert fetches == []
 
 
