@@ -3,13 +3,22 @@
 Fetches OSM / Esri raster tiles on demand, stores them on disk under
 ``<config>/life180_tiles/`` and serves them from there afterwards.
 
-Goals: offline map support, fewer external requests, faster reloads. When a
-tile fetch fails and a stale copy is on disk, the stale copy is served so the
-map keeps working without a connection.
+Goals: fewer requests to the tile servers and faster reloads. This is not an
+offline or bulk cache: it only fetches tiles someone is actively viewing, as
+the OSM tile usage policy requires (https://operations.osmfoundation.org/
+policies/tiles/). When a fetch fails and an older copy is on disk, that copy is
+served instead of an error.
+
+Being a polite client of the tile servers:
+- each install sends its own identifiable User-Agent (see ``_user_agent``);
+- at most ``MAX_CONCURRENT_FETCHES`` upstream requests run at once;
+- a 403/429 from upstream pauses all fetching for that source (honouring
+  ``Retry-After``), so a block is not prolonged by retries.
 """
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import os
 import time
@@ -51,8 +60,45 @@ EVICT_MIN_GAP = 120.0  # do not sweep more often than this on write pressure
 _MAINT_TASK_KEY = "tile_cache_maint_task"
 _STARTED_LISTENER_KEY = "tile_cache_started_listener"
 _LAST_EVICT_KEY = "tile_cache_last_evict"
+_FETCH_SEM_KEY = "tile_cache_fetch_sem"
+_BLOCKED_UNTIL_KEY = "tile_cache_blocked_until"
 
-USER_AGENT = "Life180/1.0 (+https://github.com/BigWebstas/Life180)"
+MAX_CONCURRENT_FETCHES = 2
+# Pause after upstream refuses us. 429 = slow down; 403 = blocked (see
+# osm.wiki/Blocked), which needs a human to fix the cause, so wait longer.
+BACKOFF_429 = 5 * 60  # seconds, unless Retry-After says otherwise
+BACKOFF_403 = 60 * 60
+MAX_BACKOFF = 24 * 60 * 60
+
+PROJECT_URL = "https://github.com/BigWebstas/Life180"
+
+
+def _user_agent(hass) -> str:
+    """App name + version + contact URL, plus a per-install tag.
+
+    The tag (a short hash of the config entry id, so nothing identifying is
+    sent) lets a tile server block one misbehaving install instead of every
+    Life180 user.
+    """
+    version = (hass.data.get(DOMAIN) or {}).get("version", "0")
+    install = "unknown"
+    try:
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if entries:
+            install = hashlib.sha256(entries[0].entry_id.encode()).hexdigest()[:10]
+    except Exception:  # noqa: BLE001
+        pass
+    return f"Life180/{version} (+{PROJECT_URL}; install {install})"
+
+
+def _backoff_seconds(status: int, retry_after: str | None) -> float:
+    """How long to stop fetching after upstream answered ``status``."""
+    default = BACKOFF_429 if status == 429 else BACKOFF_403
+    try:
+        wait = float(retry_after) if retry_after else default
+    except ValueError:  # Retry-After may be an HTTP date; use the default
+        wait = default
+    return min(max(wait, 1.0), MAX_BACKOFF)
 
 
 def _tile_root(hass) -> Path:
@@ -203,14 +249,39 @@ class TileEndpoint(HomeAssistantView):
         return web.Response(status=502, text="tile unavailable")
 
     async def _fetch(self, hass, source, z, x, y):
+        dd = hass.data.setdefault(DOMAIN, {})
+        blocked_until = dd.setdefault(_BLOCKED_UNTIL_KEY, {})
+        if time.monotonic() < blocked_until.get(source, 0.0):
+            return None
+        sem = dd.get(_FETCH_SEM_KEY)
+        if sem is None:
+            sem = dd[_FETCH_SEM_KEY] = asyncio.Semaphore(MAX_CONCURRENT_FETCHES)
+        async with sem:
+            # Re-check: a fetch that finished while this one queued may have
+            # just been refused.
+            if time.monotonic() < blocked_until.get(source, 0.0):
+                return None
+            return await self._fetch_upstream(hass, source, z, x, y, blocked_until)
+
+    async def _fetch_upstream(self, hass, source, z, x, y, blocked_until):
         url = TILE_SOURCES[source].format(z=z, x=x, y=y)
         session = async_get_clientsession(hass)
         try:
             async with session.get(
                 url,
-                headers={"User-Agent": USER_AGENT},
+                headers={"User-Agent": _user_agent(hass)},
                 timeout=FETCH_TIMEOUT,
             ) as resp:
+                if resp.status in (403, 429):
+                    wait = _backoff_seconds(resp.status, resp.headers.get("Retry-After"))
+                    blocked_until[source] = time.monotonic() + wait
+                    _LOGGER.warning(
+                        "Tile server for %s answered %s; pausing tile fetches for "
+                        "%d min. Cached tiles are still served. 403 usually means "
+                        "a block: see https://osm.wiki/Blocked",
+                        source, resp.status, wait // 60,
+                    )
+                    return None
                 if resp.status != 200:
                     return None
                 ctype = resp.headers.get("Content-Type", "")

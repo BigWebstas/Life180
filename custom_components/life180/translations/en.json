@@ -27,7 +27,7 @@
           },
           "map_cache": {
             "name": "Map cache",
-            "description": "Cache map tiles on the Home Assistant server for offline use and faster loads."
+            "description": "Cache the map tiles you view on the Home Assistant server for faster loads and fewer requests to the tile server. If the tile server refuses requests, downloading pauses automatically."
           }
         },
         "data": {
@@ -127,7 +127,7 @@
           },
           "map_cache": {
             "name": "Map cache",
-            "description": "Cache map tiles on the Home Assistant server for offline use and faster loads.",
+            "description": "Cache the map tiles you view on the Home Assistant server for faster loads and fewer requests to the tile server. If the tile server refuses requests, downloading pauses automatically.",
             "data": {
               "map_cache_enabled": "Cache map tiles locally",
               "map_cache_max_mb": "Max cache size (MB)",
