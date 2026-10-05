@@ -58,7 +58,7 @@ class _Session:
         return _Ctx()
 
 
-def _hass(entry_id="01J0000000000000000000ABCD", version="0.6.3"):
+def _hass(entry_id="01J0000000000000000000ABCD", version="0.7.0"):
     entry = types.SimpleNamespace(entry_id=entry_id, data={}, options={})
     return types.SimpleNamespace(
         data={tiles.DOMAIN: {"version": version}},
@@ -79,7 +79,7 @@ def _fetch(hass, session, monkeypatch, n=1):
 def test_user_agent_identifies_app_version_and_install():
     ua = tiles._user_agent(_hass())
 
-    assert ua.startswith("Life180/0.6.3 (+https://github.com/BigWebstas/Life180; install ")
+    assert ua.startswith("Life180/0.7.0 (+https://github.com/BigWebstas/Life180; install ")
     assert "01J0000000000000000000ABCD" not in ua  # raw entry id never sent
 
 
