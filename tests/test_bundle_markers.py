@@ -16,7 +16,9 @@ BUNDLE = (REPO_ROOT / "custom_components/life180/www/dist/life180.js").read_text
 
 MARKERS = {
     "tile requests carry the HA token while the cache is on (#69)":
-        'transformRequest:(f,d)=>{if(d==="Tile"&&l180TileCache&&l180LastToken',
+        'if(l180TileCache&&l180LastToken)return{url:f,headers:{Authorization:`Bearer ${l180LastToken}`}}',
+    "other tile requests go straight to OSM, not via HA's no-referrer redirect":
+        '{osm:"https://tile.openstreetmap.org/{z}/{x}/{y}.png"}[m[1]]',
     "the token is remembered from API calls (#69)": "l180LastToken=c,",
     "config reports the tile cache flag (#69)": "l180TileCache=e.map_cache_enabled===!0",
     "map search result shown as text, not HTML (#68)": ".setText(d.place_name",

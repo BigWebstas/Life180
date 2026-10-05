@@ -15,6 +15,11 @@ import { t } from './i18n.js';
 import { tileUrl, isDarkTheme, onThemeChange, haUrl, mapCacheEnabled } from '../globals.js';
 import { lastKnownToken } from '../ha/fetch.js';
 
+// Upstream raster tile URLs, mirroring TILE_SOURCES in api/tiles.py.
+const UPSTREAM_TILES = {
+    osm: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+};
+
 export let map;
 let _ml, _popup, _views = {};
 let _themeHooked = false;
@@ -647,16 +652,23 @@ export async function initMap() {
         // OPT: lowers render cost
         antialias: false,
         preserveDrawingBuffer: true,
-        // The tile cache only serves logged-in requests, so attach the HA
-        // token to our own tile URLs. Only while the cache is on: with it off
-        // the endpoint redirects to the upstream tile server.
         transformRequest: (url, resourceType) => {
+            const prefix = `${haUrl}/api/life180/tile/`;
+            if (resourceType !== 'Tile' || !url.startsWith(prefix))
+                return undefined;
+            // Cache on: go through HA, which only serves logged-in requests.
             const token = lastKnownToken();
-            if (resourceType === 'Tile' && mapCacheEnabled && token
-                && url.startsWith(`${haUrl}/api/life180/tile/`)) {
+            if (mapCacheEnabled && token)
                 return { url, headers: { Authorization: `Bearer ${token}` } };
-            }
-            return undefined;
+            // Otherwise go straight to the tile server. Following the HA
+            // endpoint's redirect would drop the Referer (HA sends
+            // Referrer-Policy: no-referrer on every response) and OSM blocks
+            // tile requests without one (403, osm.wiki/Blocked).
+            const m = /^(\w+)\/(\d+)\/(\d+)\/(\d+)/.exec(url.slice(prefix.length));
+            const tpl = m && UPSTREAM_TILES[m[1]];
+            if (!tpl)
+                return undefined;
+            return { url: tpl.replace('{z}', m[2]).replace('{x}', m[3]).replace('{y}', m[4]) };
         },
         style: {
             version: 8,
