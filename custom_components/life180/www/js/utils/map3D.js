@@ -7,8 +7,8 @@
 //  - L.circle:  options + editing + __ml_id + _ensureAdded() + AUTO-ADD + throttle setData (rAF) + fewer vertices by zoom/radius
 //                + selection by smallest radius (per-click queue) + single shared popup + auto-close on remove
 //  - Panes: stub that does NOT block events
-//  - OSM by default; Esri as a fallback if OSM fails due to CORS.
-//  - OpenFreeMap (vector style) included as a third base; overlays are reinserted after setStyle().
+//  - OpenFreeMap vector styles (Liberty for light, Dark for dark) with automatic theme switching.
+//  - Overlays (polylines/circles) are preserved across setStyle() reloads.
 
 import { loadCSSOnce, loadScriptOnce } from './loader.js';
 import { t } from './i18n.js';
@@ -90,8 +90,11 @@ const CDN = {
     geocJS: ['./vendor/maplibre-gl-geocoder/maplibre-gl-geocoder.min.js?v=' + v]
 };
 
-// OpenFreeMap (vector style)
-const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+// OpenFreeMap vector styles (light & dark)
+export const OFM_STYLES = {
+    light: 'https://tiles.openfreemap.org/styles/liberty',
+    dark: 'https://tiles.openfreemap.org/styles/dark'
+};
 
 // Registry of vector overlays (polylines/circles) to reinsert them after setStyle()
 const _vectorOverlays = new Set();
@@ -304,138 +307,33 @@ function _flushReadyQueue() {
     }
 }
 
-// === UI util ====
-// OSM has no dark tiles, so in dark mode we dim and desaturate the raster
-// layer with paint properties. This only touches the 'osm' layer - zone
-// circles and route lines are separate layers and stay untouched.
-const _RASTER_DARK = {
-    'raster-brightness-min': 0,
-    'raster-brightness-max': 0.45,
-    'raster-contrast': -0.3,
-    'raster-saturation': -0.85,
-    'raster-hue-rotate': 20,
-};
-const _RASTER_LIGHT = {
-    'raster-brightness-min': 0,
-    'raster-brightness-max': 1,
-    'raster-contrast': 0,
-    'raster-saturation': 0,
-    'raster-hue-rotate': 0,
-};
+// === OpenFreeMap Theme Handling ====
+let _currentStyleUrl = null;
 
-function _applyMapDark() {
-    try {
-        if (!_ml || !_ml.getLayer || !_ml.getLayer('osm')) return;
-        const p = isDarkTheme() ? _RASTER_DARK : _RASTER_LIGHT;
-        for (const k in p) _ml.setPaintProperty('osm', k, p[k]);
-    } catch (e) {
-        console.error('map dark toggle failed:', e);
-    }
+function _getDesiredStyleUrl() {
+    return isDarkTheme() ? OFM_STYLES.dark : OFM_STYLES.light;
 }
 
-function addRasterBasesIfMissing() {
-    if (!_ml.getSource('osm')) {
-        _ml.addSource('osm', {
-            type: 'raster',
-            tiles: [tileUrl('osm')],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
-            maxzoom: 19
-        });
-        _ml.addLayer({
-            id: 'osm',
-            type: 'raster',
-            source: 'osm',
-            layout: {
-                visibility: 'visible'
-            }
-        });
-        _applyMapDark();
+function _applyMapTheme() {
+    try {
+        if (!_ml) return;
+        const desired = _getDesiredStyleUrl();
+        if (_currentStyleUrl === desired) return;
+        _currentStyleUrl = desired;
+        _ml.setStyle(desired);
+    } catch (e) {
+        console.error('[OFM] Theme style toggle failed:', e);
     }
 }
 
 function switchBase(name) {
-    const id = _views[name];
-    if (!id)
-        return;
-
-    // Special case: OpenFreeMap (vector style)
-    if (id === 'ofm') {
-        // Diagnostics + guard + fallback
-        let done = false;
-        const finish = () => {
-            if (done)
-                return;
-            done = true;
-            try {
-                _flushReadyQueue();
-            } catch {}
-            _readdVectorOverlays();
-            try {
-                _ml.off('error', onErr);
-            } catch {}
-        };
-        const onErr = (e) => {
-            console.warn('[OFM] style error:', e);
-        };
-
-        _ml.once('error', onErr);
-        _ml.setStyle(OPENFREEMAP_STYLE);
-        _ml.once('styledata', finish);
-        _ml.once('idle', finish);
-
-        // Fallback if it did not complete within a reasonable time
-        setTimeout(() => {
-            if (!done) {
-                console.warn('[OFM] Style load did not complete. Falling back to base raster.');
-                try {
-                    _ml.off('error', onErr);
-                } catch {}
-                _ml.setStyle({
-                    version: 8,
-                    sources: {},
-                    layers: []
-                });
-                _ml.once('styledata', () => {
-                    addRasterBasesIfMissing();
-                });
-            }
-        }, 4000);
-
-        return;
-    }
-
-    // Ensure we are on the "basic raster" style (not the OFM one)
-    if (!_ml.getSource('osm')) {
-        _ml.setStyle({
-            version: 8,
-            sources: {},
-            layers: []
-        });
-        _ml.once('styledata', () => {
-            addRasterBasesIfMissing();
-            setTimeout(() => switchBase(name), 0);
-        });
-        return;
-    }
-
-    // OSM does not serve z>19 -> clamp to avoid 400
-    if (name === 'OpenStreetMap') {
-        const osmMax = Math.min(ZOOM_LIMITS.MAX, OSM_TILE_MAX_Z);
-        if (_ml.getZoom() > osmMax) {
-            _ml.easeTo({
-                zoom: osmMax
-            });
-        }
-    }
-
-    // Toggle visibility between OSM/Esri
-    for (const [label, layerId] of Object.entries(_views)) {
-        if (layerId === 'ofm')
-            continue;
-        const vis = (label === name) ? 'visible' : 'none';
-        if (_ml.getLayer(layerId))
-            _ml.setLayoutProperty(layerId, 'visibility', vis);
+    if (!_ml) return;
+    const target = (name === 'dark' || name === 'OpenFreeMap Dark')
+        ? OFM_STYLES.dark
+        : OFM_STYLES.light;
+    if (_currentStyleUrl !== target) {
+        _currentStyleUrl = target;
+        _ml.setStyle(target);
     }
 }
 
@@ -641,6 +539,8 @@ export async function initMap() {
     const { geocoderOk } = await ensureMapLibreLoaded();
 
     const start = [40.4168, -3.7038]; // Madrid [lat,lng]
+    const initialStyle = _getDesiredStyleUrl();
+    _currentStyleUrl = initialStyle;
     _ml = new maplibregl.Map({
         container: 'map',
         center: [start[1], start[0]],
@@ -670,11 +570,7 @@ export async function initMap() {
                 return undefined;
             return { url: tpl.replace('{z}', m[2]).replace('{x}', m[3]).replace('{y}', m[4]) };
         },
-        style: {
-            version: 8,
-            sources: {},
-            layers: []
-        },
+        style: initialStyle,
         cooperativeGestures: _cooperativeGestures,
         attributionControl: false,
         validate: false
@@ -707,7 +603,7 @@ export async function initMap() {
     _searchCtlRef = new SearchToggleControl();
     _ml.addControl(_searchCtlRef, 'top-left');
 
-    // The base map is locked to OpenStreetMap; no layer switcher.
+    // The base map is OpenFreeMap with automatic dark/light theme switching; no layer switcher.
 
     // >>> listen to global interactions to detect whether the open came from the table
     _onUiPointer = (ev) => _markUiSource(ev);
@@ -865,9 +761,10 @@ export async function initMap() {
     // Map scale (always imperial)
     _syncScaleFromGlobals();
 
-    // Attribution at the bottom-left (compact)
+    // Attribution at the bottom-left (compact) with OpenFreeMap and OpenStreetMap credits
     _ml.addControl(new maplibregl.AttributionControl({
-            compact: true
+            compact: true,
+            customAttribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> <a href="https://www.openmaptiles.org/" target="_blank">© OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">© OpenStreetMap</a>'
         }), 'bottom-left');
 
     if (_unitsPollId) {
@@ -905,33 +802,21 @@ export async function initMap() {
         }
     };
 
+    _ml.on('style.load', () => {
+        tryFlush();
+        _readdVectorOverlays();
+    });
+
     _ml.on('load', () => {
-        if (!_ml.getSource('osm')) {
-            _ml.addSource('osm', {
-                type: 'raster',
-                tiles: [tileUrl('osm')],
-                tileSize: 256,
-                attribution: '© OpenStreetMap contributors',
-                maxzoom: 19
-            });
-            _ml.addLayer({
-                id: 'osm',
-                type: 'raster',
-                source: 'osm',
-                layout: {
-                    visibility: 'visible'
-                }
-            });
-        }
-        _applyMapDark();
         _views = {
-            "OpenStreetMap": "osm"
+            "OpenFreeMap": "ofm"
         };
         if (!_themeHooked) {
             _themeHooked = true;
-            onThemeChange(_applyMapDark);
+            onThemeChange(_applyMapTheme);
         }
         tryFlush();
+        _readdVectorOverlays();
     });
 
     // Flush the queue and reinsert overlays when the map goes idle (style loaded)
@@ -942,31 +827,7 @@ export async function initMap() {
     });
 
     _ml.on('error', (e) => {
-        if (e?.sourceId === 'osm') {
-            const status = e?.error?.status ?? e?.error?.statusCode ?? e?.status;
-            const msg = (e?.error?.message || '').toLowerCase();
-            const looksCors = msg.includes('cors') || msg.includes('cross-origin');
-
-            // Typical case: OSM only goes up to z=19 -> 400 if we request z=20
-            if (status === 400) {
-                const osmMax = Math.min(ZOOM_LIMITS.MAX, OSM_TILE_MAX_Z);
-                if (_ml.getZoom() > osmMax)
-                    _ml.easeTo({
-                        zoom: osmMax
-                    });
-                console.warn('[OSM] 400 Bad Request (posible zoom > tile max). Se mantiene OSM y se reescala.');
-                return;
-            }
-            // Rate limit
-            if (status === 429) {
-                console.warn('[OSM] rate-limited (429). Tiles are served through the local cache; keeping OSM.');
-                return;
-            }
-            // Real CORS/permission errors: nothing to fall back to, keep OSM.
-            if (status === 0 || status === 401 || status === 403 || looksCors) {
-                console.warn('[OSM] tile request blocked (CORS/permissions).');
-            }
-        }
+        console.warn('[map] MapLibre error:', e);
     });
 
     // ===== Click gate: only the first handler per click acts (for non-grouped layers) =====
@@ -1851,6 +1712,8 @@ export async function initMap() {
             options: opts,
             __readd() {
                 try {
+                    if (!api.__added)
+                        return;
                     _ensureAdded();
                     // on reinsert, reapply painting and refresh data (without internal props)
                     whenStyleReady(() => applyLinePaint());
@@ -2360,6 +2223,8 @@ export async function initMap() {
             options: opts,
             __readd() {
                 try {
+                    if (!api.__added)
+                        return;
                     _ensureAdded();
                     scheduleRefresh();
                 } catch {}
@@ -2814,6 +2679,8 @@ export function destroyMap() {
     _views = {};
     _searchCtlRef = null;
     _scaleCtrl = null;
+    _themeHooked = false;
+    _currentStyleUrl = null;
 
     // map
     try {
