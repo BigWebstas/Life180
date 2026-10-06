@@ -1,18 +1,19 @@
-"""Local raster map-tile cache proxy.
+"""Local map-asset cache proxy for the OpenFreeMap base map.
 
-Fetches OSM / Esri raster tiles on demand, stores them on disk under
-``<config>/life180_tiles/`` and serves them from there afterwards.
+Fetches vector tiles, glyphs, sprites and the low-zoom raster backdrop on
+demand, stores them on disk under ``<config>/life180_tiles/`` and serves them
+from there afterwards. The style JSON and TileJSON are not proxied: the
+browser fetches them directly, so a new planet build is picked up on its own.
 
-Goals: fewer requests to the tile servers and faster reloads. This is not an
-offline or bulk cache: it only fetches tiles someone is actively viewing, as
-the OSM tile usage policy requires (https://operations.osmfoundation.org/
-policies/tiles/). When a fetch fails and an older copy is on disk, that copy is
-served instead of an error.
+Goals: fewer requests to the tile server and faster reloads. This is not an
+offline or bulk cache: it only fetches assets someone is actively viewing.
+When a fetch fails and an older copy is on disk, that copy is served instead
+of an error.
 
 Being a polite client of the tile servers:
 - each install sends its own identifiable User-Agent (see ``_user_agent``);
 - at most ``MAX_CONCURRENT_FETCHES`` upstream requests run at once;
-- a 403/429 from upstream pauses all fetching for that source (honouring
+- a 403/429 from upstream pauses all fetching (honouring
   ``Retry-After``), so a block is not prolonged by retries.
 """
 from __future__ import annotations
@@ -21,10 +22,12 @@ import asyncio
 import hashlib
 import logging
 import os
+import re
 import time
 
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import quote
 
 from aiohttp import web
 
@@ -37,17 +40,24 @@ DOMAIN = __package__.split(".")[-2]
 
 _LOGGER = logging.getLogger(__name__)
 
-# {source: upstream URL template}. {z}/{x}/{y} are substituted per request.
-TILE_SOURCES = {
-    "osm": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    "esri": (
-        "https://server.arcgisonline.com/ArcGIS/rest/services/"
-        "World_Imagery/MapServer/tile/{z}/{y}/{x}"
-    ),
+UPSTREAM = "https://tiles.openfreemap.org/"
+
+# Paths under UPSTREAM that may be proxied. Each path segment starts with a
+# word character, so ".." and hidden names can never reach the filesystem.
+_SEG = r"[\w@-][\w .@-]*"
+_ALLOWED = re.compile(
+    rf"(?:planet/{_SEG}/\d+/\d+/\d+\.pbf"  # vector tiles (planet/<build>/z/x/y)
+    rf"|natural_earth/{_SEG}/\d+/\d+/\d+\.png"  # low-zoom raster backdrop
+    rf"|fonts/{_SEG}/{_SEG}\.pbf"  # glyphs
+    rf"|sprites/{_SEG}/{_SEG}\.(?:png|json))"  # sprite sheet + index
+)
+_CONTENT_TYPES = {
+    ".pbf": "application/x-protobuf",
+    ".png": "image/png",
+    ".json": "application/json",
 }
 
 TILE_DIR = "life180_tiles"
-MAX_Z = 22
 FETCH_TIMEOUT = 20  # seconds
 DISK_TTL = timedelta(days=90)  # re-fetch a cached tile older than this on access
 BROWSER_MAX_AGE = 7 * 24 * 3600  # Cache-Control max-age sent to the browser
@@ -65,7 +75,7 @@ _BLOCKED_UNTIL_KEY = "tile_cache_blocked_until"
 
 MAX_CONCURRENT_FETCHES = 2
 # Pause after upstream refuses us. 429 = slow down; 403 = blocked (see
-# osm.wiki/Blocked), which needs a human to fix the cause, so wait longer.
+# a block, which needs a human to fix the cause, so wait longer.
 BACKOFF_429 = 5 * 60  # seconds, unless Retry-After says otherwise
 BACKOFF_403 = 60 * 60
 MAX_BACKOFF = 24 * 60 * 60
@@ -130,14 +140,14 @@ def _cap_bytes(hass) -> int:
 
 
 def _dir_size_and_files(root: Path):
-    """Return (total_bytes, [(mtime, size, path), ...]) for every .png under root."""
+    """Return (total_bytes, [(mtime, size, path), ...]) for every cached file under root."""
     total = 0
     files = []
     if not root.is_dir():
         return 0, files
     for dirpath, _dirs, names in os.walk(root):
         for name in names:
-            if not name.endswith(".png"):
+            if name.endswith(".tmp"):
                 continue
             fp = os.path.join(dirpath, name)
             try:
@@ -171,100 +181,84 @@ def _evict_lru(root: Path, cap: int) -> int:
 
 
 class TileEndpoint(HomeAssistantView):
-    """Serve a cached raster tile, fetching and storing it on a miss."""
+    """Serve a cached map asset, fetching and storing it on a miss."""
 
-    url = "/api/life180/tile/{source}/{z}/{x}/{y}"
+    url = "/api/life180/tile/{path:.+}"
     name = "api:life180/tile"
     # Not requires_auth: with the cache off this only redirects to public map
-    # imagery, which needs no login. With the cache on, only logged-in requests
+    # data, which needs no login. With the cache on, only logged-in requests
     # (the app sends its bearer token) are served from / fetched into the
     # cache; anonymous ones get the same redirect. That stops anyone who can
     # reach HA from pulling tiles through this IP or reading which areas are
     # cached (which reveals where the household's people go).
     requires_auth = False
 
-    async def get(self, request, source, z, x, y):
+    async def get(self, request, path):
         hass = request.app["hass"]
 
-        if source not in TILE_SOURCES:
-            return web.Response(status=404, text="unknown tile source")
-
-        # y may arrive as "12345.png"
-        y = str(y).split(".", 1)[0]
-        try:
-            zi, xi, yi = int(z), int(x), int(y)
-        except (TypeError, ValueError):
-            return web.Response(status=400, text="z/x/y must be integers")
-        if not (0 <= zi <= MAX_Z):
-            return web.Response(status=400, text="z out of range")
-        span = 1 << zi
-        if not (0 <= xi < span and 0 <= yi < span):
-            return web.Response(status=400, text="x/y out of range")
+        if not _ALLOWED.fullmatch(path):
+            return web.Response(status=404, text="unknown map asset")
 
         # Caching off, or an anonymous caller -> redirect straight to upstream.
-        # The app itself never relies on this: HA stamps Referrer-Policy:
-        # no-referrer on every response, so a browser following this redirect
-        # reaches OSM without a Referer and gets blocked. The map rewrites
-        # tile URLs to upstream instead (see transformRequest in map3D.js).
-        # Never stored, so a redirect cached while the cache was off can't
-        # shadow a logged-in request after it is turned on.
-        upstream = TILE_SOURCES[source].format(z=zi, x=xi, y=yi)
+        # The app itself never relies on this: transformRequest in map3D.js
+        # only rewrites to this endpoint when the cache is on and it has a
+        # token. Never stored, so a redirect cached while the cache was off
+        # can't shadow a logged-in request after it is turned on.
         if not _cache_enabled(hass) or request.get("hass_user") is None:
             return web.HTTPFound(
-                upstream,
+                UPSTREAM + quote(path),
                 headers={
                     "Cache-Control": "no-store",
                     "Access-Control-Allow-Origin": "*",
                 },
             )
 
-        root = _tile_root(hass)
-        path = root / source / str(zi) / str(xi) / f"{yi}.png"
+        file = _tile_root(hass) / path
+        ctype = _CONTENT_TYPES[file.suffix]
 
         fresh = False
         try:
-            st = path.stat()
+            st = file.stat()
             fresh = (time.time() - st.st_mtime) < DISK_TTL.total_seconds()
         except OSError:
             st = None
 
         if fresh:
-            data = await hass.async_add_executor_job(path.read_bytes)
-            return self._tile_response(data)
+            data = await hass.async_add_executor_job(file.read_bytes)
+            return self._tile_response(data, ctype)
 
-        data = await self._fetch(hass, source, zi, xi, yi)
+        data = await self._fetch(hass, path)
         if data is not None:
-            await hass.async_add_executor_job(_write_tile, path, data)
-            self._maybe_evict(hass, root)
-            return self._tile_response(data)
+            await hass.async_add_executor_job(_write_tile, file, data)
+            self._maybe_evict(hass, _tile_root(hass))
+            return self._tile_response(data, ctype)
 
         # Upstream failed - fall back to a stale copy if we have one.
         if st is not None:
             try:
-                data = await hass.async_add_executor_job(path.read_bytes)
-                return self._tile_response(data, stale=True)
+                data = await hass.async_add_executor_job(file.read_bytes)
+                return self._tile_response(data, ctype, stale=True)
             except OSError:
                 pass
 
         return web.Response(status=502, text="tile unavailable")
 
-    async def _fetch(self, hass, source, z, x, y):
+    async def _fetch(self, hass, path):
         dd = hass.data.setdefault(DOMAIN, {})
-        blocked_until = dd.setdefault(_BLOCKED_UNTIL_KEY, {})
-        if time.monotonic() < blocked_until.get(source, 0.0):
-            return None
         sem = dd.get(_FETCH_SEM_KEY)
         if sem is None:
             sem = dd[_FETCH_SEM_KEY] = asyncio.Semaphore(MAX_CONCURRENT_FETCHES)
+        if time.monotonic() < dd.get(_BLOCKED_UNTIL_KEY, 0.0):
+            return None
         async with sem:
             # Re-check: a fetch that finished while this one queued may have
             # just been refused.
-            if time.monotonic() < blocked_until.get(source, 0.0):
+            if time.monotonic() < dd.get(_BLOCKED_UNTIL_KEY, 0.0):
                 return None
-            return await self._fetch_upstream(hass, source, z, x, y, blocked_until)
+            return await self._fetch_upstream(hass, path, dd)
 
-    async def _fetch_upstream(self, hass, source, z, x, y, blocked_until):
-        url = TILE_SOURCES[source].format(z=z, x=x, y=y)
+    async def _fetch_upstream(self, hass, path, dd):
+        url = UPSTREAM + quote(path)
         session = async_get_clientsession(hass)
         try:
             async with session.get(
@@ -274,18 +268,14 @@ class TileEndpoint(HomeAssistantView):
             ) as resp:
                 if resp.status in (403, 429):
                     wait = _backoff_seconds(resp.status, resp.headers.get("Retry-After"))
-                    blocked_until[source] = time.monotonic() + wait
+                    dd[_BLOCKED_UNTIL_KEY] = time.monotonic() + wait
                     _LOGGER.warning(
-                        "Tile server for %s answered %s; pausing tile fetches for "
-                        "%d min. Cached tiles are still served. 403 usually means "
-                        "a block: see https://osm.wiki/Blocked",
-                        source, resp.status, wait // 60,
+                        "Map server answered %s; pausing map fetches for %d min. "
+                        "Cached tiles are still served.",
+                        resp.status, wait // 60,
                     )
                     return None
                 if resp.status != 200:
-                    return None
-                ctype = resp.headers.get("Content-Type", "")
-                if "image" not in ctype:
                     return None
                 return await resp.read()
         except (asyncio.TimeoutError, OSError):
@@ -295,7 +285,7 @@ class TileEndpoint(HomeAssistantView):
             return None
 
     @staticmethod
-    def _tile_response(data: bytes, stale: bool = False) -> web.Response:
+    def _tile_response(data: bytes, content_type: str, stale: bool = False) -> web.Response:
         headers = {
             # private: served only to logged-in callers, so no shared cache.
             "Cache-Control": f"private, max-age={BROWSER_MAX_AGE}",
@@ -303,7 +293,7 @@ class TileEndpoint(HomeAssistantView):
         }
         if stale:
             headers["X-Life180-Tile"] = "stale"
-        return web.Response(body=data, content_type="image/png", headers=headers)
+        return web.Response(body=data, content_type=content_type, headers=headers)
 
     @staticmethod
     def _maybe_evict(hass, root: Path) -> None:
@@ -354,7 +344,7 @@ async def async_clear_tile_cache(hass) -> int:
 def _write_tile(path: Path, data: bytes) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".png.tmp")
+        tmp = path.with_name(path.name + ".tmp")
         tmp.write_bytes(data)
         os.replace(tmp, path)
     except OSError as err:

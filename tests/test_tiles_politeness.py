@@ -1,7 +1,7 @@
 """Tests for how the tile cache behaves towards upstream tile servers.
 
-OSM blocks clients that ignore its tile usage policy, and a block on a home IP
-takes the map down for everyone behind it. These pin the safeguards: a
+Tile servers block clients that hammer them, and a block on a home IP takes
+the map down for everyone behind it. These pin the safeguards: a
 per-install User-Agent, a cap on parallel upstream requests, and pausing all
 fetches after a 403/429 instead of retrying through a block.
 """
@@ -71,7 +71,7 @@ def _fetch(hass, session, monkeypatch, n=1):
 
     async def run():
         ep = tiles.TileEndpoint()
-        return await asyncio.gather(*(ep._fetch(hass, "osm", 3, 4, i) for i in range(n)))
+        return await asyncio.gather(*(ep._fetch(hass, f"planet/b/3/4/{i}.pbf") for i in range(n)))
 
     return asyncio.run(run())
 
@@ -104,7 +104,7 @@ def test_at_most_two_upstream_fetches_at_once(monkeypatch):
     assert session.max_in_flight == tiles.MAX_CONCURRENT_FETCHES == 2
 
 
-def test_403_pauses_all_fetches_for_the_source(monkeypatch):
+def test_403_pauses_all_fetches(monkeypatch):
     hass = _hass()
     session = _Session([_Resp(status=403)])
 
