@@ -44,6 +44,7 @@
   --l180-primary-hover: color-mix(in srgb, var(--l180-primary) 92%, var(--l180-on-primary) 8%);
   --l180-primary-soft:  color-mix(in srgb, var(--l180-primary) 16%, transparent);
   --l180-state-hover:   color-mix(in srgb, var(--l180-text) 8%, transparent);
+  --l180-icon-filter:   none;   /* black map-control icons; inverted on dark */
 
   /* ===== Back-compat token names — now HA-driven and flat ===== */
   --modal-backdrop: rgba(0, 0, 0, 0.32);
@@ -1056,6 +1057,7 @@ body.no-scroll { overflow: hidden; }
     --l180-warning:     #e8a317;
     --l180-success:     #3d9a5b;
     --modal-backdrop:   rgba(0, 0, 0, 0.6);
+    --l180-icon-filter: invert(1);
   }
 }
 
@@ -1073,14 +1075,16 @@ body.no-scroll { overflow: hidden; }
   --l180-text-2:    var(--secondary-text-color, #c4c7c5);
   --l180-divider:   var(--divider-color, rgba(255, 255, 255, 0.14));
   --modal-backdrop: rgba(0, 0, 0, 0.6);
+  --l180-icon-filter: invert(1);
 }
 
-/* ===== Moving-person badge (speed + battery above the map marker) ===== */
+/* ===== Person badge (battery, plus mode + speed when moving) pinned over the map marker ===== */
 .l180-move-badge {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 6px);
+  bottom: -8px;
   transform: translateX(-50%);
+  z-index: 1;
   padding: 2px 8px;
   border-radius: var(--l180-radius-full);
   background: var(--l180-primary, #03a9f4);
@@ -1112,31 +1116,15 @@ body.no-scroll { overflow: hidden; }
   25% { transform: translateX(-1px); }
   75% { transform: translateX(1px); }
 }
-.l180-move-badge::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: var(--l180-primary, #03a9f4);
-}
 
-/* Critically low battery: pulse the badge (and its tip) red instead of the
-   normal accent color. Shown while moving, or standalone at rest. */
+/* Critically low battery: pulse the badge red instead of the normal accent
+   color. Shown while moving, or standalone at rest. */
 .l180-move-badge.l180-battery-low {
   animation: l180-battery-pulse 1.2s ease-in-out infinite;
-}
-.l180-move-badge.l180-battery-low::after {
-  animation: l180-battery-pulse-tip 1.2s ease-in-out infinite;
 }
 @keyframes l180-battery-pulse {
   0%, 100% { background: var(--l180-primary, #03a9f4); }
   50% { background: var(--l180-danger, #db4437); }
-}
-@keyframes l180-battery-pulse-tip {
-  0%, 100% { border-top-color: var(--l180-primary, #03a9f4); }
-  50% { border-top-color: var(--l180-danger, #db4437); }
 }
 
 /* Zone-crossing pulse: a brief expanding ring around the marker the moment
@@ -1158,8 +1146,7 @@ body.no-scroll { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .l180-move-mode.l180-mode-walk,
   .l180-move-mode.l180-mode-drive,
-  .l180-move-badge.l180-battery-low,
-  .l180-move-badge.l180-battery-low::after {
+  .l180-move-badge.l180-battery-low {
     animation: none;
   }
   .l180-zone-pulse::after {
@@ -1337,4 +1324,51 @@ span.flatpickr-weekday {
   cursor: pointer;
   text-shadow: 0 0 2px var(--l180-surface, #fff);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--l180-divider, rgba(0,0,0,.2)) 60%, transparent);
+}
+
+/* ===== Map controls (zoom / compass / search) follow the theme =====
+   maplibre-gl.css is vendored and loads after this file, hence the #map
+   prefix. Its icons are black SVGs, flipped on dark via --l180-icon-filter. */
+#map .maplibregl-ctrl-group {
+  background: var(--l180-surface-2);
+  border-radius: var(--l180-radius);
+  box-shadow: var(--l180-elev-1);
+  overflow: hidden;
+}
+#map .maplibregl-ctrl-group:not(:empty) { box-shadow: var(--l180-elev-1); }
+#map .maplibregl-ctrl-group button { color: var(--l180-text); }
+#map .maplibregl-ctrl-group button + button { border-top: 1px solid var(--l180-divider); }
+#map .maplibregl-ctrl-group button:hover,
+#map .maplibregl-ctrl-group button:focus-visible { background-color: var(--l180-state-hover); }
+#map .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: var(--l180-icon-filter); }
+
+/* Search box */
+#map .maplibregl-ctrl-geocoder {
+  background: var(--l180-surface-2) !important;
+  color: var(--l180-text) !important;
+  border-radius: var(--l180-radius-full) !important;
+  box-shadow: var(--l180-elev-1) !important;
+  font-family: var(--l180-font) !important;
+}
+#map .maplibregl-ctrl-geocoder .maplibregl-ctrl-geocoder--input {
+  background: transparent !important;
+  color: var(--l180-text) !important;
+  padding-left: 16px !important;
+}
+#map .maplibregl-ctrl-geocoder .maplibregl-ctrl-geocoder--input::placeholder { color: var(--l180-text-2); }
+#map .maplibregl-ctrl-geocoder .maplibregl-ctrl-geocoder--input:focus { outline: 2px solid var(--l180-primary); outline-offset: -2px; border-radius: var(--l180-radius-full); }
+#map .maplibregl-ctrl-geocoder .maplibregl-ctrl-geocoder--button { background: transparent !important; }
+#map .maplibregl-ctrl-geocoder .maplibregl-ctrl-geocoder--icon { fill: var(--l180-text-2) !important; }
+#map .maplibregl-ctrl-geocoder .suggestions {
+  background: var(--l180-surface-2) !important;
+  color: var(--l180-text) !important;
+  border-radius: var(--l180-radius) !important;
+  box-shadow: var(--l180-elev-3) !important;
+  overflow: hidden;
+}
+#map .maplibregl-ctrl-geocoder .suggestions > li > a { color: var(--l180-text) !important; }
+#map .maplibregl-ctrl-geocoder .suggestions > .active > a,
+#map .maplibregl-ctrl-geocoder .suggestions > li > a:hover {
+  background: var(--l180-primary-container) !important;
+  color: var(--l180-text) !important;
 }

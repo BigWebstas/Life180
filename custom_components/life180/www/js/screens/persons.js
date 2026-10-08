@@ -399,14 +399,13 @@ async function updatePersonsMarkers() {
         const isLowBattery = bat != null && bat <= LOW_BATTERY_PCT;
         const battClass = isLowBattery ? ' l180-battery-low' : '';
 
-        // Moving -> speed/mode badge (pulses red when battery is also low).
-        // Stationary but critically low battery -> a standalone battery badge,
-        // so the warning isn't hidden just because the person isn't moving.
-        const moveBadge = isMoving
-            ? `<div class="l180-move-badge${battClass}"><span class="l180-move-mode ${modeClass}">${modeIcon}</span>${speedMph} ${t('mi_per_hour')}${bat != null ? ` · ${bat}%` : ''}</div>`
-            : isLowBattery
-                ? `<div class="l180-move-badge${battClass}">🔋 ${bat}%</div>`
-                : '';
+        // Pill pinned over the avatar: always shows the battery %, and adds
+        // the mode icon (animated) + speed while moving. Pulses red when low.
+        const moveBadge = (isMoving || bat != null)
+            ? `<div class="l180-move-badge${battClass}">${isMoving
+                ? `<span class="l180-move-mode ${modeClass}">${modeIcon}</span>${speedMph} ${t('mi_per_hour')}${bat != null ? ' · ' : ''}`
+                : '🔋 '}${bat != null ? `${bat}%` : ''}</div>`
+            : '';
 
         if (!isValidCoordinates(latitude, longitude))
             return;
