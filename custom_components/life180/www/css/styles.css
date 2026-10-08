@@ -1075,12 +1075,13 @@ body.no-scroll { overflow: hidden; }
   --modal-backdrop: rgba(0, 0, 0, 0.6);
 }
 
-/* ===== Moving-person badge (speed + battery above the map marker) ===== */
+/* ===== Person badge (battery, plus mode + speed when moving) pinned over the map marker ===== */
 .l180-move-badge {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 6px);
+  bottom: -8px;
   transform: translateX(-50%);
+  z-index: 1;
   padding: 2px 8px;
   border-radius: var(--l180-radius-full);
   background: var(--l180-primary, #03a9f4);
@@ -1112,31 +1113,15 @@ body.no-scroll { overflow: hidden; }
   25% { transform: translateX(-1px); }
   75% { transform: translateX(1px); }
 }
-.l180-move-badge::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: var(--l180-primary, #03a9f4);
-}
 
-/* Critically low battery: pulse the badge (and its tip) red instead of the
-   normal accent color. Shown while moving, or standalone at rest. */
+/* Critically low battery: pulse the badge red instead of the normal accent
+   color. Shown while moving, or standalone at rest. */
 .l180-move-badge.l180-battery-low {
   animation: l180-battery-pulse 1.2s ease-in-out infinite;
-}
-.l180-move-badge.l180-battery-low::after {
-  animation: l180-battery-pulse-tip 1.2s ease-in-out infinite;
 }
 @keyframes l180-battery-pulse {
   0%, 100% { background: var(--l180-primary, #03a9f4); }
   50% { background: var(--l180-danger, #db4437); }
-}
-@keyframes l180-battery-pulse-tip {
-  0%, 100% { border-top-color: var(--l180-primary, #03a9f4); }
-  50% { border-top-color: var(--l180-danger, #db4437); }
 }
 
 /* Zone-crossing pulse: a brief expanding ring around the marker the moment
@@ -1158,8 +1143,7 @@ body.no-scroll { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .l180-move-mode.l180-mode-walk,
   .l180-move-mode.l180-mode-drive,
-  .l180-move-badge.l180-battery-low,
-  .l180-move-badge.l180-battery-low::after {
+  .l180-move-badge.l180-battery-low {
     animation: none;
   }
   .l180-zone-pulse::after {

@@ -26,6 +26,7 @@ MARKERS = {
     "people table refreshes on tab switch (#66)":
         'tr.selected").forEach(a=>a.classList.remove("selected")),en()',
     "speed chart reads theme colours (#67)": "function l180ChartColors()",
+    "battery pill always shown over the avatar": '_mb=(_mv||i!=null)?',
 }
 
 
