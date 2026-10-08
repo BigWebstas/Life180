@@ -1088,7 +1088,7 @@ body.no-scroll { overflow: hidden; }
   padding: 2px 8px;
   border-radius: var(--l180-radius-full);
   background: var(--l180-primary, #03a9f4);
-  color: var(--l180-on-primary, #fff);
+  color: #000;
   font: 700 11px/1.25 var(--l180-font, system-ui, -apple-system, "Segoe UI", sans-serif);
   white-space: nowrap;
   box-shadow: var(--l180-elev-1);
