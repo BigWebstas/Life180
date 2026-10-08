@@ -3,56 +3,70 @@
 
   /* ===== Home Assistant theme bridge =====
      When embedded in HA, the inline theme script in index.html copies the
-     parent theme's tokens onto :root. Standalone, these fallbacks give an
-     HA-flavoured light palette. Everything below is derived from them. */
-  --l180-primary:      var(--primary-color, #03a9f4);
+     parent theme's tokens onto :root. Standalone, these fallbacks give a
+     Material 3 (Google blue) light palette. Shapes, tonal containers and
+     state layers below are Material 3 and derive from these tokens. */
+  --l180-primary:      var(--primary-color, #0b57d0);
   --l180-on-primary:   var(--text-primary-color, #ffffff);
-  --l180-bg:           var(--primary-background-color, #fafafa);
+  --l180-bg:           var(--primary-background-color, #f8fafd);
   /* card-background-color isn't set by every HA theme; fall back to the
      page background so a dark theme never lands on the white default. */
   --l180-surface:      var(--card-background-color,
                          var(--ha-card-background,
                            var(--primary-background-color, #ffffff)));
   --l180-surface-2:    var(--secondary-background-color,
-                         var(--primary-background-color, #e8edf1));
-  --l180-text:         var(--primary-text-color, #212121);
-  --l180-text-2:       var(--secondary-text-color, var(--primary-text-color, #5f6368));
+                         var(--primary-background-color, #e9eef6));
+  --l180-text:         var(--primary-text-color, #1f1f1f);
+  --l180-text-2:       var(--secondary-text-color, var(--primary-text-color, #444746));
   --l180-divider:      var(--divider-color, rgba(0, 0, 0, 0.12));
-  --l180-danger:       var(--error-color, #db4437);
+  --l180-danger:       var(--error-color, #b3261e);
   --l180-warning:      var(--warning-color, #ffa600);
-  --l180-success:      var(--success-color, #43a047);
-  --l180-header-bg:    var(--app-header-background-color, var(--l180-primary));
-  --l180-header-text:  var(--app-header-text-color, var(--l180-on-primary));
-  --l180-radius:       var(--ha-card-border-radius, 12px);
-  --l180-shadow:       var(--ha-card-box-shadow, 0 2px 6px rgba(0, 0, 0, 0.18));
+  --l180-success:      var(--success-color, #146c2e);
+  --l180-header-bg:    var(--l180-primary-container);
+  --l180-header-text:  var(--l180-text);
+
+  /* Material 3 shape scale */
+  --l180-radius-sm:    8px;
+  --l180-radius-md:    12px;
+  --l180-radius:       16px;     /* cards, menus, popups */
+  --l180-radius-xl:    28px;     /* dialogs, side sheet */
+  --l180-radius-full:  999px;    /* buttons, chips, badges */
+  /* Material 3 elevation: tonal surfaces first, shadows only for floating UI */
+  --l180-shadow:       none;
+  --l180-elev-1:       0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --l180-elev-3:       0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
   --l180-font: var(--mdc-typography-font-family,
     var(--paper-font-body1_-_font-family, Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif));
 
-  --l180-primary-hover: color-mix(in srgb, var(--l180-primary) 86%, var(--l180-text) 14%);
+  /* Tonal container + state layers (hover 8% of the content colour) */
+  --l180-primary-container: color-mix(in srgb, var(--l180-primary) 16%, var(--l180-surface));
+  --l180-outline:       color-mix(in srgb, var(--l180-text-2) 60%, transparent);
+  --l180-primary-hover: color-mix(in srgb, var(--l180-primary) 92%, var(--l180-on-primary) 8%);
   --l180-primary-soft:  color-mix(in srgb, var(--l180-primary) 16%, transparent);
+  --l180-state-hover:   color-mix(in srgb, var(--l180-text) 8%, transparent);
 
   /* ===== Back-compat token names — now HA-driven and flat ===== */
-  --modal-backdrop: rgba(0, 0, 0, 0.45);
+  --modal-backdrop: rgba(0, 0, 0, 0.32);
   --brand-1: var(--l180-primary);
   --brand-2: var(--l180-primary);
   --danger-1: var(--l180-danger);
-  --danger-2: color-mix(in srgb, var(--l180-danger) 82%, #000 18%);
+  --danger-2: var(--l180-danger);
 
   --brand-grad: var(--l180-primary);
   --brand-grad-hover: var(--l180-primary-hover);
-  --brand-border: color-mix(in srgb, var(--l180-primary) 78%, #000 22%);
+  --brand-border: transparent;
 
-  --elev-2: var(--l180-shadow);
+  --elev-2: none;
   --focus-ring: var(--l180-primary);
 
   --id-option-gap: 4px;     /* gap between options */
   --id-option-py: 0.6rem;   /* vertical padding of each option */
 
   --btn-font-size: 14px;
-  --btn-radius: 8px;
+  --btn-radius: var(--l180-radius-full);
   --btn-pad-y: 6px;
   --btn-pad-x: 8px;
-  --dialog-btn-minw: 125px;
+  --dialog-btn-minw: 96px;
   --dialog-btn-h: 40px;
 
   --surface: var(--l180-surface);
@@ -121,7 +135,7 @@ body.loaded {
 
 #zones-container .table-container,
 #persons-container .table-container {
-  border-radius: 8px;
+  border-radius: var(--l180-radius-md);
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -179,6 +193,8 @@ body.loaded {
   color: var(--l180-text);
   padding: 10px;
   box-sizing: border-box;
+  border-radius: var(--l180-radius-xl) 0 0 var(--l180-radius-xl);
+  box-shadow: var(--l180-elev-3);
   position: fixed;
   top: 0;
   right: 0;
@@ -233,8 +249,8 @@ body.loaded {
   font-size: 14px;
   height: 40px;
   width: calc(100% - 130px);
-  border: 1px solid var(--l180-divider);
-  border-radius: 8px;
+  border: 1px solid var(--l180-outline);
+  border-radius: var(--l180-radius-sm);
   box-shadow: var(--l180-shadow);
   background: var(--l180-surface);
   color: var(--l180-text);
@@ -299,7 +315,7 @@ body.loaded {
   flex-direction: column;
   border-top: none;
   overflow-x: hidden;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 var(--l180-radius-md) var(--l180-radius-md);
   /* Auto sizing via flex (no JS) */
   flex: 1 1 auto;
   overflow-y: auto;
@@ -318,7 +334,7 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   z-index: 1;
   height: 20px;
   font-size: 12px;
-  font-weight: 400 !important;
+  font-weight: 500 !important;
   border-bottom: 1px solid color-mix(in srgb, var(--l180-header-text) 30%, transparent);
   border-top: 0;
   background-clip: padding-box;
@@ -345,21 +361,23 @@ td {
   right: 10px;
   min-height: 40px;
   padding: 0 12px;
-  background: var(--brand-grad);
-  color: var(--l180-on-primary);
+  background: var(--l180-primary-container);
+  color: var(--l180-text);
   border: none;
   cursor: pointer;
   z-index: 1000;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 40px;
   white-space: nowrap;
   text-align: center;
-  border-radius: 5px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5);
+  border-radius: var(--l180-radius);
+  transition: background 0.2s ease;
+  box-shadow: var(--l180-elev-3);
 }
-.hamburger-button:hover { background: var(--brand-grad-hover); }
+.hamburger-button:hover {
+  background: color-mix(in srgb, var(--l180-primary-container) 92%, var(--l180-text) 8%);
+}
 .hamburger-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 .toggle-btn {
@@ -383,14 +401,14 @@ td {
 }
 #window-message {
   background-color: var(--l180-primary);
-  border: 1px solid var(--brand-border);
-  border-radius: 12px;
+  border: 0;
+  border-radius: var(--l180-radius-xl);
   color: var(--l180-on-primary);
   padding: 20px 40px;
   font-size: 18px;
   font-weight: bold;
   text-align: center;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--l180-elev-3);
 }
 
 /* ===== Tabs ===== */
@@ -399,19 +417,19 @@ td {
 .tab-button {
   flex: 1;
   padding: 10px 5px;
-  background: color-mix(in srgb, var(--l180-primary) 74%, var(--l180-text) 26%);
-  color: var(--l180-on-primary);
+  background: var(--l180-surface-2);
+  color: var(--l180-text-2);
   border: 0;
   cursor: pointer;
   font-size: 12px;
-  font-weight: bold;
+  font-weight: 500;
   text-align: center;
   outline: none;
-  border-radius: 10px 10px 0 0;
-  transition: background 0.3s ease;
+  border-radius: var(--l180-radius-md) var(--l180-radius-md) 0 0;
+  transition: background 0.2s ease;
 }
 
-.tab-button:hover { background: color-mix(in srgb, var(--l180-primary) 88%, var(--l180-text) 12%); }
+.tab-button:hover { background: color-mix(in srgb, var(--l180-surface-2) 92%, var(--l180-text) 8%); }
 .tab-button.active {
   background: var(--l180-primary);
   color: var(--l180-on-primary);
@@ -494,20 +512,22 @@ body.no-scroll { overflow: hidden; }
   width: min(520px, calc(100vw - 32px));
   background: var(--l180-surface);
   color: var(--l180-text);
-  border-radius: var(--l180-radius);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  border-radius: var(--l180-radius-xl);
+  box-shadow: var(--l180-elev-3);
   overflow: hidden;
-  border: 1px solid var(--l180-divider);
+  border: 0;
 }
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; color: var(--l180-header-text); background: var(--l180-header-bg);
+  padding: 10px 14px; color: var(--l180-text); background: transparent;
 }
-.modal-title { font-weight: 700; }
+.modal-title { font-weight: 500; font-size: 20px; }
 .modal-close {
-  border: none; background: transparent; color: var(--l180-header-text);
-  font-size: 22px; line-height: 1; cursor: pointer; padding: 0 6px;
+  border: none; background: transparent; color: var(--l180-text-2);
+  font-size: 22px; line-height: 1; cursor: pointer;
+  width: 40px; height: 40px; padding: 0; border-radius: 50%;
 }
+.modal-close:hover { background: var(--l180-state-hover); }
 .modal-body { color: var(--l180-text); text-align: center; }
 .modal-message { text-align: left; padding: 10px; white-space: pre-wrap; word-break: break-word; }
 .modal-message > label > input[type="checkbox"] {
@@ -516,20 +536,22 @@ body.no-scroll { overflow: hidden; }
 }
 .modal-input {
   width: 90%; padding: 10px; margin: 10px auto 0;
-  border: 1px solid var(--l180-divider); border-radius: 8px; font-size: 14px;
+  border: 1px solid var(--l180-outline); border-radius: var(--l180-radius-sm); font-size: 14px;
   background: var(--l180-surface); color: var(--l180-text);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
 }
-.modal-actions { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 14px; background: var(--l180-surface-2); }
+.modal-input:focus { outline: 2px solid var(--l180-primary); outline-offset: -1px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 14px; background: transparent; }
 
-.modal-warning .modal-header { background: var(--l180-warning); }
-.modal-danger .modal-header { background: linear-gradient(to bottom, var(--danger-1), var(--danger-2)); }
-.modal-success .modal-header { background: var(--l180-success); }
+/* Dialog variants tint the title, not a coloured header bar */
+.modal-warning .modal-title { color: color-mix(in srgb, var(--l180-warning) 70%, var(--l180-text)); }
+.modal-danger .modal-title { color: var(--danger-1); }
+.modal-success .modal-title { color: var(--l180-success); }
 
 /* Base buttons (consistent with Flatpickr) */
 .btn {
-  border: none; cursor: pointer; padding: 10px 16px; border-radius: 8px;
-  font-weight: 700; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5);
+  border: none; cursor: pointer; padding: 10px 24px; border-radius: var(--l180-radius-full);
+  font-weight: 500; box-shadow: none;
+  transition: background 0.2s ease;
 }
 .btn-primary {
   color: var(--l180-on-primary); background: var(--brand-grad);
@@ -537,23 +559,23 @@ body.no-scroll { overflow: hidden; }
 }
 .btn-primary:hover { background: var(--brand-grad-hover); }
 .btn-secondary {
-  color: var(--l180-text); background: var(--l180-surface-2);
-  border: 1px solid var(--l180-divider);
+  color: var(--l180-primary); background: transparent;
+  border: 1px solid var(--l180-outline);
 }
-.btn-secondary:hover { background: color-mix(in srgb, var(--l180-surface-2) 86%, var(--l180-text) 14%); }
+.btn-secondary:hover { background: var(--l180-primary-soft); }
 .btn-danger { color: var(--l180-on-primary); background: var(--l180-danger); }
 .btn:focus { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* Toasts */
 .toast {
-  pointer-events: auto; background: var(--l180-primary); color: var(--l180-on-primary);
-  padding: 10px 14px; border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  pointer-events: auto; background: var(--l180-text); color: var(--l180-surface);
+  padding: 12px 16px; border-radius: var(--l180-radius-md);
+  box-shadow: var(--l180-elev-3);
   transform: translateY(8px); opacity: 0; animation: toast-in 150ms ease-out forwards;
 }
-.toast-warning { background: var(--l180-warning); }
-.toast-danger { background: var(--danger-1); }
-.toast-success { background: var(--l180-success); }
+.toast-warning { background: var(--l180-warning); color: #fff; }
+.toast-danger { background: var(--danger-1); color: #fff; }
+.toast-success { background: var(--l180-success); color: #fff; }
 .toast.hide { opacity: 0; transform: translateY(8px); transition: opacity 200ms ease, transform 200ms ease; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: translateY(0);} }
 
@@ -561,7 +583,7 @@ body.no-scroll { overflow: hidden; }
 .modal .btn {
   font-family: inherit !important;
   font-size: var(--btn-font-size) !important;
-  font-weight: 400 !important;
+  font-weight: 500 !important;
   line-height: 1 !important;
   box-sizing: border-box;
   padding: var(--btn-pad-y) var(--btn-pad-x) !important;
@@ -576,11 +598,11 @@ body.no-scroll { overflow: hidden; }
 }
 .modal .btn-primary:hover { background: var(--brand-grad-hover) !important; }
 .modal .btn-secondary {
-  background: var(--l180-surface-2) !important;
-  color: var(--l180-text) !important;
-  border: 1px solid var(--l180-divider) !important;
+  background: transparent !important;
+  color: var(--l180-primary) !important;
+  border: 1px solid var(--l180-outline) !important;
 }
-.modal .btn-secondary:hover { background: color-mix(in srgb, var(--l180-surface-2) 86%, var(--l180-text) 14%) !important; }
+.modal .btn-secondary:hover { background: var(--l180-primary-soft) !important; }
 .modal .btn:focus { outline: 2px solid var(--focus-ring) !important; outline-offset: 2px; }
 .modal .modal-actions { display: flex; gap: 8px; }
 .modal .modal-actions .btn {
@@ -599,7 +621,7 @@ body.no-scroll { overflow: hidden; }
   overflow-x: auto; justify-content:center;
 }
 .fp-quickbar button {
-  border:1px solid var(--l180-divider); background:var(--l180-surface); color:var(--l180-text); padding:10px 10px; border-radius:6px; cursor:pointer;
+  border:1px solid var(--l180-divider); background:var(--l180-surface); color:var(--l180-text); padding:8px 16px; border-radius:var(--l180-radius-full); cursor:pointer;
 }
 .fp-quickbar button:hover { background:var(--l180-surface-2); }
 
@@ -638,10 +660,10 @@ body.no-scroll { overflow: hidden; }
 
 .flatpickr-calendar{
   background:var(--l180-surface); color:var(--l180-text); border:1px solid var(--l180-divider);
-  border-radius:12px; box-shadow:0 12px 28px rgba(0,0,0,.30); overflow:hidden;
+  border-radius:var(--l180-radius-xl); box-shadow:var(--l180-elev-3); overflow:hidden;
 }
 .fp-timepanel .flatpickr-calendar{
-  box-shadow:none !important; border:1px solid var(--l180-divider); border-radius:8px;
+  box-shadow:none !important; border:1px solid var(--l180-divider); border-radius:var(--l180-radius-md);
 }
 
 /* Calendar OK / CANCEL */
@@ -652,11 +674,11 @@ body.no-scroll { overflow: hidden; }
 }
 .flatpickr-calendar .fp-actionbar .flatpickr-confirm:hover { background: var(--brand-grad-hover) !important; }
 .flatpickr-calendar .fp-actionbar .flatpickr-cancel {
-  background: var(--l180-surface-2) !important;
-  color: var(--l180-text) !important; border: 1px solid var(--l180-divider) !important;
+  background: transparent !important;
+  color: var(--l180-primary) !important; border: 1px solid var(--l180-outline) !important;
 }
 .flatpickr-calendar .fp-actionbar .flatpickr-cancel:hover {
-  background: color-mix(in srgb, var(--l180-surface-2) 86%, var(--l180-text) 14%) !important;
+  background: var(--l180-primary-soft) !important;
 }
 .flatpickr-calendar .fp-actionbar .flatpickr-confirm:focus,
 .flatpickr-calendar .fp-actionbar .flatpickr-cancel:focus {
@@ -739,8 +761,9 @@ body.no-scroll { overflow: hidden; }
 }
 
 /* Modal gutters/padding */
-.modal{ width: min(96vw, 600px); border-radius: 12px; overflow: hidden; }
-.modal-header, .modal-actions{ padding: 12px 20px; }
+.modal{ width: min(96vw, 600px); border-radius: var(--l180-radius-xl); overflow: hidden; }
+.modal-header{ padding: 16px 16px 8px 24px; }
+.modal-actions{ padding: 12px 24px 24px; }
 .modal-body{ padding: 10px 10px; overflow-x: hidden; }
 .modal-body > * + *{ margin-top: 5px; }
 
@@ -758,7 +781,7 @@ body.no-scroll { overflow: hidden; }
   padding: .6rem .9rem;
   padding-right: 12px !important; /* for the caret-right */
   border: 1px solid var(--controls-border);
-  border-radius: 10px;
+  border-radius: var(--l180-radius-full);
   background: var(--controls-grad) !important;
   color: var(--l180-on-primary) !important;
   cursor: pointer;
@@ -778,10 +801,10 @@ body.no-scroll { overflow: hidden; }
   inset-inline: 0; 
   top: calc(100% + .25rem);
   z-index: 2000;
-  background: var(--surface); 
+  background: var(--l180-surface-2); 
   border: 0; 
-  border-radius: 10px;
-  box-shadow: var(--elev-2) !important; 
+  border-radius: var(--l180-radius);
+  box-shadow: var(--l180-elev-3) !important; 
   padding: .25rem; 
   max-height: 300px; 
   overflow: auto; 
@@ -792,22 +815,15 @@ body.no-scroll { overflow: hidden; }
 
 .id-option {
   display: flex; align-items: center; gap: .5rem;
-  width: 100%; padding: .55rem .7rem; border: 0; border-radius: 8px;
+  width: 100%; padding: .55rem .9rem; border: 0; border-radius: var(--l180-radius-md);
   background: transparent; cursor: pointer; text-align: left; font: inherit;
   font-size: 13px; font-weight: 400; color: inherit;
 }
 
-.id-option:hover,
+.id-option:hover { background: var(--l180-state-hover) !important; }
 .id-option[aria-selected="true"] {
-  background: var(--controls-grad) !important;
-  color: var(--l180-on-primary) !important;
-}
-
-/* EXCEPTION: the screen-selector combo keeps the brand blue */
-#combo-container .id-option:hover,
-#combo-container .id-option[aria-selected="true"] {
-  background: var(--brand-grad) !important;
-  color: var(--l180-on-primary) !important;
+  background: var(--l180-primary-container) !important;
+  color: var(--l180-text) !important;
 }
 
 /* Icon only on the closed button, not in the list */
@@ -849,7 +865,7 @@ body.no-scroll { overflow: hidden; }
   font-size: 18px; 
   font-weight: bold;
   border: none; 
-  border-radius: 10px; 
+  border-radius: var(--l180-radius-full); 
   padding: 10px 20px;
   box-shadow: var(--elev-2); 
   outline: none; 
@@ -885,7 +901,7 @@ body.no-scroll { overflow: hidden; }
   -webkit-appearance: none;
   width: 100%;
   min-height: var(--combo-min-h);
-  border-radius: 10px;
+  border-radius: var(--l180-radius-full);
   border: 1px solid var(--controls-border);
   box-shadow: var(--elev-2) !important;
 
@@ -934,31 +950,23 @@ body.no-scroll { overflow: hidden; }
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 40px;
   width: 100%;
-  border-radius: 10px;
+  border-radius: var(--l180-radius-full);
   background: var(--controls-grad);
   color: var(--l180-on-primary);
   border: 1px solid var(--controls-border);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.08),
-    0 6px 14px rgba(0,0,0,.35);
+  box-shadow: none;
   font-size: 13px;
-  font-weight: 400;
+  font-weight: 500;
   cursor: pointer;
-  transition: transform .05s ease, box-shadow .2s ease, filter .2s ease, background .2s ease;
+  transition: box-shadow .2s ease, background .2s ease;
   margin-bottom: 10px; margin-right: 5px;
 }
 .action-button:hover{
   background: var(--controls-grad-hover);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.10),
-    0 8px 18px rgba(0,0,0,.38);
-  filter: brightness(1.02);
+  box-shadow: var(--l180-elev-1);
 }
 .action-button:active{
-  transform: translateY(1px);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.08),
-    0 4px 10px rgba(0,0,0,.28);
+  box-shadow: none;
 }
 .action-button:focus{ outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
@@ -967,7 +975,7 @@ body.no-scroll { overflow: hidden; }
   content: "";
   display: inline-block; width: 22px; height: 22px; flex: 0 0 22px;
   background-repeat: no-repeat; background-position: center; background-size: 22px 22px;
-  margin-right: 4px; filter: drop-shadow(0 1px 0 rgba(0,0,0,.25));
+  margin-right: 4px;
 }
 .action-button.btn-add::before{
   width: 24px; height: 24px; flex: 0 0 24px; background-size: 24px 24px;
@@ -1036,17 +1044,17 @@ body.no-scroll { overflow: hidden; }
    Embedded, the parent theme drives the palette instead. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-ha-dark]) {
-    --l180-primary:     #2196f3;
+    --l180-primary:     #4285f4;
     --l180-on-primary:  #ffffff;
-    --l180-bg:          #111417;
-    --l180-surface:     #1c1f24;
-    --l180-surface-2:   #262a30;
-    --l180-text:        #e2e4e7;
-    --l180-text-2:      #9aa0a6;
+    --l180-bg:          #131314;
+    --l180-surface:     #1e1f20;
+    --l180-surface-2:   #282a2c;
+    --l180-text:        #e3e3e3;
+    --l180-text-2:      #c4c7c5;
     --l180-divider:     rgba(255, 255, 255, 0.14);
-    --l180-danger:      #f2554e;
-    --l180-warning:     #ffb300;
-    --l180-success:     #4caf50;
+    --l180-danger:      #f2685f;
+    --l180-warning:     #e8a317;
+    --l180-success:     #3d9a5b;
     --modal-backdrop:   rgba(0, 0, 0, 0.6);
   }
 }
@@ -1056,13 +1064,13 @@ body.no-scroll { overflow: hidden; }
    colours unset, so keep the same HA tokens but make the *fallbacks* dark
    (not the #fff defaults from :root). Real theme values still win. */
 :root[data-ha-dark="1"] {
-  --l180-bg:        var(--primary-background-color, #111417);
+  --l180-bg:        var(--primary-background-color, #131314);
   --l180-surface:   var(--card-background-color,
                       var(--ha-card-background,
-                        var(--primary-background-color, #1c1f24)));
-  --l180-surface-2: var(--secondary-background-color, #262a30);
-  --l180-text:      var(--primary-text-color, #e2e4e7);
-  --l180-text-2:    var(--secondary-text-color, #9aa0a6);
+                        var(--primary-background-color, #1e1f20)));
+  --l180-surface-2: var(--secondary-background-color, #282a2c);
+  --l180-text:      var(--primary-text-color, #e3e3e3);
+  --l180-text-2:    var(--secondary-text-color, #c4c7c5);
   --l180-divider:   var(--divider-color, rgba(255, 255, 255, 0.14));
   --modal-backdrop: rgba(0, 0, 0, 0.6);
 }
@@ -1073,13 +1081,13 @@ body.no-scroll { overflow: hidden; }
   left: 50%;
   bottom: calc(100% + 6px);
   transform: translateX(-50%);
-  padding: 2px 7px;
-  border-radius: 9px;
+  padding: 2px 8px;
+  border-radius: var(--l180-radius-full);
   background: var(--l180-primary, #03a9f4);
   color: var(--l180-on-primary, #fff);
   font: 700 11px/1.25 var(--l180-font, system-ui, -apple-system, "Segoe UI", sans-serif);
   white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--l180-elev-1);
   pointer-events: none;
 }
 .l180-move-mode {
@@ -1165,7 +1173,8 @@ body.no-scroll { overflow: hidden; }
 .maplibregl-popup-content {
   background: var(--l180-surface, #fff) !important;
   color: var(--l180-text, #212121) !important;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: var(--l180-elev-3) !important;
+  border-radius: var(--l180-radius) !important;
 }
 .maplibregl-popup-content a { color: var(--l180-primary, #03a9f4); }
 .maplibregl-popup-close-button { color: var(--l180-text, #212121) !important; }
@@ -1195,7 +1204,9 @@ body.no-scroll { overflow: hidden; }
   background: var(--l180-surface) !important;
   color: var(--l180-text) !important;
   border: 1px solid var(--l180-divider) !important;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: var(--l180-elev-3) !important;
+  border: 0 !important;
+  border-radius: var(--l180-radius-xl) !important;
 }
 .flatpickr-calendar.arrowTop::after { border-bottom-color: var(--l180-surface) !important; }
 .flatpickr-calendar.arrowTop::before { border-bottom-color: var(--l180-divider) !important; }
@@ -1317,8 +1328,8 @@ span.flatpickr-weekday {
 #map.l180-hide-zone-labels .l180-zone-label { display: none; }
 .l180-zone-label {
   display: inline-block;
-  padding: 1px 6px;
-  border-radius: 6px;
+  padding: 2px 8px;
+  border-radius: var(--l180-radius-full);
   background: color-mix(in srgb, var(--l180-surface, #fff) 80%, transparent);
   color: var(--l180-text, #212121);
   font: 600 11px/1.3 var(--l180-font, system-ui, -apple-system, "Segoe UI", sans-serif);
