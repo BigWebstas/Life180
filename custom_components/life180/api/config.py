@@ -42,7 +42,7 @@ class ConfigEndpoint(HomeAssistantView):
         return self.json(
             {
                 "version": version,
-                "update_interval": config.get("update_interval", 10),
+                "update_interval": config.get("update_interval", 5),
                 "geocode_time": config.get("geocode_time", 30),
                 "geocode_distance": config.get("geocode_distance", 20),
                 "enable_debug": config.get("enable_debug", False),

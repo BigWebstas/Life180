@@ -46,7 +46,7 @@
       }
     },
     "error": {
-      "min_update_interval": "Das Aktualisierungsintervall muss mindestens 10 Sekunden betragen.",
+      "min_update_interval": "Das Aktualisierungsintervall muss mindestens 2 Sekunden betragen.",
       "min_geocode_time": "Die Geokodierungszeit muss mindestens 10 Sekunden betragen.",
       "min_geocode_distance": "Die Mindestentfernung für die Geokodierung muss mindestens 66 ft betragen.",
       "min_stop_radius": "Der Stopp-Radius darf nicht negativ sein.",
@@ -121,7 +121,7 @@
       }
     },
     "error": {
-      "min_update_interval": "Das Aktualisierungsintervall muss mindestens 10 Sekunden betragen.",
+      "min_update_interval": "Das Aktualisierungsintervall muss mindestens 2 Sekunden betragen.",
       "min_geocode_time": "Die Geokodierungszeit muss mindestens 10 Sekunden betragen.",
       "min_geocode_distance": "Die Mindestentfernung für die Geokodierung muss mindestens 66 ft betragen.",
       "min_stop_radius": "Der Stopp-Radius darf nicht negativ sein.",

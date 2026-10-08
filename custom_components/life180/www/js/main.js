@@ -57,7 +57,7 @@ function startUpdateLoop() {
             return;
         }
 
-        const PERIOD = (updateInterval ?? 10) * 1000; // ms
+        const PERIOD = (updateInterval ?? 5) * 1000; // ms
         if (now - lastRun >= PERIOD) {
             lastRun = now;
             try {

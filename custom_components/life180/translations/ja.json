@@ -46,7 +46,7 @@
       }
     },
     "error": {
-      "min_update_interval": "更新間隔は 10 秒以上である必要があります。",
+      "min_update_interval": "更新間隔は 2 秒以上である必要があります。",
       "min_geocode_time": "ジオコーディング間隔は 10 秒以上である必要があります。",
       "min_geocode_distance": "ジオコーディング最小距離は 66 ft 以上である必要があります。",
       "min_stop_radius": "停止半径を負の値にはできません。",
@@ -121,7 +121,7 @@
       }
     },
     "error": {
-      "min_update_interval": "更新間隔は 10 秒以上である必要があります。",
+      "min_update_interval": "更新間隔は 2 秒以上である必要があります。",
       "min_geocode_time": "ジオコーディング間隔は 10 秒以上である必要があります。",
       "min_geocode_distance": "ジオコーディング最小距離は 66 ft 以上である必要があります。",
       "min_stop_radius": "停止半径を負の値にはできません。",

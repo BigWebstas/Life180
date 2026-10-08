@@ -46,7 +46,7 @@
       }
     },
     "error": {
-      "min_update_interval": "L’intervalle de mise à jour doit être d’au moins 10 secondes.",
+      "min_update_interval": "L’intervalle de mise à jour doit être d’au moins 2 secondes.",
       "min_geocode_time": "Le temps de géocodage doit être d’au moins 10 secondes.",
       "min_geocode_distance": "La distance minimale pour géocoder doit être d’au moins 66 ft.",
       "min_stop_radius": "Le rayon d’arrêt ne peut pas être négatif.",
@@ -121,7 +121,7 @@
       }
     },
     "error": {
-      "min_update_interval": "L’intervalle de mise à jour doit être d’au moins 10 secondes.",
+      "min_update_interval": "L’intervalle de mise à jour doit être d’au moins 2 secondes.",
       "min_geocode_time": "Le temps de géocodage doit être d’au moins 10 secondes.",
       "min_geocode_distance": "La distance minimale pour géocoder doit être d’au moins 66 ft.",
       "min_stop_radius": "Le rayon d’arrêt ne peut pas être négatif.",

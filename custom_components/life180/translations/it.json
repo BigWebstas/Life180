@@ -46,7 +46,7 @@
       }
     },
     "error": {
-      "min_update_interval": "L'intervallo di aggiornamento deve essere almeno 10 secondi.",
+      "min_update_interval": "L'intervallo di aggiornamento deve essere almeno 2 secondi.",
       "min_geocode_time": "Il tempo di geocodifica deve essere almeno 10 secondi.",
       "min_geocode_distance": "La distanza minima per geocodificare deve essere almeno 66 ft.",
       "min_stop_radius": "Il raggio di sosta non può essere negativo.",
@@ -121,7 +121,7 @@
       }
     },
     "error": {
-      "min_update_interval": "L'intervallo di aggiornamento deve essere almeno 10 secondi.",
+      "min_update_interval": "L'intervallo di aggiornamento deve essere almeno 2 secondi.",
       "min_geocode_time": "Il tempo di geocodifica deve essere almeno 10 secondi.",
       "min_geocode_distance": "La distanza minima per geocodificare deve essere almeno 66 ft.",
       "min_stop_radius": "Il raggio di sosta non può essere negativo.",
