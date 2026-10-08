@@ -17,7 +17,7 @@ DOMAIN = __package__.split(".")[-1]
 # Distances are in feet and speeds in mph. The pipeline converts them to
 # metric (see units.py).
 DEFAULTS = {
-    "update_interval": 10,
+    "update_interval": 5,
     "geocode_time": 30,
     "geocode_distance": 66,
     "stop_radius": 100,
@@ -38,7 +38,7 @@ DEFAULTS = {
 }
 
 MINIMUMS = {
-    "update_interval": 10,
+    "update_interval": 2,
     "geocode_time": 10,
     "geocode_distance": 66,
     "stop_radius": 0.0,

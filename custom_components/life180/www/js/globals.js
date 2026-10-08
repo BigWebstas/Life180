@@ -22,7 +22,7 @@ export const fmt2 = formatNumber({
 
 export let isAdmin = false;
 export let version = "";
-export let updateInterval = 10;
+export let updateInterval = 5;
 export let geocodeTime = 30;
 export let geocodeDistance = 20;
 export let enableDebug = false;
@@ -121,7 +121,7 @@ export async function updateConfig() {
 
 			version = config.version;
 
-			if (typeof config.update_interval === "number" && config.update_interval >= 10) {
+			if (typeof config.update_interval === "number" && config.update_interval >= 2) {
 				updateInterval = config.update_interval;
 			}		
 			if (typeof config.geocode_time === "number" && config.geocode_time >= 10) {

@@ -46,7 +46,7 @@
       }
     },
     "error": {
-      "min_update_interval": "更新间隔至少为 10 秒。",
+      "min_update_interval": "更新间隔至少为 2 秒。",
       "min_geocode_time": "地理编码时间至少为 10 秒。",
       "min_geocode_distance": "触发地理编码的最小距离至少为 66 ft。",
       "min_stop_radius": "停留半径不能为负数。",
@@ -121,7 +121,7 @@
       }
     },
     "error": {
-      "min_update_interval": "更新间隔至少为 10 秒。",
+      "min_update_interval": "更新间隔至少为 2 秒。",
       "min_geocode_time": "地理编码时间至少为 10 秒。",
       "min_geocode_distance": "触发地理编码的最小距离至少为 66 ft。",
       "min_stop_radius": "停留半径不能为负数。",
