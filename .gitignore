@@ -6,3 +6,6 @@ __pycache__/
 /CLAUDE.md
 .venv/
 .pytest_cache/
+GEMINI.md
+.idea/
+CLAUDE.md
