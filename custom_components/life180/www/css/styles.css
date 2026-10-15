@@ -917,7 +917,7 @@ body.no-scroll { overflow: hidden; }
   background-image:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M1 3l4 4 4-4' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>"),
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'><path d='M14 2V1h-3v1H6V1H3v1H0v15h17V2h-3zM12 2h1v2h-1V2zM4 2h1v2H4V2zM16 16H1v-8.921h15V16zM1 6.079v-3.079h2v2h3V3h5v2h3V3h2v3.079H1z' fill='%23fff'/></svg>"),
-    var(--controls-grad);
+    linear-gradient(var(--controls-grad), var(--controls-grad));
   background-repeat: no-repeat, no-repeat, no-repeat;
   background-position:
     right 12px center,   /* caret */
@@ -936,7 +936,7 @@ body.no-scroll { overflow: hidden; }
   background-image:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M1 3l4 4 4-4' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>"),
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'><path d='M14 2V1h-3v1H6V1H3v1H0v15h17V2h-3zM12 2h1v2h-1V2zM4 2h1v2H4V2zM16 16H1v-8.921h15V16zM1 6.079v-3.079h2v2h3V3h5v2h3V3h2v3.079H1z' fill='%23fff'/></svg>"),
-    var(--controls-grad-hover);
+    linear-gradient(var(--controls-grad-hover), var(--controls-grad-hover));
   background-repeat: no-repeat, no-repeat, no-repeat;
   background-position: right 12px center, 10px center, 0 0;
   background-size: 10px 10px, 20px 20px, 100% 100%;
@@ -1091,13 +1091,13 @@ body.no-scroll { overflow: hidden; }
     background-image:
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M1 3l4 4 4-4' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>"),
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'><path d='M14 2V1h-3v1H6V1H3v1H0v15h17V2h-3zM12 2h1v2h-1V2zM4 2h1v2H4V2zM16 16H1v-8.921h15V16zM1 6.079v-3.079h2v2h3V3h5v2h3V3h2v3.079H1z' fill='%23000'/></svg>"),
-      var(--controls-grad);
+      linear-gradient(var(--controls-grad), var(--controls-grad));
   }
   :root:not([data-ha-dark]) #daterange:hover{
     background-image:
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M1 3l4 4 4-4' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>"),
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'><path d='M14 2V1h-3v1H6V1H3v1H0v15h17V2h-3zM12 2h1v2h-1V2zM4 2h1v2H4V2zM16 16H1v-8.921h15V16zM1 6.079v-3.079h2v2h3V3h5v2h3V3h2v3.079H1z' fill='%23000'/></svg>"),
-      var(--controls-grad-hover);
+      linear-gradient(var(--controls-grad-hover), var(--controls-grad-hover));
   }
 }
 :root[data-ha-dark="1"] .id-toggle .id-caret{
@@ -1108,13 +1108,13 @@ body.no-scroll { overflow: hidden; }
   background-image:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M1 3l4 4 4-4' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>"),
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'><path d='M14 2V1h-3v1H6V1H3v1H0v15h17V2h-3zM12 2h1v2h-1V2zM4 2h1v2H4V2zM16 16H1v-8.921h15V16zM1 6.079v-3.079h2v2h3V3h5v2h3V3h2v3.079H1z' fill='%23000'/></svg>"),
-    var(--controls-grad);
+    linear-gradient(var(--controls-grad), var(--controls-grad));
 }
 :root[data-ha-dark="1"] #daterange:hover{
   background-image:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M1 3l4 4 4-4' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>"),
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'><path d='M14 2V1h-3v1H6V1H3v1H0v15h17V2h-3zM12 2h1v2h-1V2zM4 2h1v2H4V2zM16 16H1v-8.921h15V16zM1 6.079v-3.079h2v2h3V3h5v2h3V3h2v3.079H1z' fill='%23000'/></svg>"),
-    var(--controls-grad-hover);
+    linear-gradient(var(--controls-grad-hover), var(--controls-grad-hover));
 }
 
 #summary-places.hidden { display: none; }
