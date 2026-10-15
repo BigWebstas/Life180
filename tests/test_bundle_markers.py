@@ -28,6 +28,8 @@ MARKERS = {
     "speed chart reads theme colours (#67)": "function l180ChartColors()",
     "battery pill always shown over the avatar": '_mb=(_mv||i!=null)?',
     "low-battery people rows pulse red": 'f.classList.toggle("l180-row-low-battery"',
+    "trips tab is rendered on filter (0.8.0)": 'l180Trips(Array.isArray(e)?[]:e?.trips||[])',
+    "trips tab is cleared on filter reset (0.8.0)": 'l180ClearTrips();let n=',
 }
 
 

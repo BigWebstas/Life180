@@ -1103,8 +1103,91 @@ def _calc_zone_stats(positions, zones, expected_total_s=None):
 
 
 # --- consistent empty payload ---
+# --- trips (movement between stops) and driving events ---
+DRIVE_MIN_SPEED_MPS = 4.5      # a trip that never exceeds ~10 mph is a walk, not a drive
+HARD_BRAKE_MPS2 = 3.5          # ~8 mph per second
+HARD_ACCEL_MPS2 = 3.0          # ~7 mph per second
+HARD_EVENT_MAX_DT_S = 15       # speed samples further apart than this say nothing about braking
+MIN_TRIP_S = 60
+MIN_TRIP_M = 100.0
+
+def _calc_trips(positions, zones):
+    """
+    A trip is the movement between two stops (or a range edge). Each stop
+    closes the current trip at its arrival time and opens the next one at its
+    departure time. Hard braking/acceleration is counted on driving trips only.
+    """
+    trips = []
+    start = None   # (t, lat, lon, speed) anchor left by the previous stop
+    cur = []       # moving points since then
+
+    def _close(end):
+        pts = ([start] if start else []) + cur + ([end] if end else [])
+        if len(pts) < 2:
+            return
+        dist = sum(haversine(a[1], a[2], b[1], b[2]) for a, b in zip(pts, pts[1:]))
+        dur = (pts[-1][0] - pts[0][0]).total_seconds()
+        if dur < MIN_TRIP_S or dist < MIN_TRIP_M:
+            return
+        speeds = [q[3] for q in pts if q[3] is not None]
+        max_speed = max(speeds) if speeds else 0.0
+        drive = max_speed >= DRIVE_MIN_SPEED_MPS
+        brakes = accels = 0
+        if drive:
+            for a, b in zip(pts, pts[1:]):
+                dt = (b[0] - a[0]).total_seconds()
+                if a[3] is None or b[3] is None or not 0 < dt <= HARD_EVENT_MAX_DT_S:
+                    continue
+                acc = (b[3] - a[3]) / dt
+                if acc <= -HARD_BRAKE_MPS2:
+                    brakes += 1
+                elif acc >= HARD_ACCEL_MPS2:
+                    accels += 1
+        trips.append({
+            "start_utc": pts[0][0].isoformat(),
+            "end_utc": pts[-1][0].isoformat(),
+            "duration_s": int(round(dur)),
+            "distance_m": round(dist, 1),
+            "max_speed_mps": round(max_speed, 2),
+            "average_speed_mps": round(dist / dur, 2),
+            "mode": "drive" if drive else "walk",
+            "hard_braking": brakes,
+            "hard_accel": accels,
+            "from": {"lat": pts[0][1], "lon": pts[0][2],
+                     "zone": _zone_of(pts[0][1], pts[0][2], zones) if start else ""},
+            "to": {"lat": pts[-1][1], "lon": pts[-1][2],
+                   "zone": _zone_of(pts[-1][1], pts[-1][2], zones) if end else ""},
+        })
+
+    for p in positions:
+        ll = _stop_center_latlon(p) if p.get("stop") else _latlon_from_pos(p)
+        t = _as_dt(p.get("last_updated"))
+        if p.get("stop"):
+            t_in = _as_dt(p.get("stop_start")) or t
+            t_out = _as_dt(p.get("stop_leave")) or _as_dt(p.get("stop_end")) or t_in
+            _close((t_in, ll[0], ll[1], None) if ll and t_in else None)
+            start = (t_out, ll[0], ll[1], None) if ll and t_out else None
+            cur = []
+        elif ll and t:
+            try:
+                v = float((p.get("attributes") or {}).get("speed"))
+                v = v if math.isfinite(v) else None
+            except (TypeError, ValueError):
+                v = None
+            cur.append((t, ll[0], ll[1], v))
+    _close(None)
+    return trips
+
+def _trip_totals(trips):
+    return {
+        "trips_count": len(trips),
+        "driving_trips_count": sum(1 for t in trips if t["mode"] == "drive"),
+        "hard_braking_count": sum(t["hard_braking"] for t in trips),
+        "hard_accel_count": sum(t["hard_accel"] for t in trips),
+    }
+
 def _empty_payload():
-    return { "positions": [], "summary": _calc_summary([]), "zones": [] }
+    return { "positions": [], "summary": _calc_summary([]), "zones": [], "trips": [] }
 
 # --- heavy pipeline off the event loop (executor) ---
 def _build_payload_offthread(states, *, cfg, zones):
@@ -1152,7 +1235,10 @@ def _build_payload_offthread(states, *, cfg, zones):
     except Exception:
         pass
 
-    return {"positions": positions, "summary": summary, "zones": zones_rows}
+    trips = _calc_trips(positions, zones)
+    summary.update(_trip_totals(trips))
+
+    return {"positions": positions, "summary": summary, "zones": zones_rows, "trips": trips}
 
 # ----------------------------
 # Endpoint

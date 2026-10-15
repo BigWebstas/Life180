@@ -15,6 +15,7 @@ import { exportPositionsToKml } from '../export/kml.js';
 import { exportPositionsToCsv } from '../export/csv.js';
 import { exportPositionsToXlsx } from '../export/xlsx.js';
 import { exportPositionsToPdf, blendedFill, reducePositionsForPdf } from '../export/pdf.js';
+import { renderTrips, renderDrivingSummary, clearTrips } from './trips.js';
 import { initPositionsChart, renderPositionsChart, clearPositionsChart, setPositionsMarker } from '../charts/positions.js';
 
 let filterMarkers = [];
@@ -203,7 +204,9 @@ export async function setFilter(payload) {
             // Server summary (if present)
             if (summary) {
                 applyServerSummary(summary);
+                renderDrivingSummary(summary);
             }
+            renderTrips(Array.isArray(payload) ? [] : (payload?.trips || []));
             await updateSummaryZonesTable();
 
             // In case some color changes dynamically, re-tint everything
@@ -700,6 +703,7 @@ export async function resetFilter(resetCalendar = true, resetUsers = true) {
     document.getElementById('stops-count').textContent = '--';
     document.getElementById('stopped-time').textContent = '--';
     document.getElementById('summary-zones-table-body').innerHTML = '';
+    clearTrips();
 
     const maxSpeedRow = document.querySelector('#summary table tbody tr:nth-child(4)');
     if (maxSpeedRow) {

@@ -106,5 +106,11 @@
   "reset_to_north": "Reset bearing to north",
   "search": "Search",
   "layers": "Layers",
-  "chart": "Chart"
+  "chart": "Chart",
+  "trips": "Trips",
+  "trip": "Trip",
+  "no_trips": "No trips in this range",
+  "trip_unknown_place": "Unknown place",
+  "hard_braking": "Hard braking",
+  "hard_accel": "Hard acceleration"
 }
