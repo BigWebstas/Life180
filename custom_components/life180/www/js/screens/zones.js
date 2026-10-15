@@ -1045,6 +1045,10 @@ function buildZonePopup(zone) {
 }
 
 // === public helpers to look up zones by id ===
+export function getZones() {
+    return zones;
+}
+
 export function getZoneById(id) {
     return zones.find(z => String(z?.id) === String(id)) || null;
 }
