@@ -1046,7 +1046,7 @@ body.no-scroll { overflow: hidden; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-ha-dark]) {
     --l180-primary:     #4285f4;
-    --l180-on-primary:  #ffffff;
+    --l180-on-primary:  #000000;
     --l180-bg:          #131314;
     --l180-surface:     #1e1f20;
     --l180-surface-2:   #282a2c;
@@ -1075,6 +1075,7 @@ body.no-scroll { overflow: hidden; }
   --l180-text-2:    var(--secondary-text-color, #c4c7c5);
   --l180-divider:   var(--divider-color, rgba(255, 255, 255, 0.14));
   --modal-backdrop: rgba(0, 0, 0, 0.6);
+  --l180-on-primary: #000000;
   --l180-icon-filter: invert(1);
 }
 
