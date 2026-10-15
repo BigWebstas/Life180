@@ -856,6 +856,17 @@ export function zoneTintRgba(zone, alpha = DEFAULT_ALPHA) {
     return toRgba(zone.color, a) || zone.color;
 }
 
+export function getSnapshotPeople() {
+    return Object.values(personsDevicesMap)
+        .map(d => ({
+            name: d.attributes.friendly_name,
+            lat: Number(d.attributes.latitude),
+            lng: Number(d.attributes.longitude),
+            battery: readBattery(d)
+        }))
+        .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+}
+
 function readBattery(dev) {
     const candidates = [
         dev?.battery_level,
