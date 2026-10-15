@@ -761,6 +761,11 @@ export async function updatePersonsTable() {
             applyTint(row, tint);
             applyTint(addressRow, tint);
 
+            // Pulse the row (and its address row) red when the phone battery is low
+            const lowBattery = battery != null && battery <= LOW_BATTERY_PCT;
+            row.classList.toggle('l180-row-low-battery', lowBattery);
+            addressRow.classList.toggle('l180-row-low-battery', lowBattery);
+
             // Replaces the whole "Data for the observer..." block
             if (addressRow) {
                 const td = addressRow.querySelector("td");
