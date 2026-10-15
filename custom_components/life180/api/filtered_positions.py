@@ -1186,8 +1186,50 @@ def _trip_totals(trips):
         "hard_accel_count": sum(t["hard_accel"] for t in trips),
     }
 
+# --- frequent places: repeated stops that are not inside any zone ---
+PLACE_RADIUS_M = 75.0          # stops closer than this are the same place
+MIN_PLACE_VISITS = 2
+MAX_PLACES = 10
+
+def _calc_places(positions, zones):
+    """Cluster the stops outside every zone; return the busiest repeat places."""
+    clusters = []
+    for p in positions:
+        if not p.get("stop"):
+            continue
+        ll = _stop_center_latlon(p)
+        if not ll or _zone_of(ll[0], ll[1], zones):
+            continue
+        try:
+            dur = max(0.0, float(p.get("stop_duration_s") or 0.0))
+        except (TypeError, ValueError):
+            dur = 0.0
+        seen = _as_dt(p.get("stop_start")) or _as_dt(p.get("last_updated"))
+        for c in clusters:
+            if haversine(c["lat"], c["lon"], ll[0], ll[1]) <= PLACE_RADIUS_M:
+                n = c["visits"]
+                c["lat"] = (c["lat"] * n + ll[0]) / (n + 1)
+                c["lon"] = (c["lon"] * n + ll[1]) / (n + 1)
+                c["visits"] = n + 1
+                c["total_s"] += dur
+                c["last"] = seen or c["last"]
+                break
+        else:
+            clusters.append({"lat": ll[0], "lon": ll[1], "visits": 1, "total_s": dur,
+                             "first": seen, "last": seen})
+    places = [c for c in clusters if c["visits"] >= MIN_PLACE_VISITS]
+    places.sort(key=lambda c: c["total_s"], reverse=True)
+    return [{
+        "lat": round(c["lat"], 6),
+        "lon": round(c["lon"], 6),
+        "visits": c["visits"],
+        "total_s": int(round(c["total_s"])),
+        "first_utc": c["first"].isoformat() if c["first"] else None,
+        "last_utc": c["last"].isoformat() if c["last"] else None,
+    } for c in places[:MAX_PLACES]]
+
 def _empty_payload():
-    return { "positions": [], "summary": _calc_summary([]), "zones": [], "trips": [] }
+    return { "positions": [], "summary": _calc_summary([]), "zones": [], "trips": [], "places": [] }
 
 # --- heavy pipeline off the event loop (executor) ---
 def _build_payload_offthread(states, *, cfg, zones):
@@ -1238,7 +1280,8 @@ def _build_payload_offthread(states, *, cfg, zones):
     trips = _calc_trips(positions, zones)
     summary.update(_trip_totals(trips))
 
-    return {"positions": positions, "summary": summary, "zones": zones_rows, "trips": trips}
+    return {"positions": positions, "summary": summary, "zones": zones_rows, "trips": trips,
+            "places": _calc_places(positions, zones)}
 
 # ----------------------------
 # Endpoint

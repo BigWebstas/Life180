@@ -65,6 +65,7 @@ def _pt(sec, lat_m, speed):
 def _stop(start, leave, lat_m=0):
     return {
         "stop": True,
+        "stop_duration_s": leave - start,
         "last_updated": (T0 + timedelta(seconds=start)).isoformat(),
         "stop_start": (T0 + timedelta(seconds=start)).isoformat(),
         "stop_end": (T0 + timedelta(seconds=leave)).isoformat(),
@@ -126,3 +127,21 @@ def test_totals():
         "trips_count": 1, "driving_trips_count": 1,
         "hard_braking_count": 1, "hard_accel_count": 1,
     }
+
+
+def test_repeat_stops_outside_zones_become_a_place():
+    positions = [
+        _stop(0, 1800),
+        _stop(5000, 8000, lat_m=30),       # same place, within 75 m
+        _stop(10000, 10600, lat_m=5000),   # one-off elsewhere
+    ]
+    (place,) = fp._calc_places(positions, [])
+    assert place["visits"] == 2
+    assert place["total_s"] == 1800 + 3000
+
+
+def test_stops_inside_a_zone_are_not_places():
+    zone = {"name": "Home", "latitude": LAT, "longitude": -75.0, "radius_m": 100.0,
+            "lat_min": LAT - 0.01, "lat_max": LAT + 0.01, "lon_min": -75.01, "lon_max": -74.99}
+    positions = [_stop(0, 1800), _stop(5000, 8000)]
+    assert fp._calc_places(positions, [zone]) == []

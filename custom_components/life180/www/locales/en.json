@@ -112,5 +112,8 @@
   "no_trips": "No trips in this range",
   "trip_unknown_place": "Unknown place",
   "hard_braking": "Hard braking",
-  "hard_accel": "Hard acceleration"
+  "hard_accel": "Hard acceleration",
+  "frequent_places": "Frequent places",
+  "save_as_zone": "Save as zone",
+  "saved": "Saved"
 }
