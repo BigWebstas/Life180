@@ -1117,6 +1117,9 @@ body.no-scroll { overflow: hidden; }
     var(--controls-grad-hover);
 }
 
+#summary-places.hidden { display: none; }
+#summary-places-table-body .btn { padding: 4px 8px; font-size: 12px; }
+
 /* ===== Person badge (battery, plus mode + speed when moving) pinned over the map marker ===== */
 .l180-move-badge {
   position: absolute;

@@ -588,7 +588,7 @@ async function handleEditZone() {
     }
 }
 
-async function handleCreateZone() {
+export async function handleCreateZone(at = null) {
     if (!map) {
         console.error("The map is not initialized.");
         return null;
@@ -613,8 +613,8 @@ async function handleCreateZone() {
         return;
     }
 
-    // Get the current map center
-    const center = map.getCenter();
+    // Get the requested point ({lat, lng}), else the current map center
+    const center = at || map.getCenter();
     const latitude = center.lat;
     const longitude = center.lng;
 

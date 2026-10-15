@@ -29,7 +29,9 @@ MARKERS = {
     "battery pill always shown over the avatar": '_mb=(_mv||i!=null)?',
     "low-battery people rows pulse red": 'f.classList.toggle("l180-row-low-battery"',
     "trips tab is rendered on filter (0.8.0)": 'l180Trips(Array.isArray(e)?[]:e?.trips||[])',
-    "trips tab is cleared on filter reset (0.8.0)": 'l180ClearTrips();let n=',
+    "frequent places are rendered on filter (0.9.0)": 'l180Places(Array.isArray(e)?[]:e?.places||[])',
+    "add-zone can target a given point (0.9.0)": 'let n=l180At||A.getCenter()',
+    "trips tab is cleared on filter reset (0.8.0)": 'l180ClearTrips(),l180ClearPlaces();let n=',
 }
 
 
