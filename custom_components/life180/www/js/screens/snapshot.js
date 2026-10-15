@@ -5,7 +5,6 @@
 
 import { isAdmin } from '../globals.js';
 import { t } from '../utils/i18n.js';
-import { toast } from '../utils/dialogs.js';
 import { map } from '../utils/map.js';
 import { getSnapshotPeople } from './persons.js';
 
@@ -74,7 +73,6 @@ async function takeSnapshot() {
     a.href = URL.createObjectURL(blob);
     a.download = file.name;
     a.click();
-    toast(t('snapshot_saved'));
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
 }
 
