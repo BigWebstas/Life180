@@ -4,13 +4,22 @@
 
 import { haUrl, formatDate, geocodeTime, geocodeDistance, DEFAULT_ALPHA, escapeHtml } from '../globals.js';
 import { fetchPersons, fetchDevices, fetchPersonTrail } from '../ha/fetch.js';
-import { handleZonePosition } from '../screens/zones.js';
+import { handleZonePosition, getZones } from '../screens/zones.js';
+import { estimateEta } from '../utils/eta.js';
 import { map, isValidCoordinates, getDistanceFromLatLonInMeters, fitBoundsSafe, focusPoint } from '../utils/map.js';
 import { t } from '../utils/i18n.js';
 import { requestAddress, cancelAddress } from '../utils/geocode.js';
 import { toRgba } from '../utils/dialogs.js';
 
 const DEFAULT_ICON_URL = './images/location-red.png';
+
+// Live ETA: per-person tracking state and the latest estimate (see utils/eta.js)
+const personTrack = {};
+const personEta = {};
+function etaText(personId) {
+    const eta = personEta[personId];
+    return eta ? `→ ${eta.name} · ${Math.max(1, Math.round(eta.seconds / 60))} min` : '';
+}
 
 // History trail (drawn automatically for every tracked person)
 const TRAIL_HOURS = 3;
@@ -417,6 +426,7 @@ async function updatePersonsMarkers() {
         const prevZoneName = personZones[personId];
         const zoneJustChanged = prevZoneName !== undefined && prevZoneName !== zoneName;
         personZones[personId] = zoneName;
+        personEta[personId] = zone ? null : estimateEta(personTrack[personId] ??= {}, latitude, longitude, speed, getZones());
 
         const formattedDate = formatDate(device.last_updated || t("date_unavailable"));
         const personObj = persons.find(p => p.entity_id === personId);
@@ -428,7 +438,7 @@ async function updatePersonsMarkers() {
 		  <strong>${escapeHtml(ownerName)}</strong> (${escapeHtml(friendly_name)})<br>
 		  ${formattedDate}<br>
 		  ${t('speed')}: ${Math.round((speed || 0) * 2.23694)} ${t('mi_per_hour')}
-		  ${batteryLevel}
+		  ${batteryLevel}${etaText(personId) ? `<br>${escapeHtml(etaText(personId))}` : ''}
 		  <br><br><a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"><strong>${t('open_location')}</strong></a>
 		`;
 
@@ -749,7 +759,7 @@ export async function updatePersonsTable() {
             const newContent = `
 				<td><p style="font-weight:bold;color:var(--l180-text);margin:0;">${escapeHtml(friendlyName)}</p></td>
 				<td>${time}</td>
-				<td>${escapeHtml(currentZoneName)}</td>
+				<td>${escapeHtml(currentZoneName || etaText(personId))}</td>
 				<td>${speed}</td>
 				<td>${battery != null ? battery + '%' : ''}</td>
 			  `;
