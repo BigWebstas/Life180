@@ -15,6 +15,7 @@ import { exportPositionsToKml } from '../export/kml.js';
 import { exportPositionsToCsv } from '../export/csv.js';
 import { exportPositionsToXlsx } from '../export/xlsx.js';
 import { exportPositionsToPdf, blendedFill, reducePositionsForPdf } from '../export/pdf.js';
+import { renderBatteryChart, clearBatteryChart } from '../charts/battery.js';
 import { renderPlaces, clearPlaces } from './places.js';
 import { renderTrips, renderDrivingSummary, clearTrips } from './trips.js';
 import { initPositionsChart, renderPositionsChart, clearPositionsChart, setPositionsMarker } from '../charts/positions.js';
@@ -209,6 +210,7 @@ export async function setFilter(payload) {
             }
             renderTrips(Array.isArray(payload) ? [] : (payload?.trips || []));
             renderPlaces(Array.isArray(payload) ? [] : (payload?.places || []));
+            renderBatteryChart(Array.isArray(payload) ? [] : (payload?.battery || []));
             await updateSummaryZonesTable();
 
             // In case some color changes dynamically, re-tint everything
@@ -707,6 +709,7 @@ export async function resetFilter(resetCalendar = true, resetUsers = true) {
     document.getElementById('summary-zones-table-body').innerHTML = '';
     clearTrips();
     clearPlaces();
+    clearBatteryChart();
 
     const maxSpeedRow = document.querySelector('#summary table tbody tr:nth-child(4)');
     if (maxSpeedRow) {

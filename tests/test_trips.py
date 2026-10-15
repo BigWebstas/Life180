@@ -145,3 +145,25 @@ def test_stops_inside_a_zone_are_not_places():
             "lat_min": LAT - 0.01, "lat_max": LAT + 0.01, "lon_min": -75.01, "lon_max": -74.99}
     positions = [_stop(0, 1800), _stop(5000, 8000)]
     assert fp._calc_places(positions, [zone]) == []
+
+
+def _with_battery(sec, value):
+    pt = _pt(sec, 0, 0.0)
+    pt["attributes"]["battery_level"] = value
+    return pt
+
+
+def test_battery_series_keeps_changes_and_the_last_point():
+    positions = [_with_battery(0, 80), _with_battery(60, 80), _with_battery(120, 79),
+                 _with_battery(180, 79), _pt(240, 0, 0.0)]
+    assert fp._calc_battery(positions) == [
+        [T0.isoformat(), 80],
+        [(T0 + timedelta(seconds=120)).isoformat(), 79],
+        [(T0 + timedelta(seconds=180)).isoformat(), 79],
+    ]
+
+
+@pytest.mark.parametrize("raw, expected", [(85, 85), ("85%", 85), (0.85, 85), ("0.5", 50),
+                                           (150, 100), ("n/a", None), (None, None)])
+def test_battery_pct_normalisation(raw, expected):
+    assert fp._battery_pct({"battery_level": raw}) == expected

@@ -1228,8 +1228,46 @@ def _calc_places(positions, zones):
         "last_utc": c["last"].isoformat() if c["last"] else None,
     } for c in places[:MAX_PLACES]]
 
+# --- battery history ---
+_BATTERY_KEYS = ("battery", "battery_level", "battery_percent", "battery_percentage",
+                 "battery_level_pct", "batteryLevel")
+
+def _battery_pct(attrs):
+    """Battery as a 0-100 integer from whichever key the tracker uses, else None."""
+    for k in _BATTERY_KEYS:
+        if k in attrs:
+            v = attrs[k]
+            break
+    else:
+        return None
+    try:
+        v = float(str(v).strip().rstrip("%"))
+    except ValueError:
+        return None
+    if not math.isfinite(v) or v < 0:
+        return None
+    if v <= 1:
+        v *= 100
+    return int(round(min(100.0, v)))
+
+def _calc_battery(positions):
+    """[[iso_time, pct], ...] keeping only the points where the level changes (plus the last)."""
+    series = []
+    last = None
+    for p in positions:
+        pct = _battery_pct(p.get("attributes") or {})
+        t = _as_dt(p.get("last_updated"))
+        if pct is None or t is None:
+            continue
+        last = [t.isoformat(), pct]
+        if not series or series[-1][1] != pct:
+            series.append(last)
+    if last and series[-1] is not last:
+        series.append(last)
+    return series
+
 def _empty_payload():
-    return { "positions": [], "summary": _calc_summary([]), "zones": [], "trips": [], "places": [] }
+    return { "positions": [], "summary": _calc_summary([]), "zones": [], "trips": [], "places": [], "battery": [] }
 
 # --- heavy pipeline off the event loop (executor) ---
 def _build_payload_offthread(states, *, cfg, zones):
@@ -1281,7 +1319,7 @@ def _build_payload_offthread(states, *, cfg, zones):
     summary.update(_trip_totals(trips))
 
     return {"positions": positions, "summary": summary, "zones": zones_rows, "trips": trips,
-            "places": _calc_places(positions, zones)}
+            "places": _calc_places(positions, zones), "battery": _calc_battery(positions)}
 
 # ----------------------------
 # Endpoint

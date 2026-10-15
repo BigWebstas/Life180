@@ -1117,6 +1117,10 @@ body.no-scroll { overflow: hidden; }
     linear-gradient(var(--controls-grad-hover), var(--controls-grad-hover));
 }
 
+#battery-chart { margin-top: 12px; }
+#battery-chart.hidden { display: none; }
+#battery-chart canvas { display: block; width: 100%; }
+.battery-chart-title { font-weight: 700; margin-bottom: 4px; color: var(--l180-text); }
 #summary-places.hidden { display: none; }
 #summary-places-table-body .btn { padding: 4px 8px; font-size: 12px; }
 
