@@ -9,6 +9,7 @@ import { authCallback } from './ha/auth.js';
 import { updatePersons, fitMapToAllPersons } from './screens/persons.js';
 import { initZones, updateZones } from './screens/zones.js';
 import { initFilter } from './screens/filter.js';
+import { initSnapshot } from './screens/snapshot.js';
 import { initializeI18n, t } from './utils/i18n.js';
 import { showOfflineBanner, hideOfflineBanner } from './utils/dialogs.js';
 
@@ -33,6 +34,7 @@ async function init() {
         await update();
         await fitMapToAllPersons(); // zoom to the set of devices
         await loadUI();
+        initSnapshot();
 
         // Run in the background with initial error handling
         startUpdateLoop(); // no .catch: these already handle their own errors

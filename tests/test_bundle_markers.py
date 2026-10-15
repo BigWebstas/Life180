@@ -31,6 +31,8 @@ MARKERS = {
     "trips tab is rendered on filter (0.8.0)": 'l180Trips(Array.isArray(e)?[]:e?.trips||[])',
     "live ETA is estimated per person on the map (0.11.0)": 'l180Eta[t]=Ye(o,r)?null:l180Estimate(t,o,r,s)',
     "live ETA shows in the people table zone cell (0.11.0)": 'esc(v||l180EtaText(l))',
+    "snapshot button is wired at startup (0.13.0)": 'await us(),l180SnapInit(),Xl()',
+    "snapshot renders the map canvas plus people pins (0.13.0)": 'function l180SnapRender(){let m=A._ml',
     "battery chart is rendered on filter (0.10.0)": 'l180Battery(Array.isArray(e)?[]:e?.battery||[])',
     "frequent places are rendered on filter (0.9.0)": 'l180Places(Array.isArray(e)?[]:e?.places||[])',
     "add-zone can target a given point (0.9.0)": 'let n=l180At||A.getCenter()',
