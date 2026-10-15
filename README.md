@@ -9,8 +9,8 @@ your registered people on a map and lets you review where they have been.
 - **Position filter**: pick a person and a date range to get their track,
   automatic stop detection, and a per-zone summary. Export to CSV, XLSX, KML,
   or PDF.
-- Ships a sidebar **panel**, a Lovelace **card**, and an automation
-  **blueprint** for zone enter/leave alerts.
+- Ships a sidebar **panel**, a Lovelace **card**, and automation
+  **blueprints** for zone enter/leave, low phone battery, and "not home by" alerts.
 
 Positions come from Home Assistant itself — install and configure a device
 tracker (the Home Assistant companion app, OwnTracks, GPSLogger, Traccar, …)

@@ -254,32 +254,34 @@ async def _remove_lovelace_resource(hass: HomeAssistant, path: str) -> None:
 #  BLUEPRINTS                                                                 #
 # --------------------------------------------------------------------------- #
 async def _ensure_blueprint(hass: HomeAssistant) -> None:
-    """Copy the bundled blueprint into the HA folder if missing or changed,
+    """Copy every bundled blueprint into the HA folder if missing or changed,
     without blocking the event loop."""
-    # Path to the blueprint inside the integration package
-    src_path = Path(__file__).parent / "blueprints" / "persons_in_zones_alert.yaml"
+    src_dir = Path(__file__).parent / "blueprints"
 
     # Destination folder (inside /config)
     bp_dir = Path(hass.config.path("blueprints/automation/life180"))
-    # mkdir is I/O -> executor
+    # mkdir and the directory listing are I/O -> executor
     await hass.async_add_executor_job(partial(bp_dir.mkdir, parents=True, exist_ok=True))
-    dest = bp_dir / src_path.name
+    sources = await hass.async_add_executor_job(lambda: sorted(src_dir.glob("*.yaml")))
 
-    # Read the source (async)
-    async with aiofiles.open(src_path, "r", encoding="utf-8") as f:
-        yaml_text = await f.read()
+    for src_path in sources:
+        dest = bp_dir / src_path.name
 
-    # Read the destination (async) if it exists; avoid the sync Path.exists()
-    current: str | None = None
-    try:
-        async with aiofiles.open(dest, "r", encoding="utf-8") as f:
-            current = await f.read()
-    except FileNotFoundError:
-        current = None
+        # Read the source (async)
+        async with aiofiles.open(src_path, "r", encoding="utf-8") as f:
+            yaml_text = await f.read()
 
-    if current != yaml_text:
-        async with aiofiles.open(dest, "w", encoding="utf-8") as f:
-            await f.write(yaml_text)
+        # Read the destination (async) if it exists; avoid the sync Path.exists()
+        current: str | None = None
+        try:
+            async with aiofiles.open(dest, "r", encoding="utf-8") as f:
+                current = await f.read()
+        except FileNotFoundError:
+            current = None
+
+        if current != yaml_text:
+            async with aiofiles.open(dest, "w", encoding="utf-8") as f:
+                await f.write(yaml_text)
 
 # --------------------------------------------------------------------------- #
 #  UTILITIES                                                                  #

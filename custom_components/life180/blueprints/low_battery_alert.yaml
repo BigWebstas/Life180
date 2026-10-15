@@ -1,0 +1,121 @@
+blueprint:
+  name: Low Phone Battery Alert (Life180)
+  description: "
+    Send voice or text notifications via the Home Assistant Companion app when a phone's battery
+    drops below a level. Fires once each time the level crosses the threshold, not on every update.
+
+    Pick the phones' device trackers (the Life180 screen marks 15% or lower in red).
+    "
+  domain: automation
+  homeassistant:
+    min_version: "2024.6.0"
+
+  input:
+    tracker_entities:
+      name: Device trackers
+      description: The phones to watch (device_tracker entities that report a battery level)
+      selector:
+        entity:
+          domain: device_tracker
+          multiple: true
+
+    battery_attribute:
+      name: Battery attribute
+      description: The tracker attribute that holds the battery percentage
+      default: battery_level
+      selector:
+        text: {}
+
+    threshold:
+      name: Alert when battery drops below (%)
+      default: 15
+      selector:
+        number:
+          min: 1
+          max: 99
+          unit_of_measurement: "%"
+
+    message:
+      name: Message
+      description: Use {person} and {battery}
+      default: "{person}'s phone battery is low ({battery}%)"
+
+    tts_devices:
+      name: TTS devices (HA Companion)
+      description: Phones/tablets that should SPEAK the message (Companion App TTS)
+      default: []
+      selector:
+        device:
+          integration: mobile_app
+          multiple: true
+
+    push_devices:
+      name: Push-only devices (HA Companion)
+      description: Devices that should receive a normal push notification
+      default: []
+      selector:
+        device:
+          integration: mobile_app
+          multiple: true
+
+# ---------- Automation ----------
+trigger:
+  - platform: numeric_state
+    entity_id: !input tracker_entities
+    attribute: !input battery_attribute
+    below: !input threshold
+
+variables:
+  message_tpl: !input message
+  tts_devs: !input tts_devices
+  push_devs: !input push_devices
+  battery_attr: !input battery_attribute
+
+condition: []
+
+action:
+  - variables:
+      # The person whose source tracker fired, else the tracker's own name
+      person_name: >
+        {% set p = states.person | selectattr('attributes.source', 'eq', trigger.entity_id) | list %}
+        {{ p[0].name if p else trigger.to_state.name }}
+      battery_pct: "{{ trigger.to_state.attributes.get(battery_attr) | float(0) | round(0) | int }}"
+      msg: >
+        {{ message_tpl | string | replace('{person}', person_name) | replace('{battery}', battery_pct | string) | trim }}
+
+      tts_services_list: >
+        {% set ns = namespace(svcs=[]) %}
+        {% for dev in tts_devs %}
+          {% set ns.svcs = ns.svcs + [ 'notify.mobile_app_' ~ (device_attr(dev, 'name') | slugify) ] %}
+        {% endfor %}
+        {{ ns.svcs | unique | list }}
+
+      push_services_list: >
+        {% set ns = namespace(svcs=[]) %}
+        {% for dev in push_devs %}
+          {% set ns.svcs = ns.svcs + [ 'notify.mobile_app_' ~ (device_attr(dev, 'name') | slugify) ] %}
+        {% endfor %}
+        {{ ns.svcs | unique | list }}
+
+  - repeat:
+      for_each: "{{ tts_services_list }}"
+      sequence:
+        - service: "{{ repeat.item }}"
+          data:
+            message: "TTS"
+            data:
+              tts_text: "{{ msg }}"
+              priority: high
+              ttl: 0
+  - repeat:
+      for_each: "{{ push_services_list }}"
+      sequence:
+        - service: "{{ repeat.item }}"
+          data:
+            message: "{{ msg }}"
+            data:
+              priority: high
+              ttl: 0
+
+mode: parallel
+max: 10
