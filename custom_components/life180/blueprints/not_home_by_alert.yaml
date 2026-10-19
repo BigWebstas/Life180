@@ -1,7 +1,7 @@
 blueprint:
   name: Not Home By Alert (Life180)
   description: "
-    Send voice or text notifications via the Home Assistant Companion app at a set time if any
+    Send voice, push or Telegram notifications at a set time if any
     selected person is not in the chosen zone yet (for example, nobody home by 9 pm).
     "
   domain: automation
@@ -72,6 +72,15 @@ blueprint:
           integration: mobile_app
           multiple: true
 
+    telegram_targets:
+      name: Telegram chats
+      description: Telegram notify entities (from the Telegram bot integration) that should receive the message
+      default: []
+      selector:
+        entity:
+          domain: notify
+          multiple: true
+
 # ---------- Automation ----------
 trigger:
   - platform: time
@@ -87,6 +96,7 @@ variables:
   message_tpl: !input message
   tts_devs: !input tts_devices
   push_devs: !input push_devices
+  telegram_devs: !input telegram_targets
 
 action:
   - variables:
@@ -139,6 +149,13 @@ action:
                       data:
                         priority: high
                         ttl: 0
+            - if: "{{ telegram_devs | length > 0 }}"
+              then:
+                - service: notify.send_message
+                  target:
+                    entity_id: "{{ telegram_devs }}"
+                  data:
+                    message: "{{ msg }}"
 
 mode: parallel
 max: 10
