@@ -72,13 +72,20 @@ blueprint:
           integration: mobile_app
           multiple: true
 
-    telegram_targets:
-      name: Telegram chats
-      description: Telegram notify entities (from the Telegram bot integration) that should receive the message
+    telegram_bot:
+      name: Telegram bot
+      description: Telegram bot (from the Telegram bot integration) that should send the message. Leave empty to skip Telegram.
+      default: ""
+      selector:
+        config_entry:
+          integration: telegram_bot
+
+    telegram_chat_ids:
+      name: Telegram chat IDs
+      description: Chat IDs to send to. Leave empty to use the bot's first allowed chat.
       default: []
       selector:
-        entity:
-          domain: notify
+        text:
           multiple: true
 
 # ---------- Automation ----------
@@ -96,7 +103,8 @@ variables:
   message_tpl: !input message
   tts_devs: !input tts_devices
   push_devs: !input push_devices
-  telegram_devs: !input telegram_targets
+  telegram_bot: !input telegram_bot
+  telegram_chats: !input telegram_chat_ids
 
 action:
   - variables:
@@ -149,13 +157,10 @@ action:
                       data:
                         priority: high
                         ttl: 0
-            - if: "{{ telegram_devs | length > 0 }}"
+            - if: "{{ telegram_bot | length > 0 }}"
               then:
-                - service: notify.send_message
-                  target:
-                    entity_id: "{{ telegram_devs }}"
-                  data:
-                    message: "{{ msg }}"
+                - service: telegram_bot.send_message
+                  data: "{{ {'config_entry_id': telegram_bot, 'message': msg} | combine({'target': telegram_chats} if telegram_chats else {}) }}"
 
 mode: parallel
 max: 10
