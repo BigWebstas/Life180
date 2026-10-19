@@ -117,6 +117,7 @@ export async function updatePersons() {
         await updatePersonsMarkers();
         await updatePersonTrails();
         await updatePersonsFilter();
+        await autoFitIfEnabled();
     } catch (error) {
         console.error("Error updating devices:", error);
         throw error;
@@ -318,6 +319,16 @@ export async function fitMapToAllPersons() {
         console.error("Error doing fitMapToAllDevices:", error);
     }
 }
+
+// Live view only: while the map checkbox is ticked, refit to everyone on each refresh.
+try { window.l180AutoFit = localStorage.getItem('l180AutoFit') === '1'; } catch (_) {}
+
+async function autoFitIfEnabled() {
+    if (!window.l180AutoFit) return;
+    if (document.getElementById('persons-container')?.style.display === 'none') return;
+    await fitMapToAllPersons();
+}
+document.addEventListener('l180-autofit', autoFitIfEnabled);
 
 async function updatePersonsDevicesMap() {
     personsDevicesMap = {};

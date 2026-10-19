@@ -105,6 +105,7 @@
   "zoom_out": "Zoom out",
   "reset_to_north": "Reset bearing to north",
   "search": "Search",
+  "auto_fit": "Keep everyone in view",
   "layers": "Layers",
   "chart": "Chart",
   "trips": "Trips",

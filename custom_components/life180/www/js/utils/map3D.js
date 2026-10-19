@@ -420,6 +420,30 @@ function toggleGeocoder() {
     vis ? hideGeocoder() : showGeocoder();
 }
 
+// ===== Auto-fit checkbox (keeps every person in view while ticked) =====
+class AutoFitControl {
+    onAdd() {
+        const c = document.createElement('div');
+        c.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+        const label = document.createElement('label');
+        label.style.cssText = 'display:flex;align-items:center;gap:6px;padding:0 10px;height:32px;cursor:pointer;font-size:12px;color:var(--l180-text);white-space:nowrap';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!window.l180AutoFit;
+        cb.onchange = () => {
+            window.l180AutoFit = cb.checked;
+            try { localStorage.setItem('l180AutoFit', cb.checked ? '1' : '0'); } catch (_) {}
+            document.dispatchEvent(new Event('l180-autofit'));
+        };
+        label.append(cb, t('auto_fit'));
+        c.appendChild(label);
+        return (this._container = c);
+    }
+    onRemove() {
+        this._container?.remove();
+    }
+}
+
 // ===== Search button control (shows/hides the geocoder) with a SLOT on the right =====
 class SearchToggleControl {
     constructor() {
@@ -596,6 +620,7 @@ export async function initMap() {
     // SEARCH button (inline slot on the right). The control itself is created now.
     _searchCtlRef = new SearchToggleControl();
     _ml.addControl(_searchCtlRef, 'top-left');
+    _ml.addControl(new AutoFitControl(), 'top-left');
 
     // The base map is OpenFreeMap with automatic dark/light theme switching; no layer switcher.
 
