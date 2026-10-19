@@ -224,7 +224,7 @@ action:
           - if: "{{ telegram_bot | length > 0 }}"
             then:
               - service: telegram_bot.send_message
-                data: "{{ {'config_entry_id': telegram_bot, 'message': enter_msg} | combine({'target': telegram_chats} if telegram_chats else {}) }}"
+                data: "{{ {'config_entry_id': telegram_bot, 'message': enter_msg} | combine({'chat_id': telegram_chats} if telegram_chats else {}) }}"
 
       # LEAVE (a fuera de zonas configuradas)
       - conditions: "{{ do_leave }}"
@@ -251,7 +251,7 @@ action:
           - if: "{{ telegram_bot | length > 0 }}"
             then:
               - service: telegram_bot.send_message
-                data: "{{ {'config_entry_id': telegram_bot, 'message': leave_msg} | combine({'target': telegram_chats} if telegram_chats else {}) }}"
+                data: "{{ {'config_entry_id': telegram_bot, 'message': leave_msg} | combine({'chat_id': telegram_chats} if telegram_chats else {}) }}"
     default: []
 
 mode: parallel

@@ -137,7 +137,7 @@ action:
   - if: "{{ telegram_bot | length > 0 }}"
     then:
       - service: telegram_bot.send_message
-        data: "{{ {'config_entry_id': telegram_bot, 'message': msg} | combine({'target': telegram_chats} if telegram_chats else {}) }}"
+        data: "{{ {'config_entry_id': telegram_bot, 'message': msg} | combine({'chat_id': telegram_chats} if telegram_chats else {}) }}"
 
 mode: parallel
 max: 10
