@@ -1,7 +1,7 @@
 blueprint:
   name: Low Phone Battery Alert (Life180)
   description: "
-    Send voice or text notifications via the Home Assistant Companion app when a phone's battery
+    Send voice, push or Telegram notifications when a phone's battery
     drops below a level. Fires once each time the level crosses the threshold, not on every update.
 
     Pick the phones' device trackers (the Life180 screen marks 15% or lower in red).
@@ -58,6 +58,15 @@ blueprint:
           integration: mobile_app
           multiple: true
 
+    telegram_targets:
+      name: Telegram chats
+      description: Telegram notify entities (from the Telegram bot integration) that should receive the message
+      default: []
+      selector:
+        entity:
+          domain: notify
+          multiple: true
+
 # ---------- Automation ----------
 trigger:
   - platform: numeric_state
@@ -69,6 +78,7 @@ variables:
   message_tpl: !input message
   tts_devs: !input tts_devices
   push_devs: !input push_devices
+  telegram_devs: !input telegram_targets
   battery_attr: !input battery_attribute
 
 condition: []
@@ -116,6 +126,13 @@ action:
             data:
               priority: high
               ttl: 0
+  - if: "{{ telegram_devs | length > 0 }}"
+    then:
+      - service: notify.send_message
+        target:
+          entity_id: "{{ telegram_devs }}"
+        data:
+          message: "{{ msg }}"
 
 mode: parallel
 max: 10

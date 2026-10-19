@@ -1,9 +1,9 @@
 blueprint:
   name: Persons in Zones Alert (Life180)
   description: "
-    Send voice or text notifications via the Home Assistant Companion app when a selected person enters or leaves a selected zone.
+    Send voice, push or Telegram notifications when a selected person enters or leaves a selected zone.
     
-    Version 0.0.1 
+    Version 0.0.2 
     "
   domain: automation
   homeassistant:
@@ -51,6 +51,7 @@ blueprint:
     tts_devices:
       name: TTS devices (HA Companion)
       description: Phones/tablets that should SPEAK the message (Companion App TTS)
+      default: []
       selector:
         device:
           integration: mobile_app
@@ -59,9 +60,19 @@ blueprint:
     push_devices:
       name: Push-only devices (HA Companion)
       description: Devices that should receive a normal push notification
+      default: []
       selector:
         device:
           integration: mobile_app
+          multiple: true
+
+    telegram_targets:
+      name: Telegram chats
+      description: Telegram notify entities (from the Telegram bot integration) that should receive the message
+      default: []
+      selector:
+        entity:
+          domain: notify
           multiple: true
 
 # ---------- Automation ----------
@@ -79,6 +90,7 @@ variables:
   zone_ids: !input zone_entities
   tts_devs: !input tts_devices
   push_devs: !input push_devices
+  telegram_devs: !input telegram_targets
 
 condition: []
 
@@ -201,6 +213,13 @@ action:
                     data:
                       priority: high
                       ttl: 0
+          - if: "{{ telegram_devs | length > 0 }}"
+            then:
+              - service: notify.send_message
+                target:
+                  entity_id: "{{ telegram_devs }}"
+                data:
+                  message: "{{ enter_msg }}"
 
       # LEAVE (a fuera de zonas configuradas)
       - conditions: "{{ do_leave }}"
@@ -224,6 +243,13 @@ action:
                     data:
                       priority: high
                       ttl: 0
+          - if: "{{ telegram_devs | length > 0 }}"
+            then:
+              - service: notify.send_message
+                target:
+                  entity_id: "{{ telegram_devs }}"
+                data:
+                  message: "{{ leave_msg }}"
     default: []
 
 mode: parallel
