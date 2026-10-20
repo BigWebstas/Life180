@@ -37,7 +37,9 @@ MARKERS = {
     "battery chart is rendered on filter (0.10.0)": 'l180Battery(Array.isArray(e)?[]:e?.battery||[])',
     "frequent places are rendered on filter (0.9.0)": 'l180Places(Array.isArray(e)?[]:e?.places||[])',
     "add-zone can target a given point (0.9.0)": 'let n=l180At||A.getCenter()',
-    "map has the auto-fit checkbox under search (0.15.0)": 'addControl(wn,"top-left"),b.addControl(new l180AutoFitCtl,"top-left")',
+    "map has the auto-fit button under search (0.15.0)": 'addControl(wn,"top-left"),b.addControl(new l180AutoFitCtl,"top-left")',
+    "auto-fit crosshair toggles on click and shows a slash when off (0.16.0)": 'window.l180AutoFit = !window.l180AutoFit;',
+    "people table rows show the person avatar (0.16.0)": '<img src="${window.__zl.esc(yi(i.attributes.entity_picture)||pi)}" alt=""',
     "live refresh refits to everyone when auto-fit is on (0.15.0)": 'await l180AutoFitIfEnabled()}catch(e){throw console.error("Error updating devices:",e),e}}',
     "trips tab is cleared on filter reset (0.8.0)": 'l180ClearTrips(),l180ClearPlaces(),l180Battery([]);let n=',
 }
