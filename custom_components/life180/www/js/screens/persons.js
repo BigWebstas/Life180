@@ -767,8 +767,9 @@ export async function updatePersonsTable() {
                 tableBody.appendChild(addressRow);
             }
 
+            const avatarUrl = resolveWithHaUrl(person.attributes.entity_picture) || DEFAULT_ICON_URL;
             const newContent = `
-				<td><p style="font-weight:bold;color:var(--l180-text);margin:0;">${escapeHtml(friendlyName)}</p></td>
+				<td><div style="display:flex;align-items:center;gap:8px;"><img src="${escapeHtml(avatarUrl)}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex:none;" /><p style="font-weight:bold;color:var(--l180-text);margin:0;">${escapeHtml(friendlyName)}</p></div></td>
 				<td>${time}</td>
 				<td>${escapeHtml(currentZoneName || etaText(personId))}</td>
 				<td>${speed}</td>

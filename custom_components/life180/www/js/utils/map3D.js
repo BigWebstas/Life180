@@ -420,23 +420,32 @@ function toggleGeocoder() {
     vis ? hideGeocoder() : showGeocoder();
 }
 
-// ===== Auto-fit checkbox (keeps every person in view while ticked) =====
+// ===== Auto-fit toggle (crosshair; slashed when off, keeps every person in view when on) =====
 class AutoFitControl {
     onAdd() {
         const c = document.createElement('div');
         c.className = 'maplibregl-ctrl maplibregl-ctrl-group';
-        const label = document.createElement('label');
-        label.style.cssText = 'display:flex;align-items:center;gap:6px;padding:0 10px;height:32px;cursor:pointer;font-size:12px;color:var(--l180-text);white-space:nowrap';
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.checked = !!window.l180AutoFit;
-        cb.onchange = () => {
-            window.l180AutoFit = cb.checked;
-            try { localStorage.setItem('l180AutoFit', cb.checked ? '1' : '0'); } catch (_) {}
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.title = t('auto_fit');
+        btn.setAttribute('aria-label', t('auto_fit'));
+        btn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><path class="l180-autofit-off" d="M4 4l16 16"/></svg>';
+        const off = btn.querySelector('.l180-autofit-off');
+        const render = () => {
+            const on = !!window.l180AutoFit;
+            btn.setAttribute('aria-pressed', String(on));
+            btn.style.color = on ? 'var(--l180-primary)' : 'var(--l180-text)';
+            btn.style.background = on ? 'var(--l180-primary-container)' : '';
+            off.style.display = on ? 'none' : '';
+        };
+        btn.onclick = () => {
+            window.l180AutoFit = !window.l180AutoFit;
+            try { localStorage.setItem('l180AutoFit', window.l180AutoFit ? '1' : '0'); } catch (_) {}
+            render();
             document.dispatchEvent(new Event('l180-autofit'));
         };
-        label.append(cb, t('auto_fit'));
-        c.appendChild(label);
+        render();
+        c.appendChild(btn);
         return (this._container = c);
     }
     onRemove() {
