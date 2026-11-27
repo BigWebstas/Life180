@@ -46,7 +46,7 @@ UPSTREAM = "https://tiles.openfreemap.org/"
 # word character, so ".." and hidden names can never reach the filesystem.
 _SEG = r"[\w@-][\w .@-]*"
 _ALLOWED = re.compile(
-    rf"(?:planet/{_SEG}/\d+/\d+/\d+\.pbf"  # vector tiles (planet/<build>/z/x/y)
+    rf"(?:(?:backup_)?planet/{_SEG}/\d+/\d+/\d+\.pbf"  # vector tiles (<set>/<build>/z/x/y)
     rf"|natural_earth/{_SEG}/\d+/\d+/\d+\.png"  # low-zoom raster backdrop
     rf"|fonts/{_SEG}/{_SEG}\.pbf"  # glyphs
     rf"|sprites/{_SEG}/{_SEG}\.(?:png|json))"  # sprite sheet + index

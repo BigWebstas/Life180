@@ -168,3 +168,8 @@ def test_fonts_and_sprites_are_cached_with_matching_type(tmp_path, monkeypatch):
         assert resp.status == 200 and resp.content_type == ctype, path
         assert (tmp_path / tiles.TILE_DIR / path).read_bytes() == TILE_PBF
 
+
+def test_current_and_backup_planet_tile_sets_are_allowed():
+    # The style's vector source has moved between these two upstream names.
+    for name in ("planet", "backup_planet"):
+        assert tiles._ALLOWED.fullmatch(f"{name}/20261122_124456_pt/3/1/3.pbf")
